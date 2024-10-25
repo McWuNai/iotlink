@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.cn.mapper.commodity.YzWxByProductInfoMapper">
+
+
+
+	<!--获取商品 上架、已审核  -->
+	<select id="findConcise" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+		SELECT
+			product_id,
+			product_name as 'text',
+			product_core as 'value',
+			one_category_id,
+			price
+		FROM
+			yz_wx_by_product_info
+		<where>
+			publish_status = '1'
+			and audit_status = '1'
+			and one_category_id = #{one_category_id}
+		</where>
+	</select>
+
+
+	<!--验证商品价格查询-->
+	<select id="findId" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+		SELECT
+			product_id,
+			product_name,
+			price
+		FROM
+			yz_wx_by_product_info
+		<where>
+			publish_status = '1'
+			and audit_status = '1'
+			and product_id = #{product_id}
+		</where>
+	</select>
+
+
+
+
+</mapper>

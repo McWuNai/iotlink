@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.upStream.upStreamMapper">
+
+
+    <sql id="selwhere">
+        <where>
+            <if test="type!=null and type!=''
+                and value!=null and value !=''">
+                <if test="type== 0 ">
+                    and  groupId = #{value}
+                </if>
+                <if test="type== 1 ">
+                    and offeringId=#{value}
+                </if>
+                <if test="type== 2 ">
+                    and offeringName like CONCAT(#{value},'%')
+                </if>
+                <if test="type== 3 ">
+                    and groupName like  CONCAT(#{value},'%')
+                </if>
+                <if test="type== 4 ">
+                    and channel_id =#{value}
+                </if>
+            </if>
+
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+                AND
+                <if test="timetype == 0">
+                     create_date
+                </if>
+                <if test="timetype == 1">
+                    upd_date
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+
+        </where>
+
+    </sql>
+
+    <select id="MapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        select
+        count(1)
+        from
+        yz_upstream_group
+        <include refid="selwhere"/>
+    </select>
+
+
+    <select id="getList" resultType="java.util.HashMap" parameterType="java.util.HashMap">
+        select
+        groupId,
+        groupName,
+        offeringId,
+        offeringName,
+        channel_id,
+        DATE_FORMAT( create_date, "%Y-%m-%d" ) AS create_date,
+        DATE_FORMAT( upd_date, "%Y-%m-%d" ) AS upd_date
+        from
+            yz_upstream_group
+
+        <include refid="selwhere"/>
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+    <!--导出 上游集团群组 信息-->
+    <select id="outChannel" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+        groupId,
+        groupName,
+        offeringId,
+        offeringName,
+        channel_id,
+        DATE_FORMAT( create_date, "%Y-%m-%d %H:%i:%S" ) AS create_date,
+        DATE_FORMAT( upd_date, "%Y-%m-%d %H:%i:%S" ) AS upd_date
+        from
+        yz_upstream_group
+
+        <include refid="selwhere"/>
+    </select>
+
+
+</mapper>

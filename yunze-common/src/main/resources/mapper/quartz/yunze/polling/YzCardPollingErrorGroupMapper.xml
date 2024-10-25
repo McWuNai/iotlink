@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.polling.YzCardPollingErrorGroupMapper">
+
+    <insert id="save" parameterType="java.util.HashMap">
+        insert into
+        yz_card_polling_error_group
+        (
+        codeOn,
+        message,
+        cd_code,
+        create_date,
+        upd_date,
+        is_notice,
+        ct_sum
+        )
+        value
+        <foreach item="msg_arrs" collection="msg_arrs" index="index" separator=",">
+            (
+            #{msg_arrs.codeOn},
+            #{msg_arrs.message},
+            #{msg_arrs.cd_code},
+            now(),
+            now(),
+            1,
+            #{msg_arrs.ct_sum}
+            )
+        </foreach>
+    </insert>
+
+
+
+
+
+
+    <select id="findEx" parameterType="java.util.HashMap" resultType="java.lang.String">
+        select
+        id
+        from
+        yz_card_polling_error_group
+        <where>
+            cd_code = #{cd_code}
+            and codeOn = #{codeOn}
+        </where>
+        LIMIT 1
+    </select>
+
+
+    <select id="findArr" parameterType="java.util.HashMap"  resultType="java.lang.String">
+        select
+        id
+        from
+        yz_card_polling_error_group
+        <where>
+            cd_code = #{cd_code}
+            and codeOn = #{codeOn}
+        </where>
+    </select>
+
+
+
+
+
+
+
+
+    <!--批量删除-->
+    <delete id="delArr" parameterType="java.util.HashMap">
+        DELETE from yz_card_polling_error_group
+        <where>
+            id in
+            <foreach item="DeleArr" collection="DeleArr" index="DeleArr" open="(" separator="," close=")">
+                #{DeleArr}
+            </foreach>
+        </where>
+    </delete>
+
+    <!--批量修改-->
+    <update id="updArr" parameterType="java.util.HashMap">
+        UPDATE yz_card_polling_error_group
+        <set>
+            is_notice =#{is_notice},
+            upd_date = now()
+        </set>
+        <where>
+            id in
+            <foreach item="UpdaArr" collection="UpdaArr" index="UpdaArr" open="(" separator="," close=")">
+                #{UpdaArr}
+            </foreach>
+        </where>
+    </update>
+
+
+    <!--单个修改轮询错误概要-->
+    <update id="updObj" parameterType="java.util.HashMap">
+        update yz_card_polling_error_group
+        <set>
+            is_notice = #{is_notice},
+            upd_date = now()
+        </set>
+        <where>
+            id = #{id}
+        </where>
+    </update>
+
+
+
+    <update id="upd" parameterType="java.util.HashMap"  >
+        update yz_card_polling_error_group
+        <set>
+            message = #{message},
+            cd_code = #{cd_code},
+            upd_date = now(),
+            ct_sum = #{ct_sum}
+        </set>
+        <where>
+            id = #{id}
+        </where>
+    </update>
+
+
+    <!--单个删除轮询错误概要-->
+    <delete id="del" parameterType="java.util.HashMap">
+        delete from yz_card_polling_error_group <where>id =#{id}</where>
+    </delete>
+
+
+    <select id="selMap" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        id,
+        codeOn,
+        message,
+        cd_code,
+        DATE_FORMAT(create_date, "%Y-%m-%d" ) AS 'create_date',
+        DATE_FORMAT( upd_date, "%Y-%m-%d" ) AS 'upd_date',
+        is_notice,
+        ct_sum
+        FROM
+        yz_card_polling_error_group
+        <include refid="whereComm"/>
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+
+    <select id="selMapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        SELECT
+        count(1)
+        FROM
+        yz_card_polling_error_group
+        <include refid="whereComm"/>
+    </select>
+
+
+    <sql id="whereComm">
+        <where>
+            <if test="is_notice!=null and is_notice != ''">
+                is_notice = #{is_notice}
+            </if>
+            <if test="isToDay!=null and isToDay==1">
+                and   upd_date = CURDATE()
+            </if>
+            <if test="cd_code != null and cd_code != ''">
+                and cd_code =#{cd_code}
+            </if>
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+                AND
+                <if test="timetype == 1">
+                    create_date
+                </if>
+                <if test="timetype == 2">
+                     upd_date
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+            <if test="value!=null and value!='' ">
+                <if test="type==1">
+                    and codeOn LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type==2">
+                    and message LIKE CONCAT(#{value},'%')
+                </if>
+            </if>
+        </where>
+    </sql>
+
+
+    <delete id="delTableData"  parameterType="java.util.HashMap" >
+        delete from yz_card_polling_error_group
+    </delete>
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

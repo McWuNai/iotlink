@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.fhgl.Ship.FhglShippingApplicationFormalMapper">
+
+    <!-- 新增 发货申请正式合同发货信息 -->
+    <insert id="add_SAFL"  parameterType="java.util.Map">
+		INSERT INTO FHGL_Shipping_Application_Formal
+			(
+				SAFL_ODYContractID,
+				SAFL_SANID
+			)
+			VALUES
+			(
+				#{SAFL_ODYContractID},
+				#{SAN_ID}
+			)
+	</insert>
+
+
+    <!-- 查询 发货申请正式合同发货信息 -->
+    <select id="find_data" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            SAFL_ODYContractID
+        FROM
+            FHGL_Shipping_Application_Formal
+        <where>
+            SAFL_SANID = #{SAN_ID}
+        </where>
+    </select>
+
+
+    <!-- 删除 临时订单发货信息详情-->
+    <delete id="del_date" parameterType="java.util.HashMap">
+        DELETE FROM FHGL_Shipping_Application_Formal <where>SAFL_SANID = #{SAN_ID}  </where>
+    </delete>
+
+    <!-- 查询商品已发货数量 -->
+    <select id="sel_SUM_Sent_Quantity" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			SAFDS_Name AS Name,
+			SUM(SAFDS_ModelAndNumber) AS Sent_Quantity
+		FROM
+			FHGL_Shipping_Application_Formal A,
+			FHGL_Shipping_Application_Formal_Details B
+		WHERE
+			A.SAFL_SANID = B.SAFDS_SANID
+		AND SAFL_ODYContractID = #{ODY_Contract_ID}
+		GROUP BY
+			SAFDS_Name
+	</select>
+
+    <!-- 查询 合同编号下的 所属发货申请 ID -->
+    <select id="sel_SAN_ID" parameterType="java.util.HashMap" resultType="java.lang.String">
+        SELECT
+            SAFL_SANID AS SAN_ID
+        FROM
+            FHGL_Shipping_Application_Formal
+        <where>
+            SAFL_ODYContractID =  #{ODY_Contract_ID}
+        </where>
+    </select>
+
+
+    <select id="Sle_ODYContractID" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT SAFL_SANID FROM fhgl_shipping_application_formal WHERE SAFL_ODYContractID =#{SAFL_ODYContractID}
+    </select>
+
+
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

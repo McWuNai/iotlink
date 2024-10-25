@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.cn.mapper.YzWxConfigMapper">
+
+
+
+	<!--获取单条 公众号配置信息-->
+	<select id="find" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+		SELECT
+			id,
+			app_id,
+			app_secret,
+			app_token,
+			origin_id,
+			mch_id,
+			paterner_key,
+			index_url,
+			back_url,
+			status,
+			create_time,
+			update_time,
+			create_user,
+			company_id,
+			agent_id,
+			native_url,
+			auth_txt
+		FROM
+			yz_wx_config
+		<where>
+			app_id = #{app_id}
+		</where>
+	</select>
+
+
+	<!--查询所有正在启用的公众号-->
+	<select id="getList" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+		SELECT
+			id as 'id' ,
+			app_id as 'appId' ,
+			app_secret as 'appSecret' ,
+			app_token as 'appToken' ,
+			origin_id as 'originId' ,
+			mch_id as 'mchId' ,
+			paterner_key as 'paternerKey' ,
+			index_url as 'indexUrl' ,
+			back_url as 'backUrl' ,
+			status  ,
+			create_time as 'createTime' ,
+			update_time as 'updateTime' ,
+			create_user as 'createUser' ,
+			company_id as 'companyId' ,
+			agent_id as 'agentId' ,
+			native_url as 'nativeUrl' ,
+			auth_txt as 'authTxt'
+		FROM yz_wx_config
+		<where>
+			status = '1'
+		</where>
+	</select>
+
+
+</mapper> 

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.warehouse.Administration.YzCkglCommodityOutputMapper">
+    <sql id="selwhere">
+        <where>
+            <if test="value!=null and value!=''">
+                <if test="type==1">
+                    and COT_Use LIKE CONCAT(#{value},'%')
+                </if>
+            </if>
+            <if test="COT_Otid != null and COT_Otid != ''">
+                and COT_Otid =#{COT_Otid}
+            </if>
+            <if test="COT_Use_People != null and COT_Use_People != ''">
+                COT_Use_People =#{COT_Use_People}
+            </if>
+            <if test="COT_warehouseman_ID != null and COT_warehouseman_ID != ''">
+                COT_warehouseman_ID =#{COT_warehouseman_ID}
+            </if>
+            <if test="COT_Time != null  and COT_Time != '' and staTime!=null and endTime!=null">
+                AND
+                <if test="COT_Time == 1">
+                    COT_Time
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+        </where>
+    </sql>
+
+    <select id="selMapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        SELECT
+            count(1)
+        FROM
+            yz_ckgl_commodity_output
+        <include refid="selwhere"/>
+    </select>
+
+    <select id="SleOutKu" resultType="java.util.HashMap" parameterType="java.util.HashMap">
+        SELECT
+            COT_ID,
+            COT_Otid,
+            DATE_FORMAT(COT_Time,'%Y-%m-%d') as COT_Time,
+            COT_Use,
+            COT_Use_People,
+            COT_warehouseman_ID
+        FROM
+            yz_ckgl_commodity_output
+            <include refid="selwhere"/>
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+
+    <!-- 新增商品出库 -->
+    <insert id="add_COT" parameterType="java.util.HashMap">
+        INSERT INTO yz_ckgl_commodity_output
+        (
+            COT_ID,
+            COT_Otid,
+            COT_Time,
+            COT_Use,
+            COT_Use_People,
+            COT_warehouseman_ID
+        )
+        VALUES
+        (
+            #{COT_ID},
+            #{COT_Otid},
+            #{COT_Time},
+            #{COT_Use},
+            #{COT_Use_People},
+            #{COT_warehouseman_ID}
+        )
+    </insert>
+
+    <!-- 获取id -->
+    <select id="sel_data_count" resultType="java.lang.Integer">
+        SELECT MAX(substring(COT_ID, 13,4)) from yz_ckgl_commodity_output where substring(COT_ID, 5,8)=NOW()
+    </select>
+
+
+
+
+
+
+
+</mapper>

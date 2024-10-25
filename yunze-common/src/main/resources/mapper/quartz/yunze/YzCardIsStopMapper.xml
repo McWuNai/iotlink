@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.YzCardIsStopMapper">
+
+    <select id="SleOrcount" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT iccid
+        FROM yz_card_isstop
+        GROUP BY order_no
+        HAVING COUNT(1) <![CDATA[ > ]]> #{MaixCount}
+    </select>
+
+    <select id="SleOrderno" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT a.iccid
+        FROM yz_card_isstop a LEFT JOIN
+             yz_order b ON a.order_no = b.ord_no
+        WHERE a.status = 1
+          and b.pay_type = 'wx'
+          and b.`status` = '1'
+        GROUP BY order_no
+    </select>
+
+    <insert id="AddStop" parameterType="java.util.HashMap">
+        INSERT INTO yz_card_isstop
+        (
+            iccid,
+            order_no,
+            status,
+            create_time,
+            update_time
+        )
+        VALUE
+        <foreach item="Stoploop" collection="Stoploop" index="Stoploop" separator=",">
+        (
+            #{Stoploop.iccid},
+            #{Stoploop.order_no},
+            #{Stoploop.status},
+            now(),
+            now()
+        )
+        </foreach>
+    </insert>
+
+
+</mapper>

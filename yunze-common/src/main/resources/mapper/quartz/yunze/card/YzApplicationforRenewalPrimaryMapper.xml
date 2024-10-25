@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.card.YzApplicationforRenewalPrimaryMapper">
+
+    <sql id="selwhere">
+        <where>
+            <if test="value!=null and value!='' ">
+                <if test="type==1">
+                    and a.info  LIKE CONCAT('%',#{value},'%')
+                </if>
+                <if test="type==2">
+                    and a.id = #{value}
+                </if>
+            </if>
+
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+            AND
+                <if test="timetype == 0">
+                     a.create_time
+                </if>
+                <if test="timetype == 1">
+                    a.review_time
+                </if>
+                <if test="timetype == 2">
+                   a.update_time
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+
+            <if test="is_send!=null and is_send!='' ">
+                and a.is_send = #{is_send}
+            </if>
+            <if test="id!=null and id!='' ">
+                and a.id = #{id}
+            </if>
+            <if test="status!=null and status!='' ">
+                and a.status = #{status}
+            </if>
+            <if test="agent_id != null  and agent_id != '' and agent_id.size>0">
+                and  a.dept_id in
+                <foreach item="agent_id" collection="agent_id" index="agent_id" open="(" separator="," close=")">
+                    #{agent_id}
+                </foreach>
+            </if>
+
+        </where>
+    </sql>
+
+    <select id="selMap" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+            a.id,
+            a.dept_id,
+            a.create_time as create_time,
+            a.status,
+            a.info,
+            a.annotation,
+            a.feedback,
+            a.user_id,
+           a.update_time as update_time,
+            a.is_send,
+            a.review_time as review_time,
+            a.card_sumCount,
+            a.amount
+        from
+            yz_applicationfor_renewal_primary a
+        <include refid="selwhere"/>
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+    <select id="selMapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        select
+            count(1)
+        from
+            yz_applicationfor_renewal_primary a
+        <include refid="selwhere"/>
+    </select>
+
+    <insert id="save" parameterType="java.util.HashMap" keyProperty="id" useGeneratedKeys="true">
+        insert into
+            yz_applicationfor_renewal_primary
+        (
+            dept_id,
+            create_time,
+            `status`,
+            info,
+            annotation,
+            feedback,
+            user_id,
+            update_time,
+            is_send,
+            card_sumCount,
+            amount
+        )
+            values
+        (
+            #{dept_id},
+            now(),
+            0,
+            #{info},
+            #{annotation},
+            #{feedback},
+            #{user_id},
+            now(),
+            1,
+            #{card_sumCount},
+            #{amount}
+        )
+    </insert>
+
+    <update id="upd" parameterType="java.util.HashMap" >
+        update
+            yz_applicationfor_renewal_primary
+        <set>
+            <if test="status!=null">
+                status = #{status},
+                review_time = now(),
+            </if>
+            <if test="info!=null">
+                info = #{info},
+            </if>
+            <if test="annotation!=null">
+                annotation = #{annotation},
+            </if>
+            <if test="feedback!=null">
+                feedback = #{feedback},
+            </if>
+            <if test="is_send!=null">
+                is_send = #{is_send},
+            </if>
+            update_time = now()
+        </set>
+        <where>
+            id = #{id}
+        </where>
+    </update>
+
+
+    <select id="find" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+            a.id,
+            a.dept_id,
+            a.create_time as create_time,
+            a.status,
+            a.info,
+            a.user_id,
+            <if test="is_Internal==true">
+                a.annotation,
+                a.feedback,
+                a.update_time as update_time,
+                a.is_send,
+                b.nick_name,
+            </if>
+            a.review_time as review_time,
+            a.card_sumCount,
+            a.amount
+        from
+            sys_user b left join
+            yz_applicationfor_renewal_primary a
+            on  b.user_id = a.user_id
+        <where>
+            a.id = #{id}
+            <if test="is_Internal!=true">
+                and  a.dept_id in
+                <foreach item="agent_id" collection="agent_id" index="agent_id" open="(" separator="," close=")">
+                    #{agent_id}
+                </foreach>
+            </if>
+        </where>
+    </select>
+
+
+    <!--获取需要通知的 状态为 审核中 的续费申请-->
+    <select id="findEmailCC" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+            a.id,
+            a.dept_id,
+            b.dept_name,
+            a.create_time as create_time,
+            a.status,
+            a.info,
+            a.card_sumCount,
+            a.amount
+        from
+            sys_dept b left join
+            yz_applicationfor_renewal_primary a
+            on  b.dept_id = a.dept_id
+        <where>
+            a.is_send = 1
+            and a.status = 0
+        </where>
+    </select>
+
+    <!--获取 订单生成申请 状态为 已审核 的-->
+    <select id="findAppOrderGr" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+            a.id,
+            a.dept_id,
+            a.create_time as create_time,
+            a.status,
+            a.card_sumCount,
+            a.amount
+        from
+            yz_applicationfor_renewal_primary a
+        <where>
+             a.status = 1
+             and create_time between #{sTime} and #{eTime}
+        </where>
+    </select>
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.xsgl.customer.YzXsglCustomerPeopleMapper">
+
+
+    <select id="findArr" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+            id,
+            name,
+            telephone,
+            qq,
+            nailed,
+            email,
+            remarks,
+            job_title,
+            state,
+            is_maste,
+            gender_id
+        from
+            yz_xsgl_customer_people
+        <where>
+            cu_id = #{CoID}
+            and state != 0
+        </where>
+    </select>
+
+
+
+    <insert id="save" parameterType="java.util.HashMap"  >
+            insert into
+                yz_xsgl_customer_people
+            (
+                cu_id,
+                name,
+                telephone,
+                qq,
+                nailed,
+                email,
+                remarks,
+                job_title,
+                state,
+                is_maste,
+                gender_id
+            )
+            values
+        <foreach item="CpeopleArrs" collection="CpeopleArrs" index="CpeopleArrs"  separator="," >
+            (
+                #{CoID},
+                #{CpeopleArrs.name},
+                #{CpeopleArrs.telephone},
+                #{CpeopleArrs.qq},
+                #{CpeopleArrs.nailed},
+                #{CpeopleArrs.email},
+                #{CpeopleArrs.remarks},
+                #{CpeopleArrs.job_title},
+                <if test="CpeopleArrs.state!=null and CpeopleArrs.state!=''">
+                    #{CpeopleArrs.state},
+                </if>
+                <if test="CpeopleArrs.state==null or CpeopleArrs.state==''">
+                    1,
+                </if>
+                #{CpeopleArrs.is_maste},
+                #{CpeopleArrs.gender_id}
+            )
+        </foreach>
+    </insert>
+
+
+    <update id="delId" parameterType="java.util.HashMap"  >
+        update  yz_xsgl_customer_people
+        <set>
+            state = 0
+        </set>
+        <where>
+            id in
+            <foreach item="CpeopleArrs_delArr" collection="CpeopleArrs_delArr" index="CpeopleArrs_delArr" open="(" separator="," close=")">
+                #{CpeopleArrs_delArr}
+            </foreach>
+            AND  cu_id = #{CoID}
+        </where>
+    </update>
+
+
+
+
+    <!--修改-->
+    <update id="upd" parameterType="java.util.HashMap" >
+        update  yz_xsgl_customer_people
+        <set>
+            name = #{name},
+            telephone = #{telephone},
+            qq = #{qq},
+            nailed = #{nailed},
+            email = #{email},
+            remarks = #{remarks},
+            job_title = #{job_title},
+            state = #{state},
+            is_maste = #{is_maste},
+            gender_id = #{gender_id}
+        </set>
+        <where>
+            id =#{id}
+        </where>
+    </update>
+
+    <select id="fnidPeopleArr" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            id,
+            NAME,
+            telephone
+        FROM
+            yz_xsgl_customer_people
+        <where>
+            cu_id = #{id}
+            and state != 0
+        </where>
+        ORDER BY state asc,is_maste DESC,id asc
+    </select>
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

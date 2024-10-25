@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.warehouse.Administration.YzCkglCommodityMapper">
+
+    <select id="commodity" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            Cy_ID AS id,
+            CONCAT( Cy_Name, "_", Cy_ModelAndNumber ) AS c_name
+        FROM
+            yz_ckgl_commodity
+        WHERE
+              Cy_Sort =#{Cy_Sort}
+          AND Cy_Category =#{Cy_Category}
+    </select>
+
+    <select id="queryloading" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        Cy_ID,Cy_Sort,Cy_Category,Cy_Name,Cy_ModelAndNumber,Cy_Unit,Cy_SuggestedPrice,Cy_Supplier,Operator,Cy_LowestPrice
+        FROM
+            yz_ckgl_commodity
+        <where>
+            Cy_ID in
+            <foreach item="idarr" collection="idarr" index="idarr" open="(" separator="," close=")">
+            #{idarr}
+            </foreach>
+            <if test="publish_status!=null">
+                and publish_status = #{publish_status}
+            </if>
+        </where>
+    </select>
+
+
+    <sql id="selwhere">
+        <where>
+            <if test="value!=null and value!='' ">
+                <if test="type==1">
+                    and Cy_Name LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type==2">
+                    and Cy_ModelAndNumber LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type==3">
+                    and Cy_Remarks LIKE CONCAT('%',#{value},'%')
+                </if>
+            </if>
+            <if test="Cy_SortArr != null  and Cy_SortArr != '' and Cy_SortArr.size>0">
+                and  Cy_Sort in
+                <foreach item="Cy_SortArr" collection="Cy_SortArr" index="Cy_SortArr" open="(" separator="," close=")">
+                    #{Cy_SortArr}
+                </foreach>
+            </if>
+            <if test="Cy_CategoryArr != null  and Cy_CategoryArr != '' and Cy_CategoryArr.size>0">
+                and  Cy_Category in
+                <foreach item="Cy_CategoryArr" collection="Cy_CategoryArr" index="Cy_CategoryArr" open="(" separator="," close=")">
+                    #{Cy_CategoryArr}
+                </foreach>
+            </if>
+            <if test="OperatorArr != null  and OperatorArr != '' and OperatorArr.size>0">
+                and  Operator in
+                <foreach item="OperatorArr" collection="OperatorArr" index="OperatorArr" open="(" separator="," close=")">
+                    #{OperatorArr}
+                </foreach>
+            </if>
+            <if test="Cy_Unit != null and Cy_Unit != '' ">
+                and Cy_Unit = #{Cy_Unit}
+            </if>
+            <if test="Cy_Supplier != null and Cy_Supplier != '' ">
+                and Cy_Supplier = #{Cy_Supplier}
+            </if>
+            <if test="publish_status != null and publish_status != '' ">
+                and publish_status = #{publish_status}
+            </if>
+
+        </where>
+    </sql>
+
+
+    <select id="selMap" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+        Cy_ID,
+        Cy_Sort,
+        Cy_Category,
+        Cy_Name,
+        Cy_ModelAndNumber,
+        Cy_Unit,
+        Cy_Remarks,
+        Cy_PurchasePrice,
+        Cy_LowestPrice,
+        Cy_SuggestedPrice,
+        Cy_Supplier,
+        Operator,
+        publish_status,
+        DATE_FORMAT( create_time, "%Y-%m-%d %H:%i:%S"  ) AS create_time,
+        DATE_FORMAT( modified_time, "%Y-%m-%d %H:%i:%S"  ) AS modified_time
+        from
+        yz_ckgl_commodity
+        <include refid="selwhere"/>
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+    <select id="selMapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        select
+        count(1)
+        from
+        yz_ckgl_commodity
+        <include refid="selwhere"/>
+    </select>
+
+
+    <insert id="save" parameterType="java.util.HashMap" >
+        insert into
+            yz_ckgl_commodity
+            (
+                Cy_ID,
+                Cy_Sort,
+                Cy_Category,
+                Cy_Name,
+                Cy_ModelAndNumber,
+                Cy_Unit,
+                Cy_Remarks,
+                Cy_PurchasePrice,
+                Cy_LowestPrice,
+                Cy_SuggestedPrice,
+                Cy_Supplier,
+                Operator,create_time,modified_time,
+                publish_status
+            )
+            value(
+                #{Cy_ID},
+                #{Cy_Sort},
+                #{Cy_Category},
+                #{Cy_Name},
+                #{Cy_ModelAndNumber},
+                #{Cy_Unit},
+                #{Cy_Remarks},
+                #{Cy_PurchasePrice},
+                #{Cy_LowestPrice},
+                #{Cy_SuggestedPrice},
+                #{Cy_Supplier},
+                #{Operator},now(),now(),
+                #{publish_status}
+            )
+    </insert>
+
+
+    <!-- 查询今日注册数量 -->
+    <select id="sel_data_count" resultType="java.lang.Integer">
+        SELECT MAX(substring(Cy_ID, 12,4)) from yz_ckgl_commodity where substring(Cy_ID, 4,8)=NOW()
+    </select>
+
+    <update id="upd" parameterType="java.util.HashMap">
+        update
+            yz_ckgl_commodity
+        <set>
+            Cy_Sort = #{Cy_Sort},
+            Cy_Category = #{Cy_Category},
+            Cy_Name = #{Cy_Name},
+            Cy_Unit = #{Cy_Unit},
+            Cy_Remarks = #{Cy_Remarks},
+            Cy_PurchasePrice = #{Cy_PurchasePrice},
+            Cy_LowestPrice = #{Cy_LowestPrice},
+            Cy_SuggestedPrice = #{Cy_SuggestedPrice},
+            Cy_Supplier = #{Cy_Supplier},
+            Operator = #{Operator},
+            modified_time = now(),
+            publish_status = #{publish_status}
+        </set>
+        <where>
+            Cy_ID = #{Cy_ID}
+        </where>
+    </update>
+
+
+    <!--是否存在同名 型号的商品-->
+    <select id="isExist" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+       select
+            count(1)
+        from
+            yz_ckgl_commodity
+        <where>
+            Cy_Name = #{Cy_Name}
+        </where>
+    </select>
+
+    <!-- 查询单条数据 -->
+    <select id="find" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+        Cy_ID,
+        Cy_Sort,
+        Cy_Category,
+        Cy_Name,
+        Cy_ModelAndNumber,
+        Cy_Unit,
+        Cy_Remarks,
+        Cy_PurchasePrice,
+        Cy_LowestPrice,
+        Cy_SuggestedPrice,
+        Cy_Supplier,
+        Operator,
+        create_time,
+        modified_time,
+        publish_status
+        from
+            yz_ckgl_commodity
+        <where>
+            Cy_ID = #{Cy_ID}
+        </where>
+    </select>
+
+    <!--入库详情查看 ==-->
+    <select id="selId" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+            a.Cy_ID,
+            a.Cy_Sort,
+            a.Cy_Category,
+            a.Cy_Name,
+            a.Cy_ModelAndNumber,
+            a.Cy_Unit,
+            a.Cy_SuggestedPrice,
+            a.Cy_Supplier,
+            a.Operator,
+            b.CSDS_Storage_Quantity,
+            b.CSDS_ID,
+            b.CSDS_CSEID,
+            b.CSDS_URL
+        from
+            yz_ckgl_commodity a,
+            yz_ckgl_commodity_storage_details b
+        where a.Cy_ID = b.CSDS_CyID
+          and b.CSDS_CSEID =#{CSE_ID}
+    </select>
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

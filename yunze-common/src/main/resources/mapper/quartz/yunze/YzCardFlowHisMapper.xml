@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.YzCardFlowHisMapper">
+
+
+
+	<!--获取指定年月 里 最近一天的月用量 API (今天之前) -->
+	<select id="total_flow" parameterType="java.util.HashMap" resultType="java.lang.String">
+		SELECT
+			total_flow
+		FROM
+			yz_card_flow_his
+		<where>
+			iccid = #{iccid}
+			AND `year` = #{year}
+			AND `month` = #{month}
+			AND `day` <![CDATA[ < ]]> #{day}
+		</where>
+		ORDER BY
+			`day` DESC
+			LIMIT 1
+	</select>
+
+
+	<insert id="save" parameterType="java.util.HashMap"  >
+		insert  into
+		yz_card_flow_his
+		(
+			total_flow,
+			total_flow_now,
+			month,
+			year,
+			day,
+			iccid,
+			create_time,
+			total_show_flow,
+			total_show_flow_now
+		)value
+		(
+			#{total_flow},
+			#{total_flow_now},
+			#{month},
+			#{year},
+			#{day},
+			#{iccid},
+			now(),
+			#{total_show_flow},
+			#{total_show_flow_now}
+		)
+	</insert>
+
+
+	<update id="edit" parameterType="java.util.HashMap"  >
+		update
+			yz_card_flow_his
+		<set>
+			total_flow = #{total_flow},
+			total_flow_now = #{total_flow_now},
+			update_time = now(),
+			total_show_flow = #{total_show_flow},
+			total_show_flow_now = #{total_show_flow_now}
+		</set>
+		<where>
+			iccid = #{iccid}
+			AND `year` = #{year}
+			AND `month` = #{month}
+			AND `day` = #{day}
+		</where>
+	</update>
+
+	<select id="isExist" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		SELECT
+			COUNT(iccid)
+		FROM
+			yz_card_flow_his
+		<where>
+			iccid = #{iccid}
+			AND `year` = #{year}
+			AND `month` = #{month}
+			AND `day` = #{day}
+		</where>
+	</select>
+
+
+
+
+
+</mapper>

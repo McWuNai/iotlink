@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.polling.PollingMapper">
+
+    <sql id="selwhere">
+        <where>
+            <if test="value!=null and value!='' ">
+                <if test="type==0">
+                    and polling_id LIKE CONCAT(#{value},'%')
+                </if>
+            </if>
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+            AND
+                <if test="timetype == 0">
+                     create_date
+                </if>
+                <if test="timetype == 1">
+                    upd_date
+                </if>
+                <if test="timetype == 2">
+                     syn_date
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+            <if test="channel_id != null and channel_id != '' ">
+                AND cd_id = #{channel_id}
+            </if>
+            <if test="polling_type != null and polling_type != '' ">
+                AND polling_type = #{polling_type}
+            </if>
+        </where>
+    </sql>
+
+    <select id="getList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select id,cd_id,
+        DATE_FORMAT(create_date,'%Y-%m-%d %H:%i:%S') as create_date,
+        DATE_FORMAT(upd_date,'%Y-%m-%d %H:%i:%S') as upd_date,
+        cd_count,cd_current,polling_id,
+        DATE_FORMAT(syn_date,'%Y-%m-%d %H:%i:%S') as syn_date,
+               polling_type
+        from yz_passageway_polling
+        <include refid="selwhere"/>
+        ORDER BY
+        <if test="ORDER_BY_type==null or ORDER_BY_type==1">
+            create_date
+        </if>
+        <if test="ORDER_BY_type==2">
+            polling_id
+        </if>
+        <if test="ORDER_BY_rule==null or ORDER_BY_rule==1">
+            ASC
+        </if>
+        <if test="ORDER_BY_rule==2">
+            DESC
+        </if>
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+    <select id="MapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        select
+            count(1)
+        from
+            yz_passageway_polling
+        <include refid="selwhere"/>
+    </select>
+
+
+    <delete id="del" parameterType="java.util.HashMap">
+        delete from  yz_passageway_polling
+        <where>
+            create_date  <![CDATA[ < ]]> #{delTime}
+        </where>
+    </delete>
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

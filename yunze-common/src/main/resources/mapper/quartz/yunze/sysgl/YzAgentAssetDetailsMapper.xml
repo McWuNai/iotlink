@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.sysgl.YzAgentAssetDetailsMapper">
+
+
+    <!-- 判断 代理下是否已生成 首页数据 -->
+    <select id="findExist" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+            id,
+            tobe_shipped,
+            expressnotreceived,
+            outstandingpayment,
+            have_Tailfunds,
+            CONVERT(batchM USING utf8mb4) AS 'batchM',
+            CONVERT(batchY USING utf8mb4) AS 'batchY',
+            CONVERT(commodityM USING utf8mb4) AS 'commodityM',
+            CONVERT(commodityY USING utf8mb4) AS 'commodityY',
+            CONVERT(contractM USING utf8mb4) AS 'contractM',
+            CONVERT(contractY USING utf8mb4) AS 'contractY',
+            CONVERT(signfor_expressdelivery USING utf8mb4) AS 'signfor_expressdelivery',
+            CONVERT(express_evaluation USING utf8mb4) AS 'express_evaluation',
+            CONVERT(shipment_status USING utf8mb4) AS 'shipment_status',
+            update_date,
+            DATE_FORMAT( record_date , '%Y-%m-%d' ) as 'record_date',
+            dept_id
+        from
+            yz_agent_asset_details
+        <where>
+            record_date  = #{record_date}
+            and dept_id = #{dept_id}
+        </where>
+        order by update_date desc
+        LIMIT 1
+    </select>
+
+
+
+
+    <!--新增资产明细数据-->
+    <insert id="addAssets" parameterType="java.util.HashMap">
+        INSERT INTO yz_agent_asset_details
+            (
+                tobe_shipped,
+                expressnotreceived,
+                outstandingpayment,
+                have_Tailfunds,
+                batchM,
+                batchY,
+                commodityM,
+                commodityY,
+                contractM,
+                contractY,
+                signfor_expressdelivery,
+                express_evaluation,
+                shipment_status,
+                update_date,
+                record_date,
+                dept_id
+            ) VALUE (
+                #{tobe_shipped},
+                #{expressnotreceived},
+                #{outstandingpayment},
+                #{have_Tailfunds},
+                #{batchM},
+                #{batchY},
+                #{commodityM},
+                #{commodityY},
+                #{contractM},
+                #{contractY},
+                #{signfor_expressdelivery},
+                #{express_evaluation},
+                #{shipment_status},
+                now(),
+                #{record_date},
+                #{dept_id}
+            )
+    </insert>
+
+
+
+
+</mapper>

@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.xsgl.Contract.YzXsglContractMapper">
+
+
+
+    <sql id="selwhere">
+        <where>
+            <if test="value!=null and value!='' ">
+                <if test="type==1">
+                    and c_name LIKE CONCAT('%',#{value},'%')
+                </if>
+                <if test="type==2">
+                    and c_party_a_name LIKE CONCAT('%',#{value},'%')
+                </if>
+                <if test="type==3">
+                    and c_contract_amount LIKE CONCAT('%',#{value},'%')
+                </if>
+                <if test="type==4">
+                    and remarks LIKE CONCAT('%',#{value},'%')
+                </if>
+            </if>
+            <if test="c_userIdArr != null  and c_userIdArr != '' and c_userIdArr.size>0">
+                and  c_userId in
+                <foreach item="c_userIdArr" collection="c_userIdArr" index="c_userIdArr" open="(" separator="," close=")">
+                    #{c_userIdArr}
+                </foreach>
+            </if>
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+                and
+                <if test="timetype == 0">
+                    c_time
+                </if>
+                <if test="timetype == 1">
+                     create_time
+                </if>
+                <if test="timetype == 2">
+                   modified_time
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+            <if test="state == null or state == ''">
+                and state = 1
+            </if>
+            <if test="state != null and state != ''">
+                and state = #{state}
+            </if>
+            <if test="c_fatId != null and c_fatId != ''">
+                and c_fatId = #{c_fatId}
+            </if>
+
+
+        </where>
+    </sql>
+
+    <!-- 查询今日注册数量 -->
+    <select id="sel_data_count" resultType="java.lang.Integer">
+        SELECT MAX(substring(code, 12,4)) from yz_xsgl_contract where substring(code, 4,8)=NOW()
+    </select>
+
+
+    <select id="selMap" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+            id,
+            code,
+            c_name,
+            c_party_a_name,
+            c_userName,
+            c_the_actual_amount,
+            c_contract_amount,
+            c_discountl_price,
+            DATE_FORMAT( modified_time, "%Y-%m-%d %H:%i:%S"  ) AS modified_time,
+            DATE_FORMAT( create_time, "%Y-%m-%d %H:%i:%S"  ) AS create_time,
+            DATE_FORMAT( c_time, "%Y-%m-%d"  ) AS c_time
+        from
+            yz_xsgl_contract
+        <include refid="selwhere"/>
+        ORDER BY create_time DESC
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+    <select id="selMapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        select
+            count(1)
+        from
+            yz_xsgl_contract
+        <include refid="selwhere"/>
+    </select>
+
+
+
+
+
+
+
+    <insert id="save" parameterType="java.util.HashMap"  keyProperty="id" useGeneratedKeys="true" >
+            insert into
+                 yz_xsgl_contract
+            (
+                code,
+                c_id,
+                c_name,
+                c_fatId,
+                c_fatName,
+                c_userId,
+                c_userName,
+                c_brId,
+                c_state,
+                c_total_original_price,
+                c_transportation_costs,
+                c_total_unit_price,
+                c_contract_amount,
+                c_other_amount,
+                c_the_actual_amount,
+                c_discount,
+                c_party_a_name,
+                c_party_a_phone,
+                c_party_a_address,
+                c_party_b_id,
+                c_party_b_name,
+                c_party_b_phone,
+                c_party_b_address,
+                modified_time,
+                create_time,
+                receive_payment,
+                remarks,
+                profit_sharing,
+                state,
+                c_time,
+                c_discountl_price,
+                c_total_tariff
+            )
+            value
+            (
+                #{code},
+                #{c_id},
+                #{c_name},
+                #{c_fatId},
+                #{c_fatName},
+                #{c_userId},
+                #{c_userName},
+                #{c_brId},
+                1,
+                #{c_total_original_price},
+                #{c_transportation_costs},
+                #{c_total_unit_price},
+                #{c_contract_amount},
+                0,
+                #{c_the_actual_amount},
+                #{c_discount},
+                #{c_party_a_name},
+                #{c_party_a_phone},
+                #{c_party_a_address},
+                #{c_party_b_id},
+                #{c_party_b_name},
+                #{c_party_b_phone},
+                #{c_party_b_address},
+                now(),
+                now(),
+                0,
+                #{remarks},
+                #{profit_sharing},
+                1,#{c_time},
+                #{c_discountl_price},
+                #{c_total_tariff}
+            )
+    </insert>
+
+
+    <update id="delId" parameterType="java.util.HashMap"  >
+        update  yz_xsgl_contract
+        <set>
+            state = 0
+        </set>
+        <where>
+            id = #{id}
+        </where>
+    </update>
+
+    <!--修改-->
+    <update id="upd" parameterType="java.util.HashMap" >
+        update  yz_xsgl_contract
+        <set>
+            c_id = #{c_id},
+            c_name = #{c_name},
+            c_fatId = #{c_fatId},
+            c_fatName = #{c_fatName},
+            c_userId = #{c_userId},
+            c_userName = #{c_userName},
+            c_brId = #{c_brId},
+            c_state = #{c_state},
+            c_total_original_price = #{c_total_original_price},
+            c_transportation_costs = #{c_transportation_costs},
+            c_total_unit_price = #{c_total_unit_price},
+            c_contract_amount = #{c_contract_amount},
+            c_other_amount = #{c_other_amount},
+            c_the_actual_amount = #{c_the_actual_amount},
+            c_discount = #{c_discount},
+            c_party_a_name = #{c_party_a_name},
+            c_party_a_phone = #{c_party_a_phone},
+            c_party_a_address = #{c_party_a_address},
+            c_party_b_id = #{c_party_b_id},
+            c_party_b_name = #{c_party_b_name},
+            c_party_b_phone = #{c_party_b_phone},
+            c_party_b_address = #{c_party_b_address},
+            modified_time = now(),
+            receive_payment = #{receive_payment},
+            remarks = #{remarks},
+            profit_sharing = #{profit_sharing},
+            c_time = #{c_time},
+            c_total_tariff = #{c_total_tariff},
+            c_discountl_price = #{c_discountl_price}
+        </set>
+        <where>
+            id =#{id}
+        </where>
+    </update>
+
+
+    <select id="find" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+            id,
+            code,
+            c_id,
+            c_name,
+            c_fatId,
+            c_fatName,
+            c_userId,
+            c_userName,
+            c_brId,
+            c_state,
+            c_total_original_price,
+            c_transportation_costs,
+            c_total_unit_price,
+            c_contract_amount,
+            c_other_amount,
+            c_the_actual_amount,
+            c_discount,
+            c_party_a_name,
+            c_party_a_phone,
+            c_party_a_address,
+            c_party_b_id,
+            c_party_b_name,
+            c_party_b_phone,
+            c_party_b_address,
+            receive_payment,
+            remarks,
+            profit_sharing,
+            c_time,
+            c_discountl_price,
+            c_total_tariff
+        from
+            yz_xsgl_contract
+       <where>
+            id = #{id}
+       </where>
+    </select>
+
+    <!--合同金额折线图-->
+    <select id="getPolyline" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        <if test="FindType == 'day'">
+            DATE_FORMAT( c_time, "%m-%d"  ) as 'monthDay',
+        </if>
+        <if test="FindType == 'month'">
+            DATE_FORMAT( c_time, "%Y-%m"  ) as 'yearMonth',
+        </if>
+        <if test="FindType == 'cId'">
+            c_id,
+            (select c_name FROM yz_xsgl_customer where id = a.c_id) as 'c_name',
+        </if>
+            SUM(c_contract_amount) as 'sumAmount'
+        FROM
+            yz_xsgl_contract a
+        <include refid="selwhere"/>
+        <if test="FindType == 'day'">
+            GROUP BY monthDay
+            ORDER BY c_time asc
+        </if>
+        <if test="FindType == 'month'">
+            GROUP BY yearMonth
+            ORDER BY c_time asc
+        </if>
+        <if test="FindType == 'cId'">
+            GROUP BY c_id
+            ORDER BY sumAmount desc
+        </if>
+    </select>
+
+    <select id="getContractPaymentAmountOfThisMonth" resultType="java.util.Map">
+        SELECT
+            sum( Dids_Amount ) AS 'sumAmount'
+        FROM
+            cwgl_deposit_info_details
+        WHERE
+            Dids_Time BETWEEN #{startTime}
+                AND #{endTime}
+    </select>
+
+
+
+</mapper>

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.automationCC.YzAutomationCcMapper">
+
+
+
+	<!-- 查询 触发任务  -->
+	<select id="findConcise" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+		SELECT
+			id,
+			trigger_type,
+			channel_id,
+			operation_type,
+			triggering_conditions,
+			conditions_type,
+			execution_type,
+			status,
+			execution_template,
+			dep_id
+		FROM
+			yz_automation_cc
+		<where>
+			trigger_type = #{trigger_type}
+			<if test="channel_id!=null and channel_id!=''">
+				AND	channel_id = #{channel_id}
+			</if>
+			<if test="operation_type!=null and operation_type!=''">
+				AND	operation_type = #{operation_type}
+			</if>
+			<if test="conditions_type!=null and conditions_type!=''">
+				AND	conditions_type = #{conditions_type}
+			</if>
+			<if test="execution_type!=null and execution_type!=''">
+				AND	execution_type = #{execution_type}
+			</if>
+			<if test="dep_id != null  and dep_id != '' and dep_id.size>0">
+				and  dep_id in
+				<foreach item="dep_id" collection="dep_id" index="dep_id" open="(" separator="," close=")">
+					#{dep_id}
+				</foreach>
+			</if>
+			AND status = '1'
+		</where>
+	</select>
+
+
+
+</mapper>

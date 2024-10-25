@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.YzUserMapper">
+
+
+
+
+
+	<sql id="selectUserVo">
+        select u.user_id, u.dept_id, u.user_name, u.nick_name, u.email, u.avatar, u.phonenumber, u.password, u.sex, u.status, u.del_flag, u.login_ip, u.login_date, u.create_by, u.create_time, u.remark,
+        d.dept_id, d.parent_id, d.dept_name, d.order_num, d.leader, d.status as dept_status,
+        r.role_id, r.role_name, r.role_key, r.role_sort, r.data_scope, r.status as role_status
+        from sys_user u
+		    left join sys_dept d on u.dept_id = d.dept_id
+		    left join sys_user_role ur on u.user_id = ur.user_id
+		    left join sys_role r on r.role_id = ur.role_id
+    </sql>
+
+
+	<sql id="selwhere" >
+		<where>
+			u.del_flag = '0'
+			<if test="value!=null and value!=''">
+				<if test="type==0 ">
+					and d.dept_name like CONCAT( '%',#{value}, '%')
+				</if>
+				<if test="type==1 ">
+					and u.nick_name like CONCAT( '%',#{value}, '%')
+				</if>
+				<if test="type==2 ">
+					and u.user_name like CONCAT( '%',#{value}, '%')
+				</if>
+				<if test="type==3 ">
+					and u.phonenumber like CONCAT( '%',#{value}, '%')
+				</if>
+				<if test="type==4 ">
+					and d.dname like CONCAT( '%',#{value}, '%')
+				</if>
+				<if test="type==5 ">
+					and d.dept_id =#{value}
+				</if>
+			</if>
+			<if test="status != null and status != ''">
+				AND u.status = #{status}
+			</if>
+			<if test="staTime != '' and endTime != '' and staTime!=null and endTime!=null">
+				AND u.create_time BETWEEN #{staTime} AND #{endTime}
+			</if>
+			AND (u.dept_id = #{deptId} OR u.dept_id IN ( SELECT t.dept_id FROM sys_dept t WHERE find_in_set(#{deptId}, ancestors) ))
+			<!-- 数据范围过滤 -->
+			${dataScope}
+		</where>
+	</sql>
+
+	<select id="selMap" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select u.user_id, u.dept_id, u.nick_name, u.user_name, u.email, u.avatar, u.phonenumber, u.password, u.sex, u.status, u.del_flag, u.login_ip, u.login_date, u.create_by, u.create_time, u.remark, d.dept_name, d.leader from sys_user u
+			left join sys_dept d on u.dept_id = d.dept_id
+		<include refid="selwhere"/>
+		LIMIT #{StarRow},#{PageSize}
+	</select>
+
+	<select id="selMapCount" parameterType="java.util.HashMap"  resultType="java.lang.Integer">
+		SELECT
+			COUNT(*)
+		from sys_user u
+			left join sys_dept d on u.dept_id = d.dept_id
+		<include refid="selwhere"/>
+	</select>
+
+
+	<!--获取用户 权限过滤-->
+	<select id="getUserID" parameterType="java.util.HashMap"  resultType="java.lang.String">
+		SELECT
+			u.user_id
+		FROM
+			 sys_dept d
+			LEFT JOIN sys_user u  ON u.dept_id = d.dept_id
+			LEFT JOIN sys_user_role ur ON u.user_id = ur.user_id
+			LEFT JOIN sys_role r ON r.role_id = ur.role_id
+		<where>
+			1=1
+			<if test="agent_id != null  and agent_id != '' and agent_id.size>0">
+				and  d.dept_id in
+				<foreach item="agent_id" collection="agent_id" index="agent_id" open="(" separator="," close=")">
+					#{agent_id}
+				</foreach>
+			</if>
+		</where>
+		<!-- 数据范围过滤 -->
+		${dataScope}
+		group by user_id
+	</select>
+
+
+	<!--获取用户 权限过滤-->
+	<select id="getDeptID" parameterType="java.util.HashMap"  resultType="java.lang.String">
+		SELECT
+			u.dept_id
+		FROM
+			sys_dept d
+		LEFT JOIN sys_user u  ON u.dept_id = d.dept_id
+		LEFT JOIN sys_user_role ur ON u.user_id = ur.user_id
+		LEFT JOIN sys_role r ON r.role_id = ur.role_id
+		<where>
+			1=1
+			<if test="agent_id != null  and agent_id != '' and agent_id.size>0">
+				and  d.dept_id in
+				<foreach item="agent_id" collection="agent_id" index="agent_id" open="(" separator="," close=")">
+					#{agent_id}
+				</foreach>
+			</if>
+		</where>
+		<!-- 数据范围过滤 -->
+		${dataScope}
+		group by dept_id
+	</select>
+
+
+
+
+	<select id="selectDeptListCount" parameterType="java.util.HashMap"  resultType="java.lang.Integer">
+		select
+			count(d.dept_id)
+		from sys_dept d
+		where d.del_flag = '0'
+		<if test="parentId != null and parentId != 0">
+			AND parent_id = #{parentId}
+		</if>
+		<if test="deptName != null and deptName != ''">
+			AND dept_name like CONCAT( '%',#{deptName}, '%')
+		</if>
+		<if test="status != null and status != ''">
+			AND status = #{status}
+		</if>
+		<if test="agent_id != null  and agent_id != '' and agent_id.size>0">
+			and  d.dept_id in
+			<foreach item="agent_id" collection="agent_id" index="agent_id" open="(" separator="," close=")">
+				#{agent_id}
+			</foreach>
+		</if>
+		<!-- 数据范围过滤 -->
+		${dataScope}
+		order by d.parent_id, d.order_num
+	</select>
+
+
+	<!--获取当月系统登录IP总数-->
+	<select id="selectLoginCount" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select
+			ipaddr,count(1) as 'count'
+		FROM
+			sys_logininfor
+		WHERE
+			 login_time =now()
+		GROUP BY
+			ipaddr
+	</select>
+
+
+	<!--授信修改-->
+	<update id="updCredit" parameterType="java.util.HashMap" >
+		update sys_dept
+		<set>
+			line_of_credit = #{line_of_credit},
+			used_line_of_credit = #{used_line_of_credit},
+			be_usable_line_of_credit = #{be_usable_line_of_credit},
+			update_time = sysdate()
+		</set>
+		<where>
+			dept_id = #{dept_id}
+		</where>
+	</update>
+
+
+	<!--预存修改-->
+	<update id="setDepositAmount" parameterType="java.util.HashMap" >
+		update sys_dept
+		<set>
+			deposit_amount =  #{deposit_amount},
+			update_time = sysdate()
+		</set>
+		<where>
+			dept_id = #{dept_id}
+		</where>
+	</update>
+
+
+	<!--预存修改-->
+	<update id="updDepositAmount" parameterType="java.util.HashMap" >
+		update sys_dept
+		<set>
+			<if test="operateType=='add'">
+				deposit_amount =  IF(ISNULL(deposit_amount)=0,deposit_amount,0)  + #{deposit_amount},
+			</if>
+			<if test="operateType=='sub'">
+				deposit_amount =  IF(ISNULL(deposit_amount)=0,deposit_amount,0)  - #{deposit_amount},
+			</if>
+			update_time = sysdate()
+		</set>
+		<where>
+			dept_id = #{dept_id}
+		</where>
+	</update>
+
+	<!--利润修改-->
+	<update id="updProfitAmount" parameterType="java.util.HashMap" >
+		update sys_dept
+		<set>
+			profit_amount = #{profit_amount},
+			update_time = sysdate()
+		</set>
+		<where>
+			dept_id = #{dept_id}
+		</where>
+	</update>
+
+	<!--查询企业下 金额数据-->
+	<select id="findDeptAmount" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select
+			dept_id,
+			dept_name,
+			deposit_amount,
+			line_of_credit,
+			profit_amount,
+			used_line_of_credit,
+			be_usable_line_of_credit
+		FROM
+			sys_dept
+		<where>
+			dept_id = #{dept_id}
+		</where>
+	</select>
+
+
+
+	<!--查询 预存金额 >= 已用授信额度 发送预存抵扣 生成 -->
+	<select id="findPreDepositDeduction" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			dept_id,
+			deposit_amount,
+			used_line_of_credit
+		FROM
+			sys_dept
+		<where>
+			deposit_amount  <![CDATA[ >= ]]> now()  used_line_of_credit
+		</where>
+	</select>
+
+
+	<!--通过手机号码查询用户账号-->
+	<select id="findUser_name" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select
+			user_name
+		FROM
+			sys_user
+		<where>
+			phonenumber = #{phonenumber}
+		</where>
+	</select>
+
+	<!--通过手机号查询账户密码-->
+	<select id="user_Massage" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			user_name,
+			password
+		FROM
+			sys_user
+		<where>
+			phonenumber = #{phonenumber}
+		</where>
+	</select>
+
+
+
+</mapper>

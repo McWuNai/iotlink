@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.card.YzCardApiOfferinginfoMapper">
+
+
+    <sql id="selwhere">
+        <where>
+            <if test="value!=null and value!='' ">
+                <if test="type==0">
+                    and offeringId LIKE CONCAT('%',#{value},'%')
+                </if>
+                <if test="type==1">
+                    and offeringName LIKE CONCAT('%',#{value},'%')
+                </if>
+                <if test="type==2">
+                    and apnName LIKE CONCAT('%',#{value},'%')
+                </if>
+            </if>
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+            AND
+                <if test="timetype == 0">
+                     create_date
+                </if>
+                <if test="timetype == 1">
+                     upd_date
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+            <if test="cd_code != null and cd_code != ''">
+                cd_code =#{cd_code}
+            </if>
+            <if test="typePackage != null and typePackage != ''">
+                type =#{typePackage}
+            </if>
+        </where>
+    </sql>
+
+    <select id="getList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+            id,
+            cd_code,
+            offeringId,
+            offeringName,
+            apnName,
+            DATE_FORMAT(create_date,'%Y-%m-%d') as create_date,
+            DATE_FORMAT(upd_date,'%Y-%m-%d') as upd_date,
+            type
+        from yz_card_api_offeringinfo
+        <include refid="selwhere"/>
+        ORDER BY
+        <if test="ORDER_BY_type==null or ORDER_BY_type==1">
+            create_date
+        </if>
+        <if test="ORDER_BY_type==2">
+            offeringId
+        </if>
+        <if test="ORDER_BY_rule==null or ORDER_BY_rule==1">
+            ASC
+        </if>
+        <if test="ORDER_BY_rule==2">
+            DESC
+        </if>
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+    <select id="MapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        select
+            count(1)
+        from
+        yz_card_api_offeringinfo
+        <include refid="selwhere"/>
+    </select>
+
+    <insert id="save" parameterType="java.util.HashMap" >
+        insert into
+            yz_card_api_offeringinfo
+        (
+            cd_code,
+            offeringId,
+            offeringName,
+            apnName,
+            create_date,
+            upd_date
+        )values
+        <foreach item="card_arrs" collection="card_arrs" index="index"  separator="," >
+            (
+                #{card_arrs.cd_code},
+                #{card_arrs.offeringId},
+                #{card_arrs.offeringName},
+                #{card_arrs.apnName},
+                now(),now()
+            )
+        </foreach>
+    </insert>
+
+    <update id="upd" parameterType="java.util.HashMap" >
+        update
+            yz_card_api_offeringinfo
+        <set>
+            <if test="offeringName!=null">
+                offeringName = #{offeringName},
+            </if>
+            <if test="apnName!=null">
+                apnName = #{apnName},
+            </if>
+            <if test="expiriedDate!=null">
+                expiriedDate = #{expiriedDate},
+            </if>
+
+            upd_date = now()
+        </set>
+        <where>
+            cd_code = #{cd_code}
+            and offeringId =#{offeringId}
+        </where>
+    </update>
+
+
+
+    <select id="is_ex" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+            id,
+            cd_code,
+            offeringId
+        from
+            yz_card_api_offeringinfo
+        <where>
+                cd_code = #{cd_code}
+                and offeringId = #{offeringId}
+        </where>
+    </select>
+
+    <delete id="deleteInfo" parameterType="java.util.HashMap">
+       DELETE FROM  yz_card_api_offeringinfo <where>id =#{id}</where>
+    </delete>
+
+    <update id="updateInfo" parameterType="java.util.HashMap">
+        UPDATE
+            yz_card_api_offeringinfo
+        <set>
+            type =#{type}
+        </set>
+        <where>
+            id =#{id}
+        </where>
+    </update>
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

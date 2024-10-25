@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.commodity.YzWxByProductAgentMapper">
+
+
+	<!-- 查询商品对应代理商  -->
+	<select id="findConcise" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+		SELECT
+			a.dept_id,
+			b.dept_name
+		FROM
+			yz_wx_by_product_agent a,
+			sys_dept b
+		<where>
+			a.dept_id = b.dept_id
+			AND del_flag = '0'
+			AND status = '0'
+		</where>
+		ORDER BY b.order_num
+	</select>
+
+
+	<!--查询运费配置-->
+	<select id="findByCardFare"  resultType="java.lang.String">
+		SELECT
+			config_value
+		FROM
+			sys_config
+		<where>
+			config_key = 'yunze.web.byCardFare'
+		</where>
+	</select>
+
+
+	<!--查询系统配置-->
+	<select id="findConfig"  resultType="java.lang.String" parameterType="java.util.HashMap"  >
+		SELECT
+			config_value
+		FROM
+			sys_config
+		<where>
+			config_key = #{config_key}
+		</where>
+	</select>
+
+
+	<!--查询 商品代理-->
+	<select id="getDepIDArr"  resultType="java.lang.String" parameterType="java.util.HashMap"  >
+		SELECT
+			dept_id
+		FROM
+			yz_wx_by_product_agent
+	</select>
+
+
+
+	<insert id="save" parameterType="java.util.HashMap"  >
+			INSERT INTO yz_wx_by_product_agent (
+			dept_id
+			)values
+			<foreach item="IdArr" collection="IdArr" index="index"  separator="," >
+			(
+				#{IdArr}
+			)
+			</foreach>
+	</insert>
+
+	<delete id="delPAgent">
+		delete from yz_wx_by_product_agent
+	</delete>
+
+	<!--查询 redis 缓存-->
+	<select id="SendCount" resultType="java.lang.Integer" parameterType="java.util.HashMap" >
+		SELECT
+			config_value
+		FROM
+			sys_config
+		<where>
+			config_key = #{config_key}
+		</where>
+	</select>
+
+</mapper> 

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.cn.mapper.commodity.YzWxByProductCategoryMapper">
+
+
+    <!--获取商品分类 分类 1 级 状态可看 -->
+    <select id="findConcise" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            category_id,
+			category_name as 'text',
+			category_code as 'value'
+        FROM
+        	yz_wx_by_product_category
+        <where>
+            category_status = '1'
+            and category_level = '1'
+        </where>
+    </select>
+
+
+</mapper>

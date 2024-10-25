@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.fhgl.FhglExpressDeliveryMapper">
+
+    <sql id="selwhere">
+        <where>
+            A.EDY_ID = B.EDSF_EDYID
+            <if test="value!=null and value!=''">
+                <if test="type==1">
+                    AND B.EDSF_Tel LIKE CONCAT('%',#{value},'%')
+                </if>
+                <if test="type==2">
+                    AND A.EDY_Name LIKE CONCAT('%',#{value},'%')
+                </if>
+                <if test="type==3">
+                    AND B.EDSF_Name LIKE CONCAT('%',#{value},'%')
+                </if>
+            </if>
+        </where>
+    </sql>
+
+    <!-- 查询快递公司数据列表 -->
+    <select id="selMap" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            A.EDY_ID,
+            A.EDY_Name,
+            A.EDY_Tel,
+            B.EDSF_Name,
+            B.EDSF_Tel
+        FROM
+            FHGL_Express_Delivery A,
+            FHGL_Express_Delivery_Staff B
+        <include refid="selwhere"/>
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+
+    <!-- 查询快递公司数据总数 -->
+    <select id="selMapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        SELECT
+            COUNT(1)
+        FROM
+            FHGL_Express_Delivery A,
+            FHGL_Express_Delivery_Staff B
+        <include refid="selwhere"/>
+    </select>
+
+
+    <!-- 查询今日注册数量 -->
+    <select id="sel_data_count" resultType="java.lang.Integer">
+		SELECT MAX(substring(EDY_ID, 13,4)) from FHGL_Express_Delivery where substring(EDY_ID, 5,8)=NOW()
+	</select>
+
+
+    <!-- 查询快递公司详情数据 -->
+    <select id="find_data" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            EDY_Name,
+            EDY_Address,
+            EDY_Tel,
+            EDY_Website,
+            EDY_Remarks,
+            EDY_ID
+        FROM
+            FHGL_Express_Delivery
+        <where>
+            EDY_ID = #{EDY_ID}
+        </where>
+    </select>
+
+
+
+    <!-- 修改快递公司数据 -->
+    <update id="upd_EDY" parameterType="java.util.HashMap">
+        UPDATE
+        FHGL_Express_Delivery
+        <set>
+            <if test="EDY_Name!=null">
+                EDY_Name=#{EDY_Name},
+            </if>
+            <if test="EDY_Address!=null">
+                EDY_Address=#{EDY_Address},
+            </if>
+            <if test="EDY_Tel!=null">
+                EDY_Tel=#{EDY_Tel},
+            </if>
+            <if test="EDY_Website!=null">
+                EDY_Website=#{EDY_Website},
+            </if>
+            <if test="EDY_Remarks!=null">
+                EDY_Remarks=#{EDY_Remarks}
+            </if>
+        </set>
+        <where>
+            EDY_ID = #{EDY_ID}
+        </where>
+    </update>
+
+    <!-- 添加快递公司数据 -->
+    <insert id="add_EDY" parameterType="java.util.HashMap">
+		INSERT INTO FHGL_Express_Delivery(
+			EDY_ID,
+			EDY_Name,
+			EDY_Address,
+			EDY_Tel,
+			EDY_Website,
+			EDY_Remarks
+		)VALUES(
+			#{EDY_ID},
+			#{EDY_Name},
+			#{EDY_Address},
+			#{EDY_Tel},
+			#{EDY_Website},
+			#{EDY_Remarks}
+		)
+	</insert>
+
+    <!-- 删除快递公司信息 -->
+    <delete id="del_EDY" parameterType="java.util.HashMap">
+        DELETE FROM FHGL_Express_Delivery <where>EDY_ID = #{EDY_ID}</where>
+    </delete>
+
+    <!-- 查询快递公司ID及名称 -->
+    <select id="sel_date"  resultType="java.util.HashMap">
+		SELECT EDY_ID,EDY_Name  FROM FHGL_Express_Delivery
+	</select>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

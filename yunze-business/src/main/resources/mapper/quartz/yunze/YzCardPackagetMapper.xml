@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.cn.mapper.YzCardPackageMapper">
+
+
+    <sql id="selwhere" >
+        <where>
+            <if test="value!=null and value!=''">
+                <if test="type==1 ">
+                    and a.package_agentname LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type==2 ">
+                    and a.package_name LIKE CONCAT(#{value},'%')
+                </if>
+            </if>
+            <if test="package_idArr != null  and package_idArr != '' and package_idArr.size>0">
+                and  a.package_id in
+                <foreach item="package_idArr" collection="package_idArr" index="package_idArr" open="(" separator="," close=")">
+                    #{package_idArr}
+                </foreach>
+            </if>
+            <if test="agent_id != null  and agent_id != '' and agent_id.size>0">
+                and  a.dept_id in
+                <foreach item="agent_id" collection="agent_id" index="agent_id" open="(" separator="," close=")">
+                    #{agent_id}
+                </foreach>
+            </if>
+            <if test="id!=null  and id != '' ">
+                and  a.id = #{id}
+            </if>
+        </where>
+        ${dataScope}
+    </sql>
+
+
+    <select id="selMap"  parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            a.id,
+            a.package_id,
+            a.package_agentname,
+            a.package_name,
+            DATE_FORMAT( a.create_time, "%Y-%m-%d  %H:%i:%S" ) AS create_time,
+            a.error_so,
+            d.dept_name,
+            u.nick_name
+        FROM
+            yz_card_package a
+            LEFT JOIN sys_dept d ON a.dept_id = d.dept_id
+            LEFT JOIN sys_user_role ur ON a.user_id = ur.user_id
+            LEFT JOIN sys_role r ON r.role_id = ur.role_id
+            LEFT JOIN sys_user u ON a.user_id = u.user_id
+        <include refid="selwhere"/>
+        GROUP BY a.id
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+
+    <select id="selMapCount" parameterType="java.util.HashMap"  resultType="java.lang.String">
+        SELECT
+            a.id
+        FROM
+            yz_card_package a
+            LEFT JOIN sys_dept d ON a.dept_id = d.dept_id
+            LEFT JOIN sys_user_role ur ON a.user_id = ur.user_id
+            LEFT JOIN sys_role r ON r.role_id = ur.role_id
+            LEFT JOIN sys_user u ON a.user_id = u.user_id
+        <include refid="selwhere"/>
+        GROUP BY a.id
+    </select>
+
+
+    <insert id="add" parameterType="java.util.HashMap">
+        INSERT  INTO
+            yz_card_package
+        (
+            package_id,
+            package_agentname,
+            package_name,
+            create_time,
+            error_so,
+            dept_id,
+            user_id
+        )value (
+             #{package_id},
+             #{package_agentname},
+             #{package_name},
+             now(),
+            <if test="error_so != null  and error_so != ''">
+                #{error_so},
+            </if>
+            <if test="error_so == null ">
+                1.0,
+            </if>
+            100,
+            1
+        )
+    </insert>
+
+    <!--查询 package_id 是否存在-->
+    <select id="isExist" parameterType="java.util.HashMap"  resultType="java.lang.Integer">
+         SELECT
+            COUNT(*)
+        FROM
+            yz_card_package
+        <where>
+            package_id = #{package_id}
+        </where>
+    </select>
+
+    <!--查询 package_id 是否存在-->
+    <select id="find" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+        SELECT
+            a.id,
+            a.package_id,
+            a.package_agentname,
+            a.package_name
+        FROM
+            yz_card_package a
+        LEFT JOIN sys_dept d ON a.dept_id = d.dept_id
+        LEFT JOIN sys_user_role ur ON a.user_id = ur.user_id
+        LEFT JOIN sys_role r ON r.role_id = ur.role_id
+        LEFT JOIN sys_user u ON a.user_id = u.user_id
+        <include refid="selwhere"/>
+    </select>
+
+    <!--修改 资费组信息-->
+    <update id="update" parameterType="java.util.HashMap">
+        UPDATE
+            yz_card_package
+        <set>
+            package_agentname = #{package_agentname},
+            package_name = #{package_name}
+        </set>
+        <where>
+            id = #{id}
+        </where>
+    </update>
+
+
+
+</mapper>

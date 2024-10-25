@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.fhgl.Ship.FhglShippingApplicationMapper">
+
+    <!-- 新增 发货申请 -->
+    <insert id="add_SAN" parameterType="java.util.Map">
+        INSERT INTO FHGL_Shipping_Application
+        (
+        SAN_ID,
+        SAN_StyID,
+        SAN_CoID,
+        SAN_CoName,
+        SAN_Recipient_Name,
+        SAN_Recipient_Tel,
+        SAN_Recipient_Address,
+        SAN_Time,
+        SAN_UserID,
+        SAN_Sender_Name,
+        SAN_ShiptyID,
+        <if test="SAN_FpayType!=null">
+            SAN_FpayType,
+        </if>
+        <if test="SAN_Express_Delivery!=null">
+            SAN_Express_Delivery,
+        </if>
+        <if test="SAN_Delivery_Person!=null">
+            SAN_Delivery_Person,
+        </if>
+        <if test="SAN_Remarks!=null">
+            SAN_Remarks,
+        </if>
+        <if test="SAN_Tracking_Number!=null">
+            SAN_Tracking_Number,
+        </if>
+        <if test="SAN_Tracking_Number!=null">
+            SAN_Tracking_Number,
+        </if>
+        SAN_Delivery_Status,
+        SAN_Shipping_Method,
+        SAN_upd_Time,
+        IsManual,
+        create_UserId,
+        Outbound_status
+        )VALUES
+        (
+        #{SAN_ID},
+        #{SAN_StyID},
+        #{SAN_CoID},
+        #{SAN_CoName},
+        #{SAN_Recipient_Name},
+        #{SAN_Recipient_Tel},
+        #{SAN_Recipient_Address},
+        #{SAN_Time},
+        #{SAN_UserID},
+        #{SAN_Sender_Name},
+        #{SAN_ShiptyID},
+        <if test="SAN_FpayType!=null">
+            #{SAN_FpayType},
+        </if>
+        <if test="SAN_Express_Delivery!=null">
+            #{SAN_Express_Delivery},
+        </if>
+        <if test="SAN_Delivery_Person!=null">
+            #{SAN_Delivery_Person},
+        </if>
+        <if test="SAN_Remarks!=null">
+            #{SAN_Remarks},
+        </if>
+        <if test="SAN_Tracking_Number!=null">
+            #{SAN_Tracking_Number},
+        </if>
+        <if test="SAN_Delivery_Status==null">
+            1,
+        </if>
+        <if test="SAN_Delivery_Status!=null">
+            #{SAN_Delivery_Status},
+        </if>
+        <![CDATA[ #{SAN_Shipping_Method} ]]>,
+        now(),#{IsManual},#{create_UserId}
+        ,#{Outbound_status}
+        )
+    </insert>
+
+
+
+    <sql id="selwhere">
+        <where>
+            <if test="value!=null and value!='' ">
+                <if test="type==1">
+                    AND SAN_CoName  LIKE CONCAT('%',#{value},'%')
+                </if>
+                <if test="type==2">
+                    AND SAN_Sender_Name  LIKE CONCAT('%',#{value},'%')
+                </if>
+            </if>
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+                and
+                <if test="timetype == 1">
+                    SAN_Time
+                </if>
+                <if test="timetype == 1">
+                   SAN_upd_Time
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+            <if test="SAN_Delivery_Status!=null  and SAN_Delivery_Status != '' and SAN_Delivery_Status.size>0">
+                AND SAN_Delivery_Status IN
+                <foreach item="SAN_Delivery_Status" collection="SAN_Delivery_Status"  open="("  separator=","  close=")" >
+                    #{SAN_Delivery_Status}
+                </foreach>
+            </if>
+            <if test="create_UserIdArr!=null  and create_UserIdArr != '' and create_UserIdArr.size>0">
+                AND create_UserId IN
+                <foreach item="create_UserIdArr" collection="create_UserIdArr"  open="("  separator=","  close=")" >
+                    #{create_UserIdArr}
+                </foreach>
+            </if>
+            <if test="SAN_CoID != null  and SAN_CoID != '' and SAN_CoID!=null and SAN_CoID!=null">
+                and SAN_CoID =#{SAN_CoID}
+            </if>
+        </where>
+    </sql>
+
+
+    <!-- 查询今日注册数量 -->
+    <select id="sel_data_count" resultType="java.lang.Integer">
+		SELECT MAX(substring(SAN_ID, 13,4)) from FHGL_Shipping_Application where substring(SAN_ID, 5,8)=NOW()
+	</select>
+
+    <!-- 查询发货申请 信息 -->
+    <select id="selMap" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            SAN_ID,
+            DATE_FORMAT(SAN_Time,'%Y-%m-%d') AS SAN_Time,
+            SAN_CoName,
+            SAN_Sender_Name,
+            SAN_StyID,
+            SAN_ShiptyID,
+            SAN_Delivery_Status
+        FROM
+            FHGL_Shipping_Application
+        <include refid="selwhere"/>
+        ORDER BY SAN_Time DESC,SAN_ID DESC,SAN_upd_Time DESC
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+    <!-- 查询发货申请 信息 总数-->
+    <select id="selMapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        SELECT
+            COUNT(1)
+        FROM
+            FHGL_Shipping_Application
+        <include refid="selwhere"/>
+    </select>
+
+    <!-- 查询 发货申请 -->
+    <select id="find_data" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            SAN_ID,
+            SAN_StyID,
+            SAN_CoID,
+            SAN_CoName,
+            SAN_Recipient_Name,
+            SAN_Recipient_Tel,
+            SAN_Recipient_Address,
+            DATE_FORMAT(SAN_Time,'%Y-%m-%d') AS SAN_Time,
+            SAN_UserID,
+            SAN_Sender_Name,
+            SAN_ShiptyID,
+            SAN_FpayType,
+            SAN_Tracking_Number,
+            SAN_Express_Delivery,
+            SAN_Delivery_Status,
+            SAN_Delivery_Person,
+            SAN_Remarks,
+            SAN_Shipping_Method,
+            IsManual
+        FROM
+            FHGL_Shipping_Application
+        <where>
+            SAN_ID = #{SAN_ID}
+        </where>
+    </select>
+
+    <!-- 修改 发货申请 -->
+    <update id="upd_SAN" parameterType="java.util.HashMap">
+        UPDATE FHGL_Shipping_Application
+        <set>
+            <if test="SAN_StyID!=null">
+                SAN_StyID= #{SAN_StyID},
+            </if>
+            <if test="SAN_CoID!=null">
+                SAN_CoID= #{SAN_CoID},
+            </if>
+            <if test="SAN_CoName!=null">
+                SAN_CoName= #{SAN_CoName},
+            </if>
+            <if test="SAN_Recipient_Name!=null">
+                SAN_Recipient_Name= #{SAN_Recipient_Name},
+            </if>
+            <if test="SAN_Recipient_Tel!=null">
+                SAN_Recipient_Tel= #{SAN_Recipient_Tel},
+            </if>
+            <if test="SAN_Recipient_Address!=null">
+                SAN_Recipient_Address= #{SAN_Recipient_Address},
+            </if>
+            <if test="SAN_Time!=null">
+                SAN_Time= #{SAN_Time},
+            </if>
+            <if test="SAN_UserID!=null">
+                SAN_UserID= #{SAN_UserID},
+            </if>
+            <if test="SAN_Sender_Name!=null">
+                SAN_Sender_Name= #{SAN_Sender_Name},
+            </if>
+            <if test="SAN_ShiptyID!=null">
+                SAN_ShiptyID= #{SAN_ShiptyID},
+            </if>
+            <if test="SAN_FpayType!=null">
+                SAN_FpayType= #{SAN_FpayType},
+            </if>
+            <if test="SAN_Tracking_Number!=null">
+                SAN_Tracking_Number= #{SAN_Tracking_Number},
+            </if>
+            <if test="SAN_Express_Delivery!=null">
+                SAN_Express_Delivery= #{SAN_Express_Delivery},
+            </if>
+            <if test="SAN_Delivery_Status!=null">
+                SAN_Delivery_Status= #{SAN_Delivery_Status},
+            </if>
+            <if test="SAN_Delivery_Person!=null">
+                SAN_Delivery_Person= #{SAN_Delivery_Person},
+            </if>
+            <if test="SAN_Remarks!=null">
+                SAN_Remarks= #{SAN_Remarks},
+            </if>
+            <if test="SAN_Shipping_Method!=null">
+                SAN_Shipping_Method= #{SAN_Shipping_Method},
+            </if>
+            <if test="IsManual!=null">
+                IsManual= #{IsManual},
+            </if>
+            <if test="Outbound_status!=null">
+                Outbound_status= #{Outbound_status},
+            </if>
+            SAN_upd_Time = NOW()
+        </set>
+        <where>
+            SAN_ID = #{SAN_ID}
+        </where>
+
+    </update>
+
+    <!-- 删除发货申请 -->
+    <delete id="del_SAN" parameterType="java.util.HashMap">
+        DELETE FROM FHGL_Shipping_Application<where>SAN_ID = #{SAN_ID}</where>
+    </delete>
+
+
+    <!-- 删除一批发货申请 -->
+    <delete id="del_SANID" parameterType="java.util.HashMap">
+        DELETE FROM FHGL_Shipping_Application
+        <where>
+            SAN_ID IN
+            <foreach item="SANID_arr" collection="SANID_arr" open="("  close=")" separator="," >
+                #{SANID_arr}
+            </foreach>
+        </where>
+    </delete>
+
+    <!--查询单号-->
+    <select id="sleNumber" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            SAN_ID
+        FROM
+            fhgl_shipping_application
+        WHERE
+             SAN_Time BETWEEN #{sta_time} AND #{end_time}
+        AND Outbound_status = '1'
+        ORDER BY
+            SAN_Time ASC
+    </select>
+
+    <!--出库修改状态 已出库-->
+    <update id="normalUpdate" parameterType="java.util.HashMap">
+        update
+            fhgl_shipping_application
+        <set>
+            Outbound_status = '2'
+        </set>
+        <where>
+            SAN_ID =#{SAN_ID}
+        </where>
+    </update>
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

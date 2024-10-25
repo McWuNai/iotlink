@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.YzSysLogsMapper">
+    <select id="Listwhole" resultType="java.util.HashMap">
+        select id,res_url,DATE_FORMAT(create_time,'%Y-%m-%d %H:%i:%S') as create_time,class_method,ip,
+               CONVERT(request_args USING utf8mb4) AS request_args,
+               CONVERT(response_args USING utf8mb4) AS response_args,
+               user_name,project,action_name from yz_sys_logs
+    </select>
+   <delete id="deleteById" parameterType="java.util.HashMap">
+        delete from yz_sys_logs
+
+        <where>
+       <if test="idAll != null  and idAll != '' and idAll.size>0">
+       and  id in
+       <foreach item="idAll" collection="idAll" index="idAll" open="(" separator="," close=")">
+           #{idAll.id}
+       </foreach>
+       </if>
+
+        </where>
+   </delete>
+
+
+    <sql id="selwhere" >
+        <where>
+            <if test="value!=null and value!='' ">
+                <if test="type==1">
+                    and res_url  LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type==2">
+                    and class_method LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type==3">
+                    and ip LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type==4">
+                    and request_args LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type==5">
+                    and response_args LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type==6">
+                    and user_name LIKE CONCAT(#{value},'%')
+                </if>
+            </if>
+            <if test="taskType != null and taskType != '' ">
+                AND project  = #{taskType}
+            </if>
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+                AND
+                <if test="timetype == 0">
+                    create_time
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+        </where>
+    </sql>
+
+    <select id="selMapCount" parameterType="java.util.HashMap"  resultType="java.lang.Integer">
+        SELECT
+        COUNT(1)
+        FROM
+        yz_sys_logs
+        <include refid="selwhere"/>
+    </select>
+
+    <select id="selMap"  parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        id,res_url,
+        DATE_FORMAT(create_time,'%Y-%m-%d %H:%i:%S') as create_time,
+        class_method,ip,
+        user_name,project,action_name
+        FROM
+        yz_sys_logs
+        <include refid="selwhere"/>
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+    <select id="getById" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT id,
+               CONVERT(request_args USING utf8mb4) AS request_args,
+               CONVERT(response_args USING utf8mb4) AS response_args
+        FROM
+            yz_sys_logs
+        WHERE id = #{id}
+    </select>
+
+
+    <delete id="del" parameterType="java.util.HashMap">
+		delete from yz_sys_logs
+		where
+	 	DATE_FORMAT( create_time , '%Y-%m-%d' ) <![CDATA[ < ]]> #{delTime}
+	</delete>
+
+
+    <delete id="delJobLog" parameterType="java.util.HashMap">
+		delete from sys_job_log
+		where
+	 	DATE_FORMAT( create_time , '%Y-%m-%d' ) <![CDATA[ < ]]> #{delTime}
+	</delete>
+
+
+    <delete id="delOperLog" parameterType="java.util.HashMap">
+		delete from sys_oper_log
+		where
+	 	DATE_FORMAT( oper_time , '%Y-%m-%d' ) <![CDATA[ < ]]> #{delTime}
+	</delete>
+
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

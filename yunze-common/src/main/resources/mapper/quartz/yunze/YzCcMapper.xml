@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.YzCcMapper">
+
+    <sql id="selwhere">
+        <where>
+            <if test="value != null and value != '' ">
+                <if test="type == 1">
+                    and cc_name LIKE CONCAT(#{value},'%')
+                </if>
+            </if>
+            <if test="trigger_type != null and trigger_type != '' ">
+                and trigger_type =#{trigger_type}
+            </if>
+            <if test="operation_type != null and operation_type != '' ">
+                and operation_type =#{operation_type}
+            </if>
+            <if test="execution_type != null and execution_type != '' ">
+                and execution_type =#{execution_type}
+            </if>
+            <if test="conditions_type != null and conditions_type != '' ">
+                and conditions_type =#{conditions_type}
+            </if>
+            <if test="execution_template != null and execution_template != '' ">
+                and execution_template =#{execution_template}
+            </if>
+            <if test="status != null and status != '' ">
+                and status =#{status}
+            </if>
+            <if test="conditions_type != null and conditions_type != '' ">
+                and conditions_type =#{conditions_type}
+            </if>
+            <if test="execution_template != null and execution_template != '' ">
+                and execution_template =#{execution_template}
+            </if>
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+                AND
+                <if test="timetype == 1">
+                     create_time
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+        </where>
+    </sql>
+
+    <select id="selMapCount" parameterType="java.util.HashMap"  resultType="java.lang.Integer">
+        SELECT
+        COUNT(1)
+        FROM
+        yz_automation_cc
+        <include refid="selwhere"/>
+    </select>
+
+    <select id="ListCc" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+            SELECT id,trigger_type,channel_id,operation_type,triggering_conditions,
+                    conditions_type,execution_type,status,remark,execution_template,
+                    dep_id,DATE_FORMAT(create_time,'%Y-%m-%d %H:%i:%S') as create_time,
+                    cc_name
+            FROM yz_automation_cc
+            <include refid="selwhere"/>
+            LIMIT #{StarRow},#{PageSize}
+    </select>
+
+
+    <insert id="CcAdd" parameterType="java.util.HashMap">
+        insert into yz_automation_cc (
+            trigger_type,channel_id,operation_type,conditions_type,dep_id,
+            execution_type,status,remark,execution_template,cc_name
+        )values(
+                   #{trigger_type},#{channel_id},#{operation_type},#{conditions_type},#{dep_id},
+                   #{execution_type},#{status},#{remark},#{execution_template},#{cc_name}
+            )
+    </insert>
+
+    <update id="UpdateCc" parameterType="java.util.HashMap">
+        update
+            yz_automation_cc
+        <set>
+            trigger_type = #{trigger_type},
+            channel_id = #{channel_id},
+            operation_type = #{operation_type},
+            conditions_type =#{conditions_type},
+            dep_id =#{dep_id},
+            execution_type =#{execution_type},
+            status =#{status},
+            remark =#{remark},
+            execution_template =#{execution_template},
+            cc_name =#{cc_name}
+        </set>
+        <where>
+            id =#{id}
+        </where>
+    </update>
+
+    <select id="NameAdd" resultType="java.util.HashMap">
+        SELECT
+            id,cc_name
+        FROM
+            yz_automation_cc
+    </select>
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

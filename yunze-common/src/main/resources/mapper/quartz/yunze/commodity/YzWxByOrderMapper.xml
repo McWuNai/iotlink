@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.commodity.YzWxByOrderMapper">
+
+	<!-- 新增 购买订单发货表  -->
+	<insert id="save" parameterType="java.util.HashMap">
+		INSERT INTO
+			yz_wx_by_order
+		(
+			ord_no,
+			openid,
+			shipping_Phone,
+			shipping_user,
+			province,
+			city,
+			district,
+			address,
+			shipping_money,
+			create_time,
+			by_count,
+			by_pid
+		)VALUE
+			(
+			#{ord_no},
+			#{openid},
+			#{shipping_Phone},
+			#{shipping_user},
+			#{province},
+			#{city},
+			#{district},
+			#{address},
+			#{shipping_money},
+			now(),
+			#{by_count},
+			#{by_pid}
+			)
+	</insert>
+
+
+
+
+	<!-- 查询商品对应代理商  -->
+	<select id="findConcise" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+		SELECT
+		a.ord_no,
+		a.shipping_Phone,
+		a.shipping_user,
+		a.province,
+		a.city,
+		DATE_FORMAT( b.create_time, "%Y-%m-%d %H:%i:%S" ) AS create_time,
+		a.district,
+		a.address,
+		a.by_count,
+		c.product_name,
+		b.info
+		FROM
+		yz_wx_by_order  AS  a left join
+		yz_order  AS  b
+		on a.ord_no = b.ord_no
+		left join yz_wx_by_product_info AS  c
+		on c.product_id = a.by_pid
+		<where>
+			<if test="Aid!=null and Aid!='' ">
+				b.ord_no = #{Aid}
+			</if>
+			<if test="Aid==null or Aid=='' ">
+				b.id = #{id}
+			</if>
+			AND b.status =1
+			AND a.order_status = '0'
+		</where>
+	</select>
+
+	<!--查询发货订单-->
+	<select id="findWxOrder" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+		SELECT
+		a.shipping_Phone,
+		a.shipping_user,
+		a.province,
+		a.city,
+		a.district,
+		a.address,
+		a.by_count
+		FROM
+		yz_wx_by_order a
+		<where>
+			ord_no = #{ord_no}
+		</where>
+	</select>
+
+	<!--购物订单导出查询-->
+	<select id="shopping_export" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			a.ord_no,
+			a.shipping_Phone,
+			a.shipping_user,
+			a.province,
+			a.city,
+			a.district,
+			a.address,
+			a.by_count,
+			b.product_name
+		FROM
+			yz_wx_by_order a
+			left join
+			yz_wx_by_product_info b
+			on b.product_id = a.by_pid
+		<where>
+			a.ord_no in
+			<foreach item="ord_no" collection="ord_no" index="ord_no" open="(" separator="," close=")">
+				#{ord_no}
+			</foreach>
+		</where>
+	</select>
+
+
+
+</mapper>

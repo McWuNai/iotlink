@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.apiCommon.mapper.YzIpWhitelistMapper">
+
+
+
+
+
+    <!-- 查询 ip是否在白名单中 -->
+    <select id="findWIp" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+       SELECT
+            ip,
+            wname
+       FROM
+            yz_ip_whitelist
+       <where>
+           ip = #{ip}
+       </where>
+    </select>
+
+
+
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

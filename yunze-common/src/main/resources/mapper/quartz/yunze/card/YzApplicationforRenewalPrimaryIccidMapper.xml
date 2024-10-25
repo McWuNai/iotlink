@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.card.YzApplicationforRenewalPrimaryIccidMapper">
+
+
+
+    <select id="find" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+            id,
+            iccid,
+            b_id
+        from
+            yz_applicationfor_renewal_iccid
+        <where>
+            b_id = #{b_id}
+        </where>
+
+    </select>
+
+    <select id="findCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        select
+            count(1)
+        from
+            yz_applicationfor_renewal_iccid
+        <where>
+            b_id = #{b_id}
+        </where>
+
+    </select>
+
+   
+
+    <insert id="save" parameterType="java.util.HashMap" >
+        insert into
+            yz_applicationfor_renewal_iccid
+        (
+            iccid,
+            b_id
+        )
+            values
+        <foreach item="cardArrs" collection="cardArrs" index="index"  separator="," >
+        (
+            #{cardArrs.iccid},
+            #{b_id}
+        )
+        </foreach>
+    </insert>
+
+    <delete id="del" parameterType="java.util.HashMap" >
+        delete  from yz_applicationfor_renewal_iccid
+        <where>
+            b_id = #{b_id}
+        </where>
+    </delete>
+
+
+
+
+
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.warehouse.Administration.YzCkglCommodityStockMapper">
+    <!--查询商品库存-->
+    <select id="sle_stock"  resultType="java.lang.Integer">
+        SELECT
+            CSK_Stock_Quantity
+        FROM
+            yz_ckgl_commodity_stock
+        WHERE
+            CSK_CyID =#{Cy_ID}
+    </select>
+    <!--修改库存数量-->
+    <update id="update_quantity" parameterType="java.util.HashMap">
+        UPDATE
+        yz_ckgl_commodity_stock
+        <set>
+            CSK_Stock_Quantity =#{Quantity}
+        </set>
+        <where>
+            CSK_CyID =#{Cy_ID}
+        </where>
+    </update>
+
+    <!--新增库存数量-->
+    <insert id="add_quantity" parameterType="java.util.HashMap">
+        insert into yz_ckgl_commodity_stock
+        (
+            CSK_CyID,
+            CSK_Stock_Quantity
+        )value
+            (
+            #{Cy_ID},
+            #{Quantity}
+            )
+    </insert>
+
+    <!-- 新增商品库存 -->
+    <insert id="add_CSK" parameterType="java.util.HashMap">
+        INSERT INTO yz_ckgl_commodity_stock
+        (
+        CSK_ID,
+        CSK_CyID,
+        CSK_Stock_Quantity
+        )
+        VALUES
+        <foreach item="add_arr" collection="add_arr"  separator="," >
+            (
+            #{add_arr.CSK_ID},
+            #{add_arr.Cy_ID},
+            #{add_arr.Quantity}
+            )
+        </foreach>
+    </insert>
+
+
+
+    <sql id="selwhere">
+        <where>
+            A.CSK_CyID = B.Cy_ID
+            <if test="value!=null and value!='' ">
+                <if test="type==1">
+                    and B.Cy_Name LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type==2">
+                    and B.Cy_ModelAndNumber LIKE CONCAT(#{value},'%')
+                </if>
+            </if>
+            <if test="Cy_Sort != null  and Cy_Sort != '' ">
+                and B.Cy_Sort = #{Cy_Sort }
+            </if>
+            <if test="Cy_SortArr != null  and Cy_SortArr != '' and Cy_SortArr.size>0">
+                and  B.Cy_Sort in
+                <foreach item="Cy_SortArr" collection="Cy_SortArr" index="Cy_SortArr" open="(" separator="," close=")">
+                    #{Cy_SortArr}
+                </foreach>
+            </if>
+            <if test="Cy_CategoryArr != null  and Cy_CategoryArr != '' and Cy_CategoryArr.size>0">
+                and  B.Cy_Category in
+                <foreach item="Cy_CategoryArr" collection="Cy_CategoryArr" index="Cy_CategoryArr" open="(" separator="," close=")">
+                    #{Cy_CategoryArr}
+                </foreach>
+            </if>
+        </where>
+    </sql>
+
+
+    <select id="selMap" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        A.CSK_Stock_Quantity,
+        B.Cy_Name,
+        B.Cy_ModelAndNumber,
+        B.Cy_Unit,
+        B.Cy_ID,
+        A.CSK_ID
+        FROM
+        yz_ckgl_commodity_stock  A,
+        yz_ckgl_commodity B
+        <include refid="selwhere"/>
+        ORDER BY CSK_Stock_Quantity desc,CSK_ID desc
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+    <select id="selMapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        select
+        count(1)
+        from
+        yz_ckgl_commodity_stock  A,
+        yz_ckgl_commodity B
+        <include refid="selwhere"/>
+    </select>
+
+
+    <!-- 修改库存 -->
+    <update id="upd_Stock_Quantity" parameterType="java.util.HashMap">
+        UPDATE yz_ckgl_commodity_stock
+        <set>
+            CSK_Stock_Quantity = #{CSK_Stock_Quantity}
+        </set>
+        <where>
+            CSK_ID = #{CSK_ID}
+        </where>
+    </update>
+
+    <!-- 查询 商品是否存在 -->
+    <select id="sel_Ex" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        SELECT
+        COUNT(*)
+        FROM
+        yz_ckgl_commodity_stock
+        <where>
+            CSK_CyID = #{Cy_ID}
+        </where>
+    </select>
+
+    <!-- 查询今日注册商品数量 -->
+    <select id="sel_data_count" resultType="java.lang.Integer">
+        SELECT MAX(substring(CSK_CyID, 13,4)) from yz_ckgl_commodity_stock where substring(CSK_CyID, 5,8)=NOW()
+    </select>
+
+
+</mapper>

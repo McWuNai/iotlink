@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.xsgl.CustomerContact.YzXsglCustomerCallLogMapper">
+
+
+
+    <!--新增 客户联系记录-->
+    <insert id="NewCustomerAdd" parameterType="java.util.HashMap">
+        insert into
+            yz_xsgl_customer_call_log
+        (
+            CCG_CoID,
+            CCG_CsfName,
+            CCG_CsfPhone,
+            CCG_Time,
+            CCG_CtID,
+            CCG_UserID,
+            CCG_Issue,
+            CCG_Content,
+            CCG_Remark
+        )value (
+            #{CCG_CoID},
+            #{CCG_CsfName},
+            #{CCG_CsfPhone},
+            #{CCG_Time},
+            #{CCG_CtID},
+            #{CCG_UserID},
+            #{CCG_Issue},
+            #{CCG_Content},
+            #{CCG_Remark}
+        )
+    </insert>
+
+    <sql id="slewhere">
+        <where>
+            a.CCG_CoID = b.id
+            <if test="value!=null and value!='' ">
+                <if test="type==1">
+                    and  b.c_name LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type==2">
+                    and a.CCG_CsfName LIKE CONCAT(#{value},'%')
+                </if>
+            </if>
+            <if test="c_userIdArr != null  and c_userIdArr != '' and c_userIdArr.size>0">
+                and  a.CCG_UserID in
+                <foreach item="c_userIdArr" collection="c_userIdArr" index="c_userIdArr" open="(" separator="," close=")">
+                    #{c_userIdArr}
+                </foreach>
+            </if>
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+                and
+                <if test="timetype == 1">
+                     CCG_Time
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+        </where>
+    </sql>
+    <!--查询 客户联系记录表-->
+    <select id="getList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            a.CCG_ID,
+            a.CCG_CoID,
+            a.CCG_CsfName,
+            a.CCG_CsfPhone,
+            DATE_FORMAT( a.CCG_Time, "%Y-%m-%d"  ) AS CCG_Time,
+            a.CCG_CtID,
+            a.CCG_UserID,
+            a.CCG_Issue,
+            a.CCG_Content,
+            a.CCG_Remark,
+            b.province,
+            b.city,
+            b.district,
+            b.c_name
+        FROM
+            yz_xsgl_customer_call_log a,
+            yz_xsgl_customer b
+        <include refid="slewhere"/>
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+    <!--查询 客户联系记录表总数-->
+    <select id="selMapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+            SELECT
+                count(1)
+            FROM
+                yz_xsgl_customer_call_log a,
+                yz_xsgl_customer b
+            <include refid="slewhere"/>
+    </select>
+
+    <!--删除 客户联系记录 单条-->
+    <delete id="deleteId" parameterType="java.util.HashMap">
+        delete from yz_xsgl_customer_call_log
+        where CCG_ID =#{CCG_ID}
+    </delete>
+
+    <!--修改 客户联系记录 -->
+    <update id="updateId" parameterType="java.util.HashMap">
+            update yz_xsgl_customer_call_log
+            <set>
+                CCG_CoID =#{CCG_CoID},
+                CCG_CsfName =#{CCG_CsfName},
+                CCG_CsfPhone =#{CCG_CsfPhone},
+                CCG_Time =#{CCG_Time},
+                CCG_CtID =#{CCG_CtID},
+                CCG_UserID =#{CCG_UserID},
+                CCG_Issue =#{CCG_Issue},
+                CCG_Content =#{CCG_Content},
+                CCG_Remark =#{CCG_Remark}
+            </set>
+            <where>
+                CCG_ID =#{CCG_ID}
+            </where>
+    </update>
+
+    <!--赋值 企业名称 管理员-->
+    <select id="assignmentID" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            a.CCG_ID,
+            a.CCG_CoID,
+            a.CCG_CsfName,
+            a.CCG_CsfPhone,
+            DATE_FORMAT( a.CCG_Time, "%Y-%m-%d"  ) AS CCG_Time,
+            a.CCG_CtID,
+            a.CCG_UserID,
+            a.CCG_Issue,
+            a.CCG_Content,
+            a.CCG_Remark,
+            b.id,
+            b.province,
+            b.city,
+            b.district,
+            b.c_name
+        FROM
+            yz_xsgl_customer_call_log a,
+            yz_xsgl_customer b
+        <where>
+            a.CCG_ID =#{CCG_ID}
+            and a.CCG_CoID = b.id
+        </where>
+    </select>
+
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

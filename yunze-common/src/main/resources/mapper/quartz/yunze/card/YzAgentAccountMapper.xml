@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.card.YzAgentAccountMapper">
+
+    <sql id="selwhere">
+        <where>
+            <if test="value!=null and value!='' ">
+                <if test="type==0">
+                    and agent_name LIKE CONCAT('%',#{value},'%')
+                </if>
+                <if test="type==1">
+                    and app_id LIKE CONCAT('%',#{value},'%')
+                </if>
+                <if test="type==2">
+                    and password LIKE CONCAT('%',#{value},'%')
+                </if>
+                <if test="type==3">
+                    and access_key LIKE CONCAT('%',#{value},'%')
+                </if>
+            </if>
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+            AND
+                <if test="timetype == 0">
+                     create_time
+                </if>
+                <if test="timetype == 1">
+                     update_time
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+            <if test="percentage != null and percentage != '' ">
+                AND percentage >= #{percentage}
+            </if>
+            <if test="agent_id != null  and agent_id != '' and agent_id.size>0">
+                and  agent_id in
+                <foreach item="agent_id" collection="agent_id" index="agent_id" open="(" separator="," close=")">
+                    #{agent_id}
+                </foreach>
+            </if>
+        </where>
+    </sql>
+
+    <select id="getList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+            id,
+            app_id,
+            access_key,
+            password,
+            DATE_FORMAT(create_time,'%Y-%m-%d ') as create_time,
+            DATE_FORMAT(update_time,'%Y-%m-%d ') as update_time,
+            agent_name,
+            agent_id,
+            times,
+            openurl,
+            typesys
+        from yz_agent_account
+        <include refid="selwhere"/>
+        order  by create_time desc
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+
+
+    <select id="selMapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        select
+            count(1)
+        from
+            yz_agent_account
+        <include refid="selwhere"/>
+    </select>
+
+    <insert id="save" parameterType="java.util.HashMap" >
+        insert into
+            yz_agent_account
+        (
+            id,
+            app_id,
+            access_key,
+            password,
+            create_time,
+            update_time,
+            agent_name,
+            agent_id,
+            times,
+            openurl,
+            typesys
+        )values
+            (
+                #{id},
+                #{app_id},
+                #{access_key},
+                #{password},
+                now(),
+                now(),
+                #{agent_name},
+                #{agent_id},
+                #{times},
+                #{openurl},
+                0
+            )
+    </insert>
+
+    <update id="upd" parameterType="java.util.HashMap" >
+        update
+            yz_agent_account
+        <set>
+            <if test="access_key!=null">
+                access_key = #{access_key},
+            </if>
+            <if test="password!=null">
+                password = #{password},
+            </if>
+            <if test="agent_name!=null">
+                agent_name = #{agent_name},
+            </if>
+            <if test="agent_id!=null">
+                agent_id = #{agent_id},
+            </if>
+            <if test="times!=null">
+                times = #{times},
+            </if>
+            <if test="openurl!=null">
+                openurl = <![CDATA[ #{openurl} ]]>,
+            </if>
+            <if test="typesys!=null">
+                typesys = #{typesys},
+            </if>
+            update_time = now()
+        </set>
+        <where>
+            id = #{id}
+        </where>
+    </update>
+
+
+
+    <select id="is_exAppId" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        select
+            count(1)
+        from
+            yz_agent_account
+        <where>
+            app_id = #{app_id}
+        </where>
+    </select>
+
+    <select id="is_exaAgentId" parameterType="java.util.HashMap" resultType="java.lang.String">
+        select
+            app_id
+        from
+            yz_agent_account
+        <where>
+            agent_id = #{agent_id}
+        </where>
+    </select>
+
+    <delete id="del" parameterType="java.util.HashMap">
+        delete from yz_agent_account
+        <where>
+            id = #{id}
+            and app_id !='adminOption'
+        </where>
+    </delete>
+
+
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

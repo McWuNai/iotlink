@@ -1,0 +1,42 @@
+[
+  {
+    "card_queueName": "polling_cardCardStatus_queue",
+    "card_del_queueName": "polling_dlxcardCardStatus_queue",
+    "card_del_exchangeName": "polling_dlxcardCardStatus_exchange",
+    "card_del_routingKey": "polling.dlxcardCardStatus.routingKey",
+    "card_exchangeName": "polling_cardCardStatus_exchange",
+    "card_routingKey": "polling.cardCardStatus.routingKey"
+  },
+  {
+    "card_queueName": "polling_cardCardStop_queue",
+    "card_del_queueName": "polling_dlxcardCardStop_queue",
+    "card_del_exchangeName": "polling_dlxcardCardStop_exchange",
+    "card_del_routingKey": "polling.dlxcardCardStop.routingKey",
+    "card_exchangeName": "polling_cardCardStop_exchange",
+    "card_routingKey": "polling.cardCardStop.routingKey"
+  },
+  {
+    "card_queueName": "polling_cardCardDisconnected_queue",
+    "card_del_queueName": "polling_dlxcardCardDisconnected_queue",
+    "card_del_exchangeName": "polling_dlxcardCardDisconnected_exchange",
+    "card_del_routingKey": "polling.dlxcardCardDisconnected.routingKey",
+    "card_exchangeName": "polling_cardCardDisconnected_exchange",
+    "card_routingKey": "polling.cardCardDisconnected.routingKey"
+  },
+  {
+    "card_queueName": "polling_cardActivateDate_queue",
+    "card_del_queueName": "polling_dlxcardActivateDate_queue",
+    "card_del_exchangeName": "polling_dlxcardActivateDate_exchange",
+    "card_del_routingKey": "polling.dlxcardActivateDate.routingKey",
+    "card_exchangeName": "polling_cardActivateDate_exchange",
+    "card_routingKey": "polling.cardActivateDate.routingKey"
+  },
+  {
+    "card_queueName": "polling_cardCardFlow_queue",
+    "card_del_queueName": "polling_dlxcardCardFlow_queue",
+    "card_del_exchangeName": "polling_dlxcardCardFlow_exchange",
+    "card_del_routingKey": "polling.dlxcardCardFlow.routingKey",
+    "card_exchangeName": "polling_cardCardFlow_exchange",
+    "card_routingKey": "polling.cardCardFlow.routingKey"
+  }
+]

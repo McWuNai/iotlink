@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.card.AutoPollingMapper">
+    <delete id="del">
+        delete from yz_auto_polling where iccid = #{iccid}
+    </delete>
+
+    <select id="selMapCount" parameterType="java.util.Map" resultType="java.lang.Integer">
+        select
+        count(*)
+        from
+        yz_auto_polling
+        <if test="value!=null and value!=''">
+            where
+            <if test="type == 1">
+                iccid =#{value}
+            </if>
+            <if test="type == 2">
+                route_id =#{value}
+            </if>
+        </if>
+    </select>
+    <select id="list" resultType="java.util.Map" parameterType="java.util.Map">
+        select a.id,a.iccid,b.cd_id,b.cd_name as cd_username,a.day_auto,a.day_type
+        from yz_auto_polling a left join yz_card_route b on a.route_id = b.cd_id
+
+        <if test="value !='' and value != null">
+            where
+            <if test="type == 1">
+                a.iccid =#{value}
+            </if>
+            <if test="type == 2">
+                a.route_id =#{value}
+            </if>
+        </if>
+        LIMIT #{pageNum} , #{pageSize}
+    </select>
+
+    <select id="test" parameterType="java.util.Map" resultType="java.util.Map">
+        select iccid,channel_id from yz_card_info where iccid BETWEEN #{startStr}  and #{endStr}
+    </select>
+    <select id="selectPollingByIccid" resultType="java.util.Map">
+        select id,iccid,route_id,day_auto,day_type from yz_auto_polling where iccid = #{iccid}
+    </select>
+    <select id="selectCardByIccid" resultType="java.util.Map"
+            parameterType="com.yunze.common.core.domain.entity.SysAutoPolling">
+        select channel_id from yz_card_info where iccid = #{iccid}
+    </select>
+    <insert id="ins" parameterType="java.util.Map">
+        insert into yz_auto_polling(iccid,route_id) values (#{iccid},#{channel_id})
+    </insert>
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

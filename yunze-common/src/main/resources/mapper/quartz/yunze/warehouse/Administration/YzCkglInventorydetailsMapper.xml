@@ -1,0 +1,879 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.warehouse.Administration.YzCkglInventorydetailsMapper">
+    <!--仓库导入上传-->
+    <insert id="importStock" parameterType="java.util.HashMap">
+        insert into
+        yz_ckgl_inventorydetails
+        (
+        CaseNumber,
+        PlateNumber,
+        productCode,
+        arraylNumber,
+        batchNumber,
+        Pkg_Id,
+        MAC,
+        DeviceCode,
+        SerialNumber,
+        SN,
+        Original_SN,
+        iccid,
+        IMSI,
+        IMEI,
+        CMEI,
+        CSDS_ID,
+        create_time,
+        enteringwarehousetime,
+        CSDS_CyID,
+        VID
+        )value
+        <foreach item="Import_arrs" collection="Import_arrs" index="Import_arrs" separator=",">
+            (
+            <if test="Import_arrs.CaseNumber != null">
+                #{Import_arrs.CaseNumber},
+            </if>
+            <if test="Import_arrs.PlateNumber != null">
+                #{Import_arrs.PlateNumber},
+            </if>
+            <if test="Import_arrs.PlateNumber == null">
+                '',
+            </if>
+            <if test="Import_arrs.productCode != null">
+                #{Import_arrs.productCode},
+            </if>
+            <if test="Import_arrs.productCode == null">
+                '',
+            </if>
+            <if test="Import_arrs.arraylNumber != null">
+                #{Import_arrs.arraylNumber},
+            </if>
+            <if test="Import_arrs.arraylNumber == null">
+                '',
+            </if>
+            <if test="Import_arrs.batchNumber != null">
+                #{Import_arrs.batchNumber},
+            </if>
+            <if test="Import_arrs.batchNumber == null">
+                '',
+            </if>
+            <if test="Import_arrs.Pkg_Id != null">
+                #{Import_arrs.Pkg_Id},
+            </if>
+            <if test="Import_arrs.Pkg_Id == null">
+                '',
+            </if>
+            <if test="Import_arrs.MAC != null">
+                #{Import_arrs.MAC},
+            </if>
+            <if test="Import_arrs.MAC == null">
+                '',
+            </if>
+            <if test="Import_arrs.DeviceCode != null">
+                #{Import_arrs.DeviceCode},
+            </if>
+            <if test="Import_arrs.DeviceCode == null">
+                '',
+            </if>
+            <if test="Import_arrs.SerialNumber != null">
+                #{Import_arrs.SerialNumber},
+            </if>
+            <if test="Import_arrs.SerialNumber == null">
+                '',
+            </if>
+            <if test="Import_arrs.SN != null">
+                #{Import_arrs.SN},
+            </if>
+            <if test="Import_arrs.SN == null">
+                '',
+            </if>
+            <if test="Import_arrs.Original_SN != null">
+                #{Import_arrs.Original_SN},
+            </if>
+            <if test="Import_arrs.Original_SN == null">
+                '',
+            </if>
+            <if test="Import_arrs.iccid != null">
+                #{Import_arrs.iccid},
+            </if>
+            <if test="Import_arrs.iccid == null">
+                '',
+            </if>
+            <if test="Import_arrs.IMSI != null">
+                #{Import_arrs.IMSI},
+            </if>
+            <if test="Import_arrs.IMSI == null">
+                '',
+            </if>
+            <if test="Import_arrs.IMEI != null">
+                #{Import_arrs.IMEI},
+            </if>
+            <if test="Import_arrs.CMEI != null">
+                #{Import_arrs.CMEI},
+            </if>
+            <if test="Import_arrs.CMEI == null">
+                '',
+            </if>
+            #{CSDS_ID},now(),now(),
+            #{Cy_ID},#{Import_arrs.vid}
+            )
+        </foreach>
+    </insert>
+    <!--筛选 IMEI-->
+    <select id="iMEIStock" parameterType="java.util.HashMap" resultType="java.lang.String">
+        SELECT
+        <if test="type==1">
+            IMEI
+        </if>
+        FROM
+        yz_ckgl_inventorydetails
+        <where>
+            <if test="type==1">
+                IMEI
+            </if>
+            IN
+            <foreach item="Import_arrs" collection="Import_arrs" index="Import_arrs" separator="," open="(" close=")">
+                <if test="type==1">
+                    #{Import_arrs.IMEI}
+                </if>
+            </foreach>
+        </where>
+    </select>
+
+
+    <sql id="selwhere">
+        <where>
+            <if test="value!=null and value!='' ">
+                <if test="type == 1">
+                    and CaseNumber LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 2">
+                    and PlateNumber LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 3">
+                    and productCode LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 4">
+                    and arraylNumber LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 5">
+                    and batchNumber LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 6">
+                    and Pkg_Id LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 7">
+                    and MAC LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 8">
+                    and DeviceCode LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 9">
+                    and SerialNumber LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 10">
+                    and SN LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 11">
+                    and Original_SN LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 12">
+                    and iccid LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 13">
+                    and IMSI LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 14">
+                    and IMEI LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 15">
+                    and CMEI LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 16">
+                    CSDS_ID = #{value}
+                </if>
+                <if test="type == 17">
+                    CSDS_CyID = #{value}
+                </if>
+            </if>
+            <if test="StartAndEndtype != null  and StartAndEndtype != '' and StartValue!=null and EndValue!=null ">
+                AND
+                <if test="StartAndEndtype == 1">
+                    CaseNumber
+                </if>
+                <if test="StartAndEndtype == 2">
+                    PlateNumber
+                </if>
+                <if test="StartAndEndtype == 3">
+                    productCode
+                </if>
+                <if test="StartAndEndtype == 4">
+                    arraylNumber
+                </if>
+                <if test="StartAndEndtype == 5">
+                    batchNumber
+                </if>
+                <if test="StartAndEndtype == 6">
+                    Pkg_Id
+                </if>
+                <if test="StartAndEndtype == 7">
+                    MAC
+                </if>
+                <if test="StartAndEndtype == 8">
+                    DeviceCode
+                </if>
+                <if test="StartAndEndtype == 9">
+                    SerialNumber
+                </if>
+                <if test="StartAndEndtype == 10">
+                    SN
+                </if>
+                <if test="StartAndEndtype == 11">
+                    Original_SN
+                </if>
+                <if test="StartAndEndtype == 12">
+                    iccid
+                </if>
+                <if test="StartAndEndtype == 13">
+                    IMSI
+                </if>
+                <if test="StartAndEndtype == 14">
+                    IMEI
+                </if>
+                <if test="StartAndEndtype == 15">
+                    CMEI
+                </if>
+                BETWEEN #{StartValue} AND #{EndValue}
+            </if>
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+                AND
+                <if test="timetype == 1">
+                     create_time
+                </if>
+                <if test="timetype == 2">
+                     enteringwarehousetime
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+            <if test="dept_id != null  and dept_id != '' and dept_id!=null and dept_id!=null">
+                and dept_id = #{dept_id}
+            </if>
+
+
+        </where>
+    </sql>
+
+    <!--查询总数-->
+    <select id="MapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        SELECT
+        COUNT(1)
+        FROM
+        yz_ckgl_inventorydetails
+        <include refid="selwhere"/>
+    </select>
+
+    <!--查询库存明细列表 ==-->
+    <select id="liststorage" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        id,
+        CaseNumber,
+        PlateNumber,
+        productCode,
+        arraylNumber,
+        batchNumber,
+        Pkg_Id,
+        MAC,
+        DeviceCode,
+        SerialNumber,
+        SN,
+        Original_SN,
+        iccid,
+        IMSI,
+        IMEI,
+        CMEI,
+        CSDS_ID,
+        DATE_FORMAT(create_time,'%Y-%m-%d') as create_time,
+        DATE_FORMAT(enteringwarehousetime,'%Y-%m-%d') as enteringwarehousetime,
+        CSDS_CyID,
+        VID
+        FROM
+        yz_ckgl_inventorydetails
+        <include refid="selwhere"/>
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+    <!--库存明细导出-->
+    <select id="ExportInvent" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        id,
+        CaseNumber,
+        PlateNumber,
+        productCode,
+        arraylNumber,
+        batchNumber,
+        Pkg_Id,
+        MAC,
+        DeviceCode,
+        SerialNumber,
+        SN,
+        Original_SN,
+        iccid,
+        IMSI,
+        IMEI,
+        CMEI,
+        CSDS_ID,
+        DATE_FORMAT(create_time,'%Y-%m-%d') as create_time,
+        DATE_FORMAT(enteringwarehousetime,'%Y-%m-%d') as enteringwarehousetime
+        FROM
+        yz_ckgl_inventorydetails
+        <include refid="selwhere"/>
+    </select>
+
+    <!--查询目前最大自定义号码-->
+    <select id="selMaxVid" resultType="java.lang.String">
+        SELECT MAX(VID)
+        FROM yz_ckgl_inventorydetails
+    </select>
+
+
+    <!-- 查询相同的iccid -->
+    <select id="repeatIdArr" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            a.iccid
+        FROM
+            yz_ckgl_inventorydetails a,
+            yz_card_info b
+            <include refid="selcard"/>
+    </select>
+
+    <sql id="selcard">
+        <where>
+            <if test="value!=null and value!='' ">
+                <if test="type == 1">
+                    and a.CaseNumber LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 2">
+                    and a.PlateNumber LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 3">
+                    and a.productCode LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 4">
+                    and a.arraylNumber LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 5">
+                    and a.batchNumber LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 6">
+                    and a.Pkg_Id LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 7">
+                    and a.MAC LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 8">
+                    and a.DeviceCode LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 9">
+                    and a.SerialNumber LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 10">
+                    and a.SN LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 11">
+                    and a.Original_SN LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 12">
+                    and a.iccid LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 13">
+                    and a.IMSI LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 14">
+                    and a.IMEI LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 15">
+                    and a.CMEI LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 16">
+                    a.CSDS_ID = #{value}
+                </if>
+                <if test="type == 17">
+                    a.CSDS_CyID = #{value}
+                </if>
+            </if>
+            <if test="StartAndEndtype != null  and StartAndEndtype != '' and StartValue!=null and EndValue!=null ">
+                AND
+                <if test="StartAndEndtype == 1">
+                    a.CaseNumber
+                </if>
+                <if test="StartAndEndtype == 2">
+                    a.PlateNumber
+                </if>
+                <if test="StartAndEndtype == 3">
+                    a.productCode
+                </if>
+                <if test="StartAndEndtype == 4">
+                    a.arraylNumber
+                </if>
+                <if test="StartAndEndtype == 5">
+                    a.batchNumber
+                </if>
+                <if test="StartAndEndtype == 6">
+                    a.Pkg_Id
+                </if>
+                <if test="StartAndEndtype == 7">
+                    a.MAC
+                </if>
+                <if test="StartAndEndtype == 8">
+                    a.DeviceCode
+                </if>
+                <if test="StartAndEndtype == 9">
+                    a.SerialNumber
+                </if>
+                <if test="StartAndEndtype == 10">
+                    a.SN
+                </if>
+                <if test="StartAndEndtype == 11">
+                    a.Original_SN
+                </if>
+                <if test="StartAndEndtype == 12">
+                    a.iccid
+                </if>
+                <if test="StartAndEndtype == 13">
+                    a.IMSI
+                </if>
+                <if test="StartAndEndtype == 14">
+                    a.IMEI
+                </if>
+                <if test="StartAndEndtype == 15">
+                    a.CMEI
+                </if>
+                BETWEEN #{StartValue} AND #{EndValue}
+            </if>
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+                AND
+                <if test="timetype == 1">
+                     a.create_time
+                </if>
+                <if test="timetype == 2">
+                     a.enteringwarehousetime
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+            AND a.iccid = b.iccid
+            AND ISNULL(a.iccid) = 0
+            AND ISNULL(a.vid) = 0
+        </where>
+    </sql>
+
+    <!--导入至卡信息-->
+    <insert id="ImportAddCard" parameterType="java.util.HashMap">
+        INSERT INTO yz_card_info
+            (iccid,vid,imsi,imei,create_date,batch_date,dept_id,user_id,package_id,channel_id,remind_ratio,is_Disconnected)
+        SELECT
+            iccid,
+            VID,
+            imsi,
+            IMEI,
+            now(),
+            enteringwarehousetime,
+            #{dept_id},
+            #{user_id},
+            #{package_id},
+            #{channel_id},
+            #{remind_ratio},
+            #{is_Disconnected}
+        FROM
+            yz_ckgl_inventorydetails
+            <include refid="selinclude"/>
+    </insert>
+
+    <sql id="selinclude">
+        <where>
+            <if test="value!=null and value!='' ">
+                <if test="type == 1">
+                    and CaseNumber LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 2">
+                    and PlateNumber LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 3">
+                    and productCode LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 4">
+                    and arraylNumber LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 5">
+                    and batchNumber LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 6">
+                    and Pkg_Id LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 7">
+                    and MAC LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 8">
+                    and DeviceCode LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 9">
+                    and SerialNumber LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 10">
+                    and SN LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 11">
+                    and Original_SN LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 12">
+                    and iccid LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 13">
+                    and IMSI LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 14">
+                    and IMEI LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 15">
+                    and CMEI LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 16">
+                    CSDS_ID = #{value}
+                </if>
+                <if test="type == 17">
+                    CSDS_CyID = #{value}
+                </if>
+            </if>
+            <if test="StartAndEndtype != null  and StartAndEndtype != '' and StartValue!=null and EndValue!=null ">
+                AND
+                <if test="StartAndEndtype == 1">
+                    CaseNumber
+                </if>
+                <if test="StartAndEndtype == 2">
+                    PlateNumber
+                </if>
+                <if test="StartAndEndtype == 3">
+                    productCode
+                </if>
+                <if test="StartAndEndtype == 4">
+                    arraylNumber
+                </if>
+                <if test="StartAndEndtype == 5">
+                    batchNumber
+                </if>
+                <if test="StartAndEndtype == 6">
+                    Pkg_Id
+                </if>
+                <if test="StartAndEndtype == 7">
+                    MAC
+                </if>
+                <if test="StartAndEndtype == 8">
+                    DeviceCode
+                </if>
+                <if test="StartAndEndtype == 9">
+                    SerialNumber
+                </if>
+                <if test="StartAndEndtype == 10">
+                    SN
+                </if>
+                <if test="StartAndEndtype == 11">
+                    Original_SN
+                </if>
+                <if test="StartAndEndtype == 12">
+                    iccid
+                </if>
+                <if test="StartAndEndtype == 13">
+                    IMSI
+                </if>
+                <if test="StartAndEndtype == 14">
+                    IMEI
+                </if>
+                <if test="StartAndEndtype == 15">
+                    CMEI
+                </if>
+                BETWEEN #{StartValue} AND #{EndValue}
+            </if>
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+                AND
+                <if test="timetype == 1">
+                     create_time
+                </if>
+                <if test="timetype == 2">
+                     enteringwarehousetime
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+            <if test="iccid_Arr != null  and iccid_Arr != '' and iccid_Arr.size>0">
+                AND iccid NOT IN
+                <foreach item="iccid_Arr" collection="iccid_Arr" index="iccid_Arr" open="(" separator="," close=")">
+                    #{iccid_Arr.iccid}
+                </foreach>
+            </if>
+            AND ISNULL(iccid) = 0
+            AND ISNULL(vid) = 0
+        </where>
+    </sql>
+
+
+
+
+
+    <!--没有iccid总数-->
+    <select id="wCOUNT" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        SELECT
+        COUNT(id)
+        FROM
+            yz_ckgl_inventorydetails
+        <include refid="selwhere1"/>
+    </select>
+    <sql id="selwhere1">
+        <where>
+            <if test="value!=null and value!='' ">
+                <if test="type == 1">
+                    and CaseNumber LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 2">
+                    and PlateNumber LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 3">
+                    and productCode LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 4">
+                    and arraylNumber LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 5">
+                    and batchNumber LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 6">
+                    and Pkg_Id LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 7">
+                    and MAC LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 8">
+                    and DeviceCode LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 9">
+                    and SerialNumber LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 10">
+                    and SN LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 11">
+                    and Original_SN LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 12">
+                    and iccid LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 13">
+                    and IMSI LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 14">
+                    and IMEI LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 15">
+                    and CMEI LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 16">
+                    CSDS_ID = #{value}
+                </if>
+                <if test="type == 17">
+                    CSDS_CyID = #{value}
+                </if>
+            </if>
+            <if test="StartAndEndtype != null  and StartAndEndtype != '' and StartValue!=null and EndValue!=null ">
+                AND
+                <if test="StartAndEndtype == 1">
+                    CaseNumber
+                </if>
+                <if test="StartAndEndtype == 2">
+                    PlateNumber
+                </if>
+                <if test="StartAndEndtype == 3">
+                    productCode
+                </if>
+                <if test="StartAndEndtype == 4">
+                    arraylNumber
+                </if>
+                <if test="StartAndEndtype == 5">
+                    batchNumber
+                </if>
+                <if test="StartAndEndtype == 6">
+                    Pkg_Id
+                </if>
+                <if test="StartAndEndtype == 7">
+                    MAC
+                </if>
+                <if test="StartAndEndtype == 8">
+                    DeviceCode
+                </if>
+                <if test="StartAndEndtype == 9">
+                    SerialNumber
+                </if>
+                <if test="StartAndEndtype == 10">
+                    SN
+                </if>
+                <if test="StartAndEndtype == 11">
+                    Original_SN
+                </if>
+                <if test="StartAndEndtype == 12">
+                    iccid
+                </if>
+                <if test="StartAndEndtype == 13">
+                    IMSI
+                </if>
+                <if test="StartAndEndtype == 14">
+                    IMEI
+                </if>
+                <if test="StartAndEndtype == 15">
+                    CMEI
+                </if>
+                BETWEEN #{StartValue} AND #{EndValue}
+            </if>
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+                AND
+                <if test="timetype == 1">
+                     create_time
+                </if>
+                <if test="timetype == 2">
+                     enteringwarehousetime
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+            AND ISNULL(iccid) = 1
+            AND ISNULL(vid) = 1
+        </where>
+    </sql>
+
+
+    <!-- 卡所属划分 -->
+    <update id="updateDivid" parameterType="java.util.HashMap">
+        UPDATE yz_ckgl_inventorydetails
+        <set>
+            dept_id = #{set_dept_id},
+            user_id = #{set_user_id}
+        </set>
+        <where>
+            id in
+            <foreach item="idArr" collection="idArr" index="idArr" open="("  separator=","  close=")">
+                #{idArr}
+            </foreach>
+        </where>
+    </update>
+
+    <select id="BackupAssociate" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            id,
+            iccid,
+            dept_id,
+            user_id
+        FROM
+            yz_ckgl_inventorydetails
+            <include refid="selwhere"/>
+    </select>
+
+    <!--划卡只查询id-->
+    <select id="BackupId" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        id
+        FROM
+        yz_ckgl_inventorydetails
+        <include refid="selwhere"/>
+    </select>
+
+
+
+    <!-- 按批次号分组 -->
+    <select id="groupByBatchNumber" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            batchNumber,
+            COUNT(1) as 'count'
+        FROM
+            yz_ckgl_inventorydetails
+        <include refid="selwhere"/>
+        group by batchNumber
+
+    </select>
+
+    <!-- 按商品id分组 -->
+    <select id="groupByCyID" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            CSDS_CyID,
+            COUNT(1) as 'count'
+        FROM
+            yz_ckgl_inventorydetails a,
+            yz_ckgl_commodity b
+        <where>
+            a.CSDS_CyID = b.Cy_ID
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+                AND
+                <if test="timetype == 1">
+                     a.create_time
+                </if>
+                <if test="timetype == 2">
+                     enteringwarehousetime
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+            <if test="dept_id != null  and dept_id != '' and dept_id!=null and dept_id!=null">
+                and a.dept_id = #{dept_id}
+            </if>
+
+        </where>
+        group by CSDS_CyID
+
+    </select>
+
+    <!-- 按商品id分组 -->
+    <select id="getPolyline" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            <if test="FindType == 'day'">
+                DATE_FORMAT( enteringwarehousetime, "%m-%d"  ) as 'monthDay',
+            </if>
+            <if test="FindType == 'month'">
+                DATE_FORMAT( enteringwarehousetime, "%Y-%m"  ) as 'yearMonth',
+            </if>
+            COUNT(1) as 'count'
+        FROM
+            yz_ckgl_inventorydetails
+        <where>
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+                AND
+                <if test="timetype == 1">
+                     create_time
+                </if>
+                <if test="timetype == 2">
+                     enteringwarehousetime
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+            <if test="dept_id != null  and dept_id != '' and dept_id!=null and dept_id!=null">
+                and dept_id = #{dept_id}
+            </if>
+        </where>
+        <if test="FindType == 'day'">
+            GROUP BY monthDay
+            ORDER BY enteringwarehousetime asc
+        </if>
+        <if test="FindType == 'month'">
+            GROUP BY yearMonth
+            ORDER BY enteringwarehousetime asc
+        </if>
+
+    </select>
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+

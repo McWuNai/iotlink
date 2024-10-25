@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.card.YzApplicationforRenewalPrimaryOrdNoMapper">
+
+
+
+    <select id="find" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+            id,
+            ord_no,
+            p_id
+        from
+            yz_applicationfor_renewal_ordno
+        <where>
+            p_id = #{p_id}
+        </where>
+    </select>
+
+
+    <select id="findOrder" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+            a.id,
+            a.ord_no,
+            a.p_id,
+            b.ord_type,
+            b.ord_name,
+            b.price,
+            b.account,
+            b.pay_type,
+            b.cre_type,
+            b.agent_id
+        from
+            yz_applicationfor_renewal_ordno a
+            left  join yz_order b on a.ord_no = b.ord_no
+        <where>
+            a.p_id = #{p_id}
+        </where>
+    </select>
+
+
+    <select id="findPid" parameterType="java.util.HashMap" resultType="java.lang.String">
+        select
+            p_id
+        from
+            yz_applicationfor_renewal_ordno
+        <where>
+            ord_no = #{ord_no}
+        </where>
+    </select>
+
+    <insert id="save" parameterType="java.util.HashMap" >
+        insert into
+            yz_applicationfor_renewal_ordno
+        (
+            ord_no,
+            p_id
+        )
+            values
+        <foreach item="OrdArrs" collection="OrdArrs" index="index"  separator="," >
+        (
+            #{OrdArrs},
+            #{p_id}
+        )
+        </foreach>
+    </insert>
+
+    <delete id="del" parameterType="java.util.HashMap" >
+        delete  from yz_applicationfor_renewal_ordno
+        <where>
+            p_id = #{p_id}
+        </where>
+    </delete>
+
+
+
+
+
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

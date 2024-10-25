@@ -1,0 +1,692 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.xsgl.customer.YzXsglCustomerMapper">
+
+    <sql id="selwhere">
+        <where>
+            <if test="value!=null and value!='' ">
+                <if test="type==1">
+                    and c_name LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type==2">
+                    and tax_number LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type==3">
+                    and address LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type==4">
+                    and alias LIKE CONCAT(#{value},'%')
+                </if>
+            </if>
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+                and
+                <if test="timetype == 0">
+                     create_time
+                </if>
+                <if test="timetype == 1">
+                     modified_time
+                </if>
+                BETWEEN #{staTime} and #{endTime}
+            </if>
+            <if test="gradeIdArr != null  and gradeIdArr != '' and gradeIdArr.size>0">
+                and grade_id in
+                <foreach item="gradeIdArr" collection="gradeIdArr" index="gradeIdArr" open="(" separator="," close=")">
+                    #{gradeIdArr}
+                </foreach>
+            </if>
+            <if test="oneIdArr != null  and oneIdArr != '' and oneIdArr.size>0">
+                and one_category_id in
+                <foreach item="oneIdArr" collection="oneIdArr" index="oneIdArr" open="(" separator="," close=")">
+                    #{oneIdArr}
+                </foreach>
+            </if>
+            <if test="TowIdArr != null  and TowIdArr != '' and TowIdArr.size>0">
+                and two_category_id in
+                <foreach item="TowIdArr" collection="TowIdArr" index="TowIdArr" open="(" separator="," close=")">
+                    #{TowIdArr}
+                </foreach>
+            </if>
+            <if test="sourceIdArr != null  and sourceIdArr != '' and sourceIdArr.size>0">
+                and source_id in
+                <foreach item="sourceIdArr" collection="sourceIdArr" index="sourceIdArr" open="(" separator=","
+                         close=")">
+                    #{sourceIdArr}
+                </foreach>
+            </if>
+            <if test="sales_idArr != null  and sales_idArr != '' and sales_idArr.size>0">
+                and sales_id in
+                <foreach item="sales_idArr" collection="sales_idArr" index="sales_idArr" open="(" separator=","
+                         close=")">
+                    #{sales_idArr}
+                </foreach>
+            </if>
+            <if test="is_Recycle != null and is_Recycle != '' ">
+                and is_Recycle = #{is_Recycle}
+            </if>
+            <if test="province != null and province != '' ">
+                and province = #{province}
+            </if>
+            <if test="city != null and city != '' ">
+                and city = #{city}
+            </if>
+            <if test="district != null and district != '' ">
+                and district = #{district}
+            </if>
+            <if test="affiliation_id != null and affiliation_id != '' ">
+                and affiliation_id = #{affiliation_id}
+            </if>
+            <if test="Co_Discount != null and Co_Discount != '' ">
+                and Co_Discount  <![CDATA[ >= ]]> #{Co_Discount}
+            </if>
+        </where>
+    </sql>
+
+    <select id="selMap" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+        id,
+        c_name,
+        dept_id,
+        grade_id,
+        province,
+        city,
+        district,
+        address,
+        DATE_FORMAT( create_time, "%Y-%m-%d %H:%i:%S" ) AS create_time,
+        DATE_FORMAT( modified_time, "%Y-%m-%d %H:%i:%S" ) AS modified_time,
+        one_category_id,
+        two_category_id,
+        remarks,
+        source_id,
+        is_Recycle,
+        affiliation_id,
+        tax_number,
+        Co_Discount,
+        state_id,
+        sales_id,
+        afterSale_rate,
+        affiliation_rate,
+        sales_rate,
+        sort_id,
+        credit_code,
+        id_card,
+        alias
+        from yz_xsgl_customer
+        <include refid="selwhere"/>
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+    <select id="selMapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        select
+        count(1)
+        from
+        yz_xsgl_customer
+        <include refid="selwhere"/>
+    </select>
+
+
+    <insert id="save" parameterType="java.util.HashMap" keyProperty="id" useGeneratedKeys="true">
+        insert into
+        yz_xsgl_customer
+        (
+        c_name,
+        dept_id,
+        grade_id,
+        province,
+        city,
+        district,
+        address,
+        create_time,
+        modified_time,
+        one_category_id,
+        two_category_id,
+        remarks,
+        source_id,
+        is_Recycle,
+        <if test="affiliation_id!=null">
+            affiliation_id,
+        </if>
+        tax_number,
+        Co_Discount,
+        state_id,
+        sales_id,
+        sort_id,
+        credit_code,
+        id_card,
+        alias
+        )
+        value (
+        #{c_name},
+        #{dept_id},
+        #{grade_id},
+        #{province},
+        #{city},
+        #{district},
+        #{address},
+        now(),
+        now(),
+
+        <if test="one_category_id!=null and one_category_id!=''">
+            #{one_category_id},
+        </if>
+        <if test="one_category_id==null or one_category_id==''">
+            1,
+        </if>
+        <if test="two_category_id!=null and two_category_id!=''">
+            #{two_category_id},
+        </if>
+        <if test="two_category_id==null or two_category_id==''">
+            1,
+        </if>
+        #{remarks},
+        <if test="source_id!=null and source_id!=''">
+            #{source_id},
+        </if>
+        <if test="source_id==null or source_id==''">
+            1,
+        </if>
+        <if test="is_Recycle!=null and is_Recycle!=''">
+            #{is_Recycle},
+        </if>
+        <if test="is_Recycle==null or is_Recycle==''">
+            1,
+        </if>
+        <if test="affiliation_id!=null">
+            #{affiliation_id},
+        </if>
+        #{tax_number},
+        #{Co_Discount},
+        <if test="state_id!=null and state_id!=''">
+            #{state_id},
+        </if>
+        <if test="state_id==null or state_id==''">
+            1,
+        </if>
+        <if test="sales_id!=null and sales_id!=''">
+            #{sales_id},
+        </if>
+        <if test="sales_id==null or sales_id==''">
+            1,
+        </if>
+        #{sort_id},
+        #{credit_code},
+        #{id_card},
+        #{alias}
+        )
+    </insert>
+
+
+    <select id="find" resultType="java.util.HashMap" parameterType="java.util.HashMap">
+        select
+        id,
+        c_name,
+        dept_id,
+        grade_id,
+        province,
+        city,
+        district,
+        address,
+        DATE_FORMAT( create_time, "%Y-%m-%d %H:%i:%S" ) AS create_time,
+        DATE_FORMAT( modified_time, "%Y-%m-%d %H:%i:%S" ) AS modified_time,
+        one_category_id,
+        two_category_id,
+        remarks,
+        source_id,
+        is_Recycle,
+        affiliation_id,
+        tax_number,
+        Co_Discount,
+        state_id,
+        sort_id,
+        credit_code,
+        id_card,
+        affiliation_rate,
+        sales_rate,
+        afterSale_rate,
+        alias
+        from
+        yz_xsgl_customer
+        <where>
+            id = #{id}
+        </where>
+    </select>
+
+
+    <update id="upd" parameterType="java.util.HashMap">
+        update yz_xsgl_customer
+        <set>
+            grade_id = #{grade_id},
+            province = #{province},
+            city = #{city},
+            district = #{district},
+            address = #{address},
+            modified_time = now(),
+            one_category_id = #{one_category_id},
+            two_category_id = #{two_category_id},
+            remarks = #{remarks},
+            source_id = #{source_id},
+            credit_code = #{credit_code},
+            tax_number = #{tax_number},
+            alias = #{alias}
+        </set>
+        <where>
+            id = #{id}
+        </where>
+    </update>
+
+
+    <update id="updInfo" parameterType="java.util.HashMap">
+        update yz_xsgl_customer
+        <set>
+            <if test="Co_Discount!=null">
+                Co_Discount = #{Co_Discount},
+            </if>
+            <if test="is_Recycle!=null">
+                is_Recycle = #{is_Recycle},
+            </if>
+            <if test="affiliation_rate!=null">
+                affiliation_rate = #{affiliation_rate},
+            </if>
+            <if test="sales_rate!=null">
+                sales_rate = #{sales_rate},
+            </if>
+            <if test="afterSale_rate!=null">
+                afterSale_rate = #{afterSale_rate},
+            </if>
+            <if test="affiliation_id!=null">
+                affiliation_id = #{affiliation_id},
+            </if>
+            <if test="state_id!=null">
+                state_id = #{state_id},
+            </if>
+            <if test="id_card!=null">
+                id_card = #{id_card},
+            </if>
+            <if test="sort_id!=null">
+                sort_id = #{sort_id},
+            </if>
+            <if test="c_name!=null">
+                c_name = #{c_name},
+            </if>
+        </set>
+        <where>
+            id = #{id}
+        </where>
+    </update>
+
+    <select id="IsExist" resultType="java.lang.Integer" parameterType="java.util.HashMap">
+        select
+        COUNT(1)
+        from
+        yz_xsgl_customer
+        <where>
+            dept_id = #{dept_id}
+            <if test="credit_code!=null and credit_code!=''">
+                OR credit_code = #{credit_code}
+            </if>
+            <if test="id_card!=null and id_card!=''">
+                OR id_card = #{id_card}
+            </if>
+        </where>
+    </select>
+
+
+    <select id="IsAdmin" resultType="java.util.HashMap" parameterType="java.util.HashMap">
+        select
+        id,
+        c_name
+        from
+        yz_xsgl_customer
+        <where>
+            <if test="IsAdmin!=null and IsAdmin==true">
+                sales_id = '1'
+            </if>
+            <if test="IsAdmin==null or IsAdmin==false or IsAdmin==''">
+                sales_id != '1'
+            </if>
+        </where>
+    </select>
+
+
+    <!--客户划分-->
+    <update id="updDivide" parameterType="java.util.HashMap">
+        update yz_xsgl_customer
+        <set>
+            <if test="sales_id!=null">
+                sales_id = #{sales_id},
+            </if>
+        </set>
+        <where>
+            id in
+            <foreach item="salesIdArr" collection="salesIdArr" index="salesIdArr" open="(" separator="," close=")">
+                #{salesIdArr}
+            </foreach>
+        </where>
+    </update>
+
+    <select id="findCustomerArr" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        id,
+        c_name,
+        alias
+        FROM
+        yz_xsgl_customer
+        <where>
+            <if test="gradeIdArr != null  and gradeIdArr != '' and gradeIdArr.size>0">
+                and grade_id in
+                <foreach item="gradeIdArr" collection="gradeIdArr" index="gradeIdArr" open="(" separator="," close=")">
+                    #{gradeIdArr}
+                </foreach>
+            </if>
+            <if test="oneIdArr != null  and oneIdArr != '' and oneIdArr.size>0">
+                and one_category_id in
+                <foreach item="oneIdArr" collection="oneIdArr" index="oneIdArr" open="(" separator="," close=")">
+                    #{oneIdArr}
+                </foreach>
+            </if>
+            <if test="TowIdArr != null  and TowIdArr != '' and TowIdArr.size>0">
+                and two_category_id in
+                <foreach item="TowIdArr" collection="TowIdArr" index="TowIdArr" open="(" separator="," close=")">
+                    #{TowIdArr}
+                </foreach>
+            </if>
+            <if test="sourceIdArr != null  and sourceIdArr != '' and sourceIdArr.size>0">
+                and source_id in
+                <foreach item="sourceIdArr" collection="sourceIdArr" index="sourceIdArr" open="(" separator=","
+                         close=")">
+                    #{sourceIdArr}
+                </foreach>
+            </if>
+            <if test="province != null and province != '' and province != '全部' ">
+                and province = #{province}
+            </if>
+            <if test="city != null and city != '' and province != '全部' and city != '全部' ">
+                and city = #{city}
+            </if>
+            <if test="district != null and district != '' and  province != '全部' and city != '全部' and district != '全部' ">
+                and district = #{district}
+            </if>
+            <if test="c_name != null and c_name != '' ">
+                and c_name LIKE CONCAT('%',#{c_name},'%')
+            </if>
+            <if test="sales_idArr != null  and sales_idArr != '' and sales_idArr.size>0">
+                and sales_id in
+                <foreach item="sales_idArr" collection="sales_idArr" index="sales_idArr" open="(" separator=","
+                         close=")">
+                    #{sales_idArr}
+                </foreach>
+            </if>
+        </where>
+
+
+    </select>
+
+
+    <select id="selInfo" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        id,
+        <if test="IsSel_grade_id!=null and  IsSel_grade_id==true">
+            grade_id,
+        </if>
+        <if test="IsSel_province!=null and  IsSel_province==true">
+            province,
+        </if>
+        <if test="IsSel_city!=null and  IsSel_city==true">
+            city,
+        </if>
+        <if test="IsSel_district!=null and  IsSel_district==true">
+            district,
+        </if>
+        <if test="IsSel_address!=null and  IsSel_address==true">
+            address,
+        </if>
+        <if test="IsSel_two_category_id!=null and  IsSel_two_category_id==true">
+            two_category_id,
+        </if>
+        <if test="IsSel_one_category_id!=null and  IsSel_one_category_id==true">
+            one_category_id,
+        </if>
+        <if test="IsSel_remarks!=null and  IsSel_remarks==true">
+            remarks,
+        </if>
+        <if test="IsSel_grade_id!=null and  IsSel_grade_id==true">
+            grade_id,
+        </if>
+        <if test="IsSel_is_Recycle!=null and  IsSel_is_Recycle==true">
+            is_Recycle,
+        </if>
+        <if test="IsSel_affiliation_id!=null and  IsSel_affiliation_id==true">
+            affiliation_id,
+        </if>
+        <if test="IsSel_tax_number!=null and  IsSel_tax_number==true">
+            tax_number,
+        </if>
+        <if test="IsSel_Co_Discount!=null and  IsSel_Co_Discount==true">
+            Co_Discount,
+        </if>
+        <if test="IsSel_source_id!=null and  IsSel_source_id==true">
+            source_id,
+        </if>
+        <if test="IsSel_state_id!=null and  IsSel_state_id==true">
+            state_id,
+        </if>
+        <if test="IsSel_sales_id!=null and  IsSel_sales_id==true">
+            sales_id,
+        </if>
+        <if test="IsSel_affiliation_rate!=null and  IsSel_affiliation_rate==true">
+            affiliation_rate,
+        </if>
+        <if test="IsSel_sales_rate!=null and  IsSel_sales_rate==true">
+            sales_rate,
+        </if>
+        <if test="IsSel_afterSale_rate!=null and  IsSel_afterSale_rate==true">
+            afterSale_rate,
+        </if>
+        <if test="IsSel_credit_code!=null and  IsSel_credit_code==true">
+            credit_code,
+        </if>
+        <if test="IsSel_id_card!=null and  IsSel_id_card==true">
+            id_card,
+        </if>
+        <if test="IsSel_sort_id!=null and  IsSel_sort_id==true">
+            sort_id,
+        </if>
+        dept_id
+        FROM
+        yz_xsgl_customer
+        <where>
+            id in
+            <foreach item="salesIdArr" collection="salesIdArr" index="salesIdArr" open="(" separator="," close=")">
+                #{salesIdArr}
+            </foreach>
+        </where>
+    </select>
+
+    <!--查询企业名称是否已存在-->
+    <select id="Is_exist" parameterType="java.util.HashMap" resultType="java.lang.String">
+        SELECT
+        c_name
+        FROM
+        yz_xsgl_customer
+        <where>
+            c_name in
+            <foreach item="CMaplist" collection="CMaplist" index="CMaplist" open="(" separator="," close=")">
+                #{CMaplist.dept_name}
+            </foreach>
+        </where>
+    </select>
+
+
+    <!-- sys_dept 查询系统企业是否存在-->
+    <select id="Is_existSysDept" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        dept_id,
+        dept_name
+        from
+        sys_dept
+        <where>
+            dept_name in
+            <foreach item="CMaplist" collection="CMaplist" index="CMaplist" open="(" separator="," close=")">
+                #{CMaplist.dept_name}
+            </foreach>
+        </where>
+    </select>
+
+
+    <!--批量新增系统企业-->
+    <insert id="saveSysDept" parameterType="java.util.List" keyProperty="dept_id" useGeneratedKeys="true">
+        insert into
+        sys_dept
+        (
+        parent_id,
+        ancestors,
+        dept_name,
+        order_num,
+        status,
+        del_flag,
+        create_by,
+        create_time,
+        dname
+        )value
+        <foreach item="saveSysDeptlist" collection="list" index="index" separator=",">
+            (
+            '100',
+            '0,100',
+            #{saveSysDeptlist.dept_name},
+            #{saveSysDeptlist.order_num},
+            '0','0','admin',now(),
+            #{saveSysDeptlist.dname}
+            )
+        </foreach>
+    </insert>
+
+    <!--新增默认生成 企业账户密码-->
+    <insert id="userAdd" parameterType="java.util.List" keyProperty="user_id" useGeneratedKeys="true">
+        insert into
+        sys_user
+        (
+        dept_id,
+        user_name,
+        nick_name,
+        password,
+        status,
+        del_flag,
+        create_by,
+        create_time,
+        isSales,
+        isPartner
+        )value (
+        <foreach item="userList" collection="list" index="index" separator=",">
+            #{userList.dept_id},
+            #{userList.user_name},
+            #{userList.nick_name},
+            #{userList.password},
+            '0','0','admin',now(),
+            '0','0'
+        </foreach>
+        )
+    </insert>
+    <!--新增 用户和角色-->
+    <insert id="userDept" parameterType="java.util.List">
+        insert into
+        sys_user_role
+        (
+            user_id,
+            role_id
+        )value
+        <foreach item="rooleList" collection="list" index="index" separator=",">
+            (
+            #{rooleList.user_id},
+            #{rooleList.role_id}
+            )
+        </foreach>
+    </insert>
+
+    <!--客户信息 企业账户密码-->
+    <insert id="userCustomer" parameterType="java.util.HashMap" keyProperty="user_id" useGeneratedKeys="true">
+        insert into
+        sys_user
+        (
+        dept_id,
+        user_name,
+        nick_name,
+        password,
+        status,
+        del_flag,
+        create_by,
+        create_time,
+        isSales,
+        isPartner
+        )value (
+            #{dept_id},
+            #{user_name},
+            #{nick_name},
+            #{password},
+            '0','0','admin',now(),
+            '0','0'
+        )
+    </insert>
+
+    <!--获取部门最大排序-->
+    <select id="getMaxOrderNum" resultType="java.lang.Integer">
+        SELECT max(order_num)
+        FROM sys_dept
+    </select>
+    <!--查询 dept_name-->
+    <select id="getDeptName" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            dept_id,
+            dept_name
+        FROM
+            sys_dept
+        <where>
+            dept_name =#{c_name}
+        </where>
+        LIMIT 1
+    </select>
+
+    <!--查询 dept_id-->
+    <select id="deptID" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            dept_id,
+            id
+        FROM
+            yz_xsgl_customer
+        <where>
+            dept_id =#{dept_id}
+        </where>
+        LIMIT 1
+    </select>
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

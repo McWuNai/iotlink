@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.YzInfoChangeMapper">
+
+    <sql id="selwhere">
+        <where>
+            <if test="value!=null and value!='' ">
+                <if test="type==1">
+                    and iccid LIKE CONCAT(#{value},'%')
+                </if>
+            </if>
+            <if test="taskType !=null and taskType != '' ">
+               AND ctype =#{taskType}
+            </if>
+            <if test="source !=null and source != '' ">
+                AND source_type =#{source}
+            </if>
+            <if test="state !=null and state != '' ">
+                AND execution_status =#{state}
+            </if>
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+                AND
+                <if test="timetype == 0">
+                     createTime
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+            <if test="IccidArr != null  and IccidArr != '' and IccidArr.size>0">
+                and  iccid in
+                <foreach item="IccidArr" collection="IccidArr" index="IccidArr" open="(" separator="," close=")">
+                    #{IccidArr}
+                </foreach>
+            </if>
+
+        </where>
+    </sql>
+
+
+    <select id="ListInfo" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            id,iccid,ctype,cbefore,cafterward,
+            DATE_FORMAT(createTime,'%Y-%m-%d %H:%i:%S') as createTime,
+            remark,source_type,execution_status
+        FROM
+            yz_card_info_change
+        <include refid="selwhere"/>
+            ORDER BY
+                createTime
+            DESC
+            LIMIT #{StarRow},#{PageSize}
+    </select>
+
+    <select id="selMapCount" parameterType="java.util.HashMap"  resultType="java.lang.Integer">
+        SELECT
+            COUNT(1)
+        FROM
+            yz_card_info_change
+        <include refid="selwhere"/>
+    </select>
+
+
+
+    <!--时间降序查询-->
+    <select id="selTime" parameterType="java.util.HashMap"   resultType="java.util.HashMap" >
+        select
+            cbefore,cafterward,
+            DATE_FORMAT(createTime,'%Y-%m-%d %H:%i:%S') as createTime,
+            remark,source_type,execution_status
+        from
+            yz_card_info_change
+        <where>
+            iccid = #{iccid}
+        </where>
+        ORDER BY
+            createTime
+                DESC
+            limit 4
+    </select>
+
+
+</mapper>

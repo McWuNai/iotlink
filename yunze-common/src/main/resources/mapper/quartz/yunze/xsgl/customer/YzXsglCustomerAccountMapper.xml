@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.xsgl.customer.YzXsglCustomerAccountMapper">
+
+
+
+    <select id="findArr" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+            Cat_ID,
+            Cat_Name,
+            Cat_Bank_Name,
+            Cat_Number,
+            Cat_CoID,
+            Cat_User_Name,
+            Cat_Zip_Code,
+            Cat_Address,
+            Cat_atId
+        from
+            yz_xsgl_customer_account
+        <where>
+            Cat_CoID = #{CoID}
+            and state != 0
+        </where>
+    </select>
+
+
+
+    <insert id="save" parameterType="java.util.HashMap"  >
+            insert into
+                yz_xsgl_customer_account
+            (
+                Cat_Name,
+                Cat_Bank_Name,
+                Cat_Number,
+                Cat_CoID,
+                Cat_User_Name,
+                Cat_Zip_Code,
+                Cat_Address,
+                Cat_atId
+            )
+            values
+        <foreach item="CatArrs" collection="CatArrs" index="CatArrs"  separator="," >
+            (
+                #{CatArrs.Cat_Name},
+                #{CatArrs.Cat_Bank_Name},
+                #{CatArrs.Cat_Number},
+                #{CoID},
+                #{CatArrs.Cat_User_Name},
+                #{CatArrs.Cat_Zip_Code},
+                #{CatArrs.Cat_Address},
+                #{CatArrs.Cat_atId}
+            )
+        </foreach>
+    </insert>
+
+
+    <update id="delId" parameterType="java.util.HashMap"  >
+        update  yz_xsgl_customer_account
+        <set>
+            state = 0
+        </set>
+        <where>
+            Cat_ID in
+            <foreach item="CatArrs_delArr" collection="CatArrs_delArr" index="CatArrs_delArr" open="(" separator="," close=")">
+                #{CatArrs_delArr}
+            </foreach>
+            AND Cat_CoID = #{CoID}
+        </where>
+    </update>
+
+    <!--修改-->
+    <update id="upd" parameterType="java.util.HashMap" >
+        update  yz_xsgl_customer_account
+        <set>
+            Cat_Name = #{Cat_Name},
+            Cat_Bank_Name = #{Cat_Bank_Name},
+            Cat_Number = #{Cat_Number},
+            Cat_User_Name = #{Cat_User_Name},
+            Cat_Zip_Code = #{Cat_Zip_Code},
+            Cat_Address = #{Cat_Address},
+            Cat_atId = #{Cat_atId}
+        </set>
+        <where>
+            Cat_ID =#{Cat_ID}
+        </where>
+    </update>
+
+
+    <select id="fnidAccountArr" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            Cat_ID,
+            Cat_Address
+        FROM
+            yz_xsgl_customer_account
+        <where>
+            Cat_CoID = #{id}
+            and state != 0
+        </where>
+        ORDER BY state asc,Cat_atId asc,Cat_ID asc
+    </select>
+
+
+
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

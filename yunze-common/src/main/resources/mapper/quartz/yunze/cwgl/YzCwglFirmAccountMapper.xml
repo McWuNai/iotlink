@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.cwgl.Firm.YzCwglFirmAccountMapper">
+
+
+
+    <sql id="selwhere">
+        <where>
+            <if test="value!=null and value!='' ">
+                <if test="type==1">
+                    and Fat_Name LIKE CONCAT('%',#{value},'%')
+                </if>
+                <if test="type==2">
+                    and Fat_Abbreviation LIKE CONCAT('%',#{value},'%')
+                </if>
+                <if test="type==3">
+                    and Fat_Bank LIKE CONCAT('%',#{value},'%')
+                </if>
+                <if test="type==4">
+                    and Fat_Bank_Number LIKE CONCAT('%',#{value},'%')
+                </if>
+                <if test="type==5">
+                    and Fat_Account_Number LIKE CONCAT('%',#{value},'%')
+                </if>
+                <if test="type==6">
+                    and Fat_Legal_Person LIKE CONCAT('%',#{value},'%')
+                </if>
+                <if test="type==7">
+                    and Fat_Phone LIKE CONCAT('%',#{value},'%')
+                </if>
+                <if test="type==8">
+                    and Fat_Address LIKE CONCAT('%',#{value},'%')
+                </if>
+            </if>
+            <if test="state == null or state == ''">
+                and state = 1
+            </if>
+            <if test="state != null and state != ''">
+                and state = #{state}
+            </if>
+
+        </where>
+    </sql>
+
+    <!-- 查询今日注册数量 -->
+    <select id="sel_data_count" resultType="java.lang.Integer">
+        SELECT MAX(substring(Fat_ID, 13,4)) from yz_cwgl_firm_account where substring(Fat_ID, 5,8)=NOW()
+    </select>
+
+
+    <select id="selMap" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+            Fat_ID,
+            Fat_Name,
+            Fat_Abbreviation,
+            Fat_Bank,
+            Fat_Bank_Number,
+            Fat_Account_Number,
+            Fat_Legal_Person,
+            Fat_Phone,
+            Fat_Address,
+            state
+        from
+            yz_cwgl_firm_account
+        <include refid="selwhere"/>
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+    <select id="selMapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        select
+            count(1)
+        from
+            yz_cwgl_firm_account
+        <include refid="selwhere"/>
+    </select>
+
+
+
+
+    <insert id="save" parameterType="java.util.HashMap"  keyProperty="id" useGeneratedKeys="true" >
+            insert into
+                 yz_cwgl_firm_account
+            (
+                Fat_ID,
+                Fat_Name,
+                Fat_Abbreviation,
+                Fat_Bank,
+                Fat_Bank_Number,
+                Fat_Account_Number,
+                Fat_Legal_Person,
+                Fat_Phone,
+                Fat_Address,
+                state
+            )
+            value
+            (
+                #{Fat_ID},
+                #{Fat_Name},
+                #{Fat_Abbreviation},
+                #{Fat_Bank},
+                #{Fat_Bank_Number},
+                #{Fat_Account_Number},
+                #{Fat_Legal_Person},
+                #{Fat_Phone},
+                #{Fat_Address},
+                <if test="state != null">
+                    #{state},
+                </if>
+                <if test="state == null">
+                 '1'
+                </if>
+            )
+    </insert>
+
+
+    <update id="delId" parameterType="java.util.HashMap"  >
+        update  yz_cwgl_firm_account
+        <set>
+            state = 0
+        </set>
+        <where>
+            Fat_ID = #{Fat_ID}
+        </where>
+    </update>
+
+    <!--修改-->
+    <update id="upd" parameterType="java.util.HashMap" >
+        update  yz_cwgl_firm_account
+        <set>
+            Fat_Name = #{Fat_Name},
+            Fat_Abbreviation = #{Fat_Abbreviation},
+            Fat_Bank = #{Fat_Bank},
+            Fat_Bank_Number = #{Fat_Bank_Number},
+            Fat_Account_Number = #{Fat_Account_Number},
+            Fat_Legal_Person = #{Fat_Legal_Person},
+            Fat_Phone = #{Fat_Phone},
+            Fat_Address = #{Fat_Address},
+        </set>
+        <where>
+            Fat_ID = #{Fat_ID}
+        </where>
+    </update>
+
+
+    <select id="find" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+            Fat_ID,
+            Fat_Name,
+            Fat_Abbreviation,
+            Fat_Bank,
+            Fat_Bank_Number,
+            Fat_Account_Number,
+            Fat_Legal_Person,
+            Fat_Phone,
+            Fat_Address
+        from
+            yz_cwgl_firm_account
+       <where>
+           Fat_ID = #{Fat_ID}
+       </where>
+    </select>
+
+
+
+    <select id="findArr" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+            Fat_ID,
+            Fat_Name,
+            Fat_Address
+        from
+            yz_cwgl_firm_account
+        <where>
+            state = 1
+        </where>
+    </select>
+
+    <!--公司账户删除-->
+    <delete id="deletefatid" parameterType="java.util.HashMap">
+        delete from yz_cwgl_firm_account where Fat_ID=#{Fat_ID}
+    </delete>
+
+    <!--查询 公司名称-->
+    <select id="sleName" resultType="java.util.HashMap">
+        SELECT
+            Fat_ID as 'dictValue',
+            Fat_Name as 'dictLabel'
+        FROM
+            yz_cwgl_firm_account
+    </select>
+
+</mapper>

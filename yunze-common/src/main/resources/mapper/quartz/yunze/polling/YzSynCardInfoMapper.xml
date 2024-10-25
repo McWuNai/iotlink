@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.polling.YzSynCardInfoMapper">
+
+    <select id="is_exist" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        select
+            count(1)
+        from
+            yz_syn_card_info
+        <where>
+            msisdn = #{msisdn}
+        </where>
+    </select>
+
+
+
+    <insert id="save" parameterType="java.util.HashMap" >
+        insert into yz_syn_card_info
+        (
+            msisdn,
+            iccid,
+            imsi,
+            activate_date,
+            open_date,
+            create_date,
+            update_date,
+            syn_Time,
+            channel_id,
+            remark,
+            groupId,
+            custId,
+            status_id
+        )values
+        <foreach item="arrs" collection="arrs" index="index" separator=",">
+            (
+            #{arrs.msisdn},
+            <choose>
+                <when test="arrs.iccid!=null">
+                    #{arrs.iccid},
+                </when>
+                <otherwise>
+                    '',
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="arrs.imsi!=null">
+                    #{arrs.imsi},
+                </when>
+                <otherwise>
+                    '',
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="arrs.activate_date!=null">
+                    #{arrs.activate_date},
+                </when>
+                <otherwise>
+                    '',
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="arrs.open_date!=null">
+                    #{arrs.open_date},
+                </when>
+                <otherwise>
+                    '',
+                </otherwise>
+            </choose>
+            now(),
+            now(),
+            now()
+            <choose>
+                <when test="arrs.channel_id!=null">
+                    ,#{arrs.channel_id}
+                </when>
+                <otherwise>
+                    ,''
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="arrs.remark!=null">
+                    ,#{arrs.remark}
+                </when>
+                <otherwise>
+                    , ''
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="arrs.groupId!=null">
+                    ,#{arrs.groupId}
+                </when>
+                <otherwise>
+                    , ''
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="arrs.custId!=null">
+                    ,#{arrs.custId}
+                </when>
+                <otherwise>
+                    , ''
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="arrs.status_id!=null and arrs.status_id != ''">
+                    ,#{arrs.status_id}
+                </when>
+                <otherwise>
+                    , '8'
+                </otherwise>
+            </choose>
+            )
+        </foreach>
+    </insert>
+
+    <update id="update" parameterType="java.util.HashMap" >
+        update yz_syn_card_info
+        <set>
+            <if test="iccid!=null">
+                iccid = #{iccid},
+            </if>
+            <if test="iccid!=null">
+                iccid = #{iccid},
+            </if>
+            <if test="imsi!=null">
+                imsi = #{imsi},
+            </if>
+            <if test="activate_date!=null">
+                activate_date = #{activate_date},
+            </if>
+            <if test="open_date!=null">
+                open_date = #{open_date},
+            </if>
+            <if test="channel_id!=null">
+                channel_id = #{channel_id},
+            </if>
+            <if test="remark!=null">
+                remark = #{remark},
+            </if>
+            <if test="groupId!=null">
+                groupId = #{groupId},
+            </if>
+            <if test="custId!=null">
+                custId = #{custId},
+            </if>
+            <if test="status_id!=null">
+                status_id = #{status_id},
+            </if>
+            update_date = now(),
+            syn_Time = now()
+        </set>
+        <where>
+            msisdn = #{msisdn}
+        </where>
+    </update>
+
+
+    <update id="updateArr" parameterType="java.util.HashMap" >
+        update yz_syn_card_info
+        <set>
+            <if test="inconsistent_iccid!=null">
+                inconsistent_iccid = #{inconsistent_iccid},
+            </if>
+            <if test="is_new!=null">
+                is_new = #{is_new},
+            </if>
+        </set>
+        <where>
+            msisdn in
+            <foreach item="updArr" collection="updArr" index="updArr" open="(" separator="," close=")">
+                #{updArr.msisdn}
+            </foreach>
+        </where>
+    </update>
+
+
+
+    <select id="getNotSyncedInfo" parameterType="java.util.HashMap" resultType="java.lang.String">
+        SELECT
+            msisdn
+        from
+            yz_syn_card_info
+        <where>
+             update_date BETWEEN #{staTime} AND #{endTime}
+            and channel_id = #{channel_id}
+            and LENGTH(trim(iccid ))   <![CDATA[ < ]]> 1
+        </where>
+    </select>
+
+
+    <!--获取需要同步到主表 card_info 的数据-->
+    <select id="getSyncCardInfo" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            msisdn,
+            iccid,
+            imsi,
+            DATE_FORMAT( activate_date, '%Y-%m-%d' ) as 'activate_date',
+            DATE_FORMAT( open_date, '%Y-%m-%d' ) as 'open_date',
+            channel_id,
+            remark
+        from
+            yz_syn_card_info
+        <where>
+            channel_id = #{channel_id}
+            <if test="staTime!=null and endTime!=null">
+                and  update_date  BETWEEN #{staTime} AND #{endTime}
+            </if>
+            and LENGTH(trim(iccid ))   <![CDATA[ > ]]> 1
+            <if test="inconsistent_iccid!=null">
+                and inconsistent_iccid = #{inconsistent_iccid}
+            </if>
+            <if test="is_new!=null">
+                and is_new = #{is_new}
+            </if>
+        </where>
+    </select>
+
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

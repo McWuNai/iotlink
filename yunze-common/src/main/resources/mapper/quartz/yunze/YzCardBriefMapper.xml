@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.YzCardBriefMapper">
+
+    <!--批量新增-->
+    <insert id="batchCard" parameterType="java.util.HashMap">
+        INSERT INTO
+        yz_card_brief
+            (
+                vid,
+                msisdn,
+                iccid
+            )value
+        <foreach item="cardArr" collection="cardArr" index="index"  separator="," >
+            (
+                #{cardArr.vid},
+                #{cardArr.msisdn},
+                #{cardArr.iccid}
+            )
+        </foreach>
+    </insert>
+
+    <!--批量修改-->
+    <update id="batchUpd" parameterType="java.util.HashMap">
+        UPDATE
+            yz_card_brief
+        <set>
+            <if test="msisdn!=null and myUpdType!=1">msisdn = #{msisdn},</if>
+            <if test="iccid!=null and myUpdType!=2">iccid = #{iccid},</if>
+        </set>
+        <where>
+            <choose>
+                <when test="myUpdType!=null">
+                    <if test="myUpdType==1">
+                        msisdn = #{msisdn}
+                    </if>
+                    <if test="myUpdType==2">
+                        iccid = #{iccid}
+                    </if>
+                    <if test="myUpdType==0">
+                        vid = #{vid}
+                    </if>
+                </when>
+                <otherwise>
+                    vid = #{vid}
+                </otherwise>
+            </choose>
+        </where>
+    </update>
+
+    <sql id="selBrief">
+        <where>
+            a.iccid not in (SELECT iccid FROM yz_card_brief WHERE iccid = a.iccid)
+        </where>
+    </sql>
+     <!--查询 yz_card_brief 没有主表 iccid 的-->
+    <select id="selList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            a.vid,
+            a.msisdn,
+            a.iccid
+            FROM
+                yz_card_info a
+            <include refid="selBrief"/>
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+    <!--通过总数进行批量新增  每页 500 条-->
+    <select id="selMapCount" resultType="java.lang.Integer">
+        SELECT
+            count(1)
+        FROM
+            yz_card_info a
+        <include refid="selBrief"/>
+    </select>
+
+
+
+
+</mapper>

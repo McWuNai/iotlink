@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.warehouse.Administration.YzCkglCommodityStorageMapper">
+
+    <sql id="selwhere">
+        <where>
+            <if test="type==1">
+                and CSE_fliieUrl LIKE CONCAT(#{value},'%')
+            </if>
+            <if test="CSE_Stid != null and CSE_Stid != ''">
+                and CSE_Stid =#{CSE_Stid}
+            </if>
+            <if test="CSE_Manager_ID != null and CSE_Manager_ID != ''">
+                and CSE_Manager_ID =#{CSE_Manager_ID}
+            </if>
+            <if test="CSE_warehouseman_ID != null and CSE_warehouseman_ID != ''">
+                and CSE_warehouseman_ID =#{CSE_warehouseman_ID}
+            </if>
+            <if test="CSE_Time != null  and CSE_Time != '' and staTime!=null and endTime!=null">
+                AND
+                <if test="CSE_Time == 1">
+                    CSE_Time
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+        </where>
+    </sql>
+
+    <insert id="warehousingadd" parameterType="java.util.HashMap">
+        insert into yz_ckgl_commodity_storage(
+            CSE_ID,
+            CSE_Stid,
+            CSE_Time,
+            CSE_Overview,
+            CSE_Manager_ID,
+            CSE_warehouseman_ID
+        )values (
+                    #{CSE_ID},
+                    #{CSE_Stid},
+                    #{CSE_Time},
+                    #{CSE_Overview},
+                    #{CSE_Manager_ID},
+                    #{CSE_warehouseman_ID}
+                )
+    </insert>
+
+    <!-- 查询今日注册数量 -->
+    <select id="sel_data_count" resultType="java.lang.Integer">
+        SELECT MAX(substring(CSE_ID, 13,4)) from yz_ckgl_commodity_storage where substring(CSE_ID, 5,8)=NOW()
+    </select>
+
+    <!--查询出库总数-->
+    <select id="sle_warehouse"  resultType="java.lang.Integer">
+        SELECT
+            sum( CODS_Output_Quantity )
+        FROM
+            yz_ckgl_commodity_output_details
+        WHERE
+            CODS_CyID =#{Cy_ID}
+    </select>
+
+    <!--查询总数-->
+    <select id="selMapCount" parameterType="java.util.HashMap"  resultType="java.lang.Integer">
+        SELECT
+        COUNT(1)
+        FROM
+        yz_ckgl_commodity_storage
+        <include refid="selwhere"/>
+    </select>
+    <!--查询商品信息列表-->
+    <select id="slestorage" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        CSE_ID,CSE_Stid,
+        DATE_FORMAT(CSE_Time,'%Y-%m-%d') as CSE_Time,
+        CSE_Overview,CSE_Manager_ID,CSE_warehouseman_ID,CSE_fliieUrl
+        FROM
+        yz_ckgl_commodity_storage
+        <include refid="selwhere"/>
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+    <!--查询 上传文件地址-->
+    <select id="sleFile" parameterType="java.util.HashMap" resultType="java.lang.String">
+        SELECT CSE_fliieUrl FROM yz_ckgl_commodity_storage where CSE_ID =#{CSE_ID}
+    </select>
+
+    <!--修改 上传文件地址-->
+    <update id="uploadFile" parameterType="java.util.HashMap">
+        UPDATE
+        yz_ckgl_commodity_storage
+        <set>
+            CSE_fliieUrl =#{CSE_fliieUrl}
+        </set>
+        <where>
+            CSE_ID = #{CSE_ID}
+        </where>
+    </update>
+
+
+
+
+
+</mapper>

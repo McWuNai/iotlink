@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.cn.mapper.YzWeChatUserMapper">
+
+
+
+
+
+
+
+
+	<sql id="selwhere" >
+		<where>
+			u.del_flag = '0'
+			<if test="user_name != null and user_name != ''">
+				AND u.user_name like CONCAT( #{user_name}, '%')
+			</if>
+			<if test="status != null and status != ''">
+				AND u.status = #{status}
+			</if>
+			<if test="phonenumber != null and phonenumber != ''">
+				AND u.phonenumber like CONCAT( #{phonenumber}, '%')
+			</if>
+			<if test="staTime != '' and endTime != '' and staTime!=null and endTime!=null">
+				 u.create_time BETWEEN #{staTime} AND #{endTime}
+			</if>
+			AND (u.dept_id = #{deptId} OR u.dept_id IN ( SELECT t.dept_id FROM sys_dept t WHERE find_in_set(#{deptId}, ancestors) ))
+			<!-- 数据范围过滤 -->
+			${dataScope}
+		</where>
+	</sql>
+
+	<select id="selMap" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select u.user_id, u.dept_id, u.nick_name, u.user_name, u.email, u.avatar, u.phonenumber, u.password, u.sex, u.status, u.del_flag, u.login_ip, u.login_date, u.create_by, u.create_time, u.remark, d.dept_name, d.leader from yz_wechat_user u
+			left join sys_dept d on u.dept_id = d.dept_id
+		<include refid="selwhere"/>
+		LIMIT #{StarRow},#{PageSize}
+	</select>
+
+	<select id="selMapCount" parameterType="java.util.HashMap"  resultType="java.lang.Integer">
+		SELECT
+			COUNT(*)
+		from yz_wechat_user u
+			left join sys_dept d on u.dept_id = d.dept_id
+		<include refid="selwhere"/>
+	</select>
+
+
+	<insert id="save" parameterType="java.util.HashMap">
+		INSERT INTO yz_wechat_user
+		(
+			user_name,
+			openid,
+			head_image,
+			iccid,
+			sex,
+			create_time,
+			city,
+			province,
+			country,
+			app_id,
+			status,
+			bind_status
+		)VALUES
+		(
+			#{user_name},
+			#{openid},
+			#{head_image},
+			#{iccid},
+			#{sex},
+			#{create_time},
+			#{city},
+			#{province},
+			#{country},
+			#{app_id},
+			#{status},
+			#{bind_status}
+		)
+	</insert>
+
+
+
+	<update id="upd" parameterType="java.util.HashMap">
+		update yz_wechat_user
+		<set>
+			iccid = #{iccid},
+			bind_status = #{bind_status}
+		</set>
+		<where>
+			openid = #{openid}
+		</where>
+	</update>
+
+
+	<select id="find" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select
+			id,
+			user_name,
+			openid,
+			head_image,
+			iccid,
+			sex,
+			create_time,
+			city,
+			province,
+			country,
+			app_id,
+			status,
+			bind_status
+		from
+			yz_wechat_user
+		<where>
+			iccid = #{iccid}
+			and openid = #{openid}
+			and status = 1
+			and bind_status = 1
+		</where>
+		order by create_time desc limit 1
+	</select>
+
+
+	<select id="findBindtatus" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			iccid,
+			bind_status
+		FROM yz_wechat_user
+		<where>
+			openid = #{openid}
+		</where>
+			order by create_time desc limit 1
+	</select>
+
+
+</mapper>

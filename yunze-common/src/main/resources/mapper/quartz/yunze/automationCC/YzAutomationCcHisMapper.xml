@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.automationCC.YzAutomationCcHisMapper">
+
+
+    <!-- 插入 推送记录  -->
+    <insert id="save" parameterType="java.util.HashMap">
+		INSERT INTO
+			yz_automation_cc_his
+		(
+			cc_id,
+			cc_url,
+			cc_email,
+			cc_state,
+			cc_result,
+			remark,
+			cc_parameter,
+			create_time,
+			cc_count,
+			cc_time
+		)VALUE
+		(
+			#{cc_id},
+			#{cc_url},
+			#{cc_email},
+			#{cc_state},
+			#{cc_result},
+			#{remark},
+			#{cc_parameter},
+			now(),
+			0,
+			now()
+		)
+	</insert>
+
+	<!--修改抄送记录-->
+	<update id="updCcCount" parameterType="java.util.HashMap">
+		UPDATE yz_automation_cc_his
+		<set>
+			cc_count = cc_count+1,
+			cc_time = now(),
+			cc_state = '1',
+			cc_result = #{cc_result},
+			remark = #{remark}
+		</set>
+		<where>
+			id = #{id}
+		</where>
+	</update>
+
+
+	<!--获取未抄送成功的数据进行抄送-->
+	<select id="findNotPerformed" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+		SELECT
+			b.id,
+			b.cc_id,
+			b.cc_url,
+			b.cc_email,
+			b.cc_parameter
+		FROM
+			yz_automation_cc as  a left  join
+			yz_automation_cc_his as b
+			on  a.id = b.cc_id
+		<where>
+			a.trigger_type = #{trigger_type}
+			and a.status = 1
+			and b.cc_result = 0
+			and cc_count <![CDATA[ <= ]]> #{cc_count}
+		</where>
+	</select>
+
+
+
+
+</mapper>

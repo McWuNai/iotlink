@@ -1,0 +1,311 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.fhgl.FhglExpressInquiryMapper">
+
+
+    <sql id="selwhere">
+        <where>
+            B.SAN_CoID  = C.id
+            AND	B.SAN_ID = A.EIY_SANID
+            <if test="value!=null and value!='' ">
+                <if test="type==1">
+                    AND SAN_CoName  LIKE CONCAT('%',#{value},'%')
+                </if>
+                <if test="type==2">
+                    AND SAN_Recipient_Name  LIKE CONCAT('%',#{value},'%')
+                </if>
+                <if test="type==3">
+                    AND EIY_ID = #{value}
+                </if>
+                <if test="type==4">
+                    AND EIY_Tracking_Number = #{value}
+                </if>
+            </if>
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+                and
+                <if test="timetype == 1">
+                    EIY_Ship_Time
+                </if>
+                <if test="timetype == 2">
+                    EIY_Time
+                </if>
+                BETWEEN #{staTime} and #{endTime}
+            </if>
+            <if test="EIY_Evaluation_Status != null  and EIY_Evaluation_Status != '' and EIY_Evaluation_Status.size>0">
+                AND EIY_Evaluation_Status IN
+                <foreach item="EIY_Evaluation_Status" collection="EIY_Evaluation_Status" index="index"  open="(" separator=","  close=")">
+                    #{EIY_Evaluation_Status}
+                </foreach>
+            </if>
+            <if test="EIY_Signing_Status != null  and EIY_Signing_Status != '' and EIY_Signing_Status.size>0">
+                AND EIY_Signing_Status IN
+                <foreach item="EIY_Signing_Status" collection="EIY_Signing_Status" index="index"  open="(" separator=","  close=")">
+                    #{EIY_Signing_Status}
+                </foreach>
+            </if>
+            <if test="sales_idArr != null  and sales_idArr != '' and sales_idArr.size>0">
+                and  C.sales_id in
+                <foreach item="sales_idArr" collection="sales_idArr" index="sales_idArr" open="(" separator="," close=")">
+                    #{sales_idArr}
+                </foreach>
+            </if>
+            <if test="cId != null  and cId != '' ">
+                and  C.id = #{cId}
+            </if>
+        </where>
+    </sql>
+
+
+
+
+    <!-- 查询快递查询信息 -->
+    <select id="selMap" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            A.EIY_ID,
+            DATE_FORMAT(A.EIY_Ship_Time,'%Y-%m-%d') AS EIY_Ship_Time,
+            B.SAN_CoName,
+            B.SAN_Recipient_Name,
+            A.EIY_Express_Delivery,
+            A.EIY_Tracking_Number,
+            B.SAN_Sender_Name,
+            A.EIY_Signing_Status,
+            DATE_FORMAT(A.EIY_Time,'%Y-%m-%d') AS EIY_Time,
+            A.EIY_Evaluation_Status
+        FROM
+            FHGL_Express_Inquiry A,
+            FHGL_Shipping_Application B,
+            yz_xsgl_customer C
+        <include refid="selwhere"/>
+        ORDER BY EIY_Ship_Time DESC
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+    <select id="selMapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        SELECT
+            COUNT(1)
+        FROM
+            FHGL_Express_Inquiry A,
+            FHGL_Shipping_Application B,
+            yz_xsgl_customer C
+        <include refid="selwhere"/>
+    </select>
+
+    <!-- 修改时间、状态 -->
+    <update id="upd_EIY" parameterType="java.util.HashMap">
+        UPDATE
+        FHGL_Express_Inquiry
+        <set>
+            <if test="EIY_Signing_Status!=null">
+                EIY_Signing_Status = #{EIY_Signing_Status},
+            </if>
+            <if test="EIY_Evaluation_Status!=null">
+                EIY_Evaluation_Status = #{EIY_Evaluation_Status},
+            </if>
+            <if test="EIY_Time!=null">
+                EIY_Time = #{EIY_Time},
+            </if>
+        </set>
+        <where>
+            EIY_ID = #{EIY_ID}
+        </where>
+    </update>
+
+    <!-- 查询快递查询详情 -->
+    <select id="find_data" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            B.EIY_ID,
+            DATE_FORMAT(A.SAN_Time,'%Y-%m-%d') AS SAN_Time,
+            A.SAN_CoName,
+            A.SAN_Recipient_Name,
+            A.SAN_Sender_Name,
+            A.SAN_Recipient_Tel,
+            A.SAN_Recipient_Address,
+            DATE_FORMAT(B.EIY_Ship_Time,'%Y-%m-%d') AS EIY_Ship_Time,
+            B.EIY_ShiptyID,
+            B.EIY_FpayType,
+            B.EIY_Tracking_Number,
+            B.EIY_Express_Delivery,
+            B.EIY_Delivery_Person,
+            B.EIY_Signing_Status,
+            B.EIY_Evaluation_Status,
+            B.EIY_Time,
+            B.EIY_Remarks
+        FROM
+        FHGL_Shipping_Application A,
+        FHGL_Express_Inquiry B
+        <where>
+            A.SAN_ID = B.EIY_SANID
+            AND	B.EIY_ID = #{EIY_ID}
+        </where>
+    </select>
+
+    <insert id="add_EIY" parameterType="java.util.HashMap">
+		INSERT INTO FHGL_Express_Inquiry
+		(
+			EIY_ID,
+			EIY_Signing_Status,
+			EIY_Evaluation_Status,
+			EIY_Remarks,
+			EIY_SANID,
+			EIY_ShiptyID,
+			EIY_FpayType,
+			EIY_Tracking_Number,
+			EIY_Express_Delivery,
+			EIY_Delivery_Person,
+			EIY_Ship_Time
+		)VALUES
+		(
+			#{EIY_ID},
+			1,
+			1,
+			#{SAN_Remarks},
+			#{SAN_ID},
+			#{SAN_ShiptyID},
+			#{SAN_FpayType},
+			#{SAN_Tracking_Number},
+			#{SAN_Express_Delivery},
+			#{SAN_Delivery_Person},
+			#{EIY_Ship_Time}
+		)
+	</insert>
+
+    <!-- 查询今日注册数量 -->
+    <select id="sel_data_count" resultType="java.lang.Integer">
+		SELECT MAX(substring(EIY_ID, 13,4)) from FHGL_Express_Inquiry where substring(EIY_ID, 5,8)=NOW()
+	</select>
+
+    <!-- 修改快递查询详情发货方式数据 -->
+    <update id="upd_EIY_data" parameterType="java.util.HashMap">
+        UPDATE
+        FHGL_Express_Inquiry
+        <set>
+            <if test="EIY_Ship_Time!=null">
+                EIY_Ship_Time=#{EIY_Ship_Time},
+            </if>
+            <if test="EIY_ShiptyID!=null">
+                EIY_ShiptyID=#{EIY_ShiptyID},
+            </if>
+            <if test="EIY_FpayType!=null">
+                EIY_FpayType=#{EIY_FpayType},
+            </if>
+            <if test="EIY_Tracking_Number!=null">
+                EIY_Tracking_Number=#{EIY_Tracking_Number},
+            </if>
+            <if test="EIY_Express_Delivery!=null">
+                EIY_Express_Delivery=#{EIY_Express_Delivery},
+            </if>
+            <if test="EIY_Delivery_Person!=null">
+                EIY_Delivery_Person=#{EIY_Delivery_Person},
+            </if>
+            <if test="EIY_Remarks!=null">
+                EIY_Remarks=#{EIY_Remarks},
+            </if>
+            <if test="EIY_Signing_Status!=null">
+                EIY_Signing_Status = #{EIY_Signing_Status},
+            </if>
+            <if test="EIY_Evaluation_Status!=null">
+                EIY_Evaluation_Status = #{EIY_Evaluation_Status},
+            </if>
+            <if test="EIY_Time!=null">
+                EIY_Time = #{EIY_Time},
+            </if>
+        </set>
+        <where>
+            EIY_ID = #{EIY_ID}
+        </where>
+    </update>
+
+    <!-- 删除快递查询信息 -->
+    <delete id="del_EIY" parameterType="java.util.HashMap">
+        DELETE FROM FHGL_Express_Inquiry <where>EIY_ID = #{EIY_ID}</where>
+    </delete>
+
+
+    <!-- 修改所属发货申请ID -->
+    <update id="upd_SANID" parameterType="java.util.HashMap">
+        UPDATE FHGL_Express_Inquiry
+        <set>
+            EIY_SANID = #{SAN_ID}
+        </set>
+        <where>
+            EIY_SANID IN
+            <foreach item="SANID_arr" collection="SANID_arr"  open="("  close=")"   separator="," >
+                #{SANID_arr}
+            </foreach>
+        </where>
+    </update>
+
+    <!-- 按时间段查询 快递ID-->
+    <select id="find_ID" parameterType="java.util.HashMap" resultType="java.lang.String">
+        SELECT
+            EIY_ID
+        FROM
+            FHGL_Express_Inquiry
+        <where>
+            <if test="S_time!=null and E_time!=null">
+                AND EIY_Ship_Time BETWEEN #{S_time} and #{E_time}
+            </if>
+        </where>
+    </select>
+
+
+
+    <!-- 查询快递 类型分组 -->
+    <select id="groupCount" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            A.EIY_Evaluation_Status ,
+            A.EIY_Signing_Status ,
+            B.SAN_Delivery_Status,
+            count(1) as 'count'
+        FROM
+            FHGL_Express_Inquiry A,
+            FHGL_Shipping_Application B,
+            yz_xsgl_customer C
+        <include refid="selwhere"/>
+        group by
+        <if test="FindType == 'Evaluation'">
+            A.EIY_Evaluation_Status
+        </if>
+        <if test="FindType == 'Signing'">
+            A.EIY_Signing_Status
+        </if>
+        <if test="FindType == 'Delivery'">
+            B.SAN_Delivery_Status
+        </if>
+    </select>
+
+
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

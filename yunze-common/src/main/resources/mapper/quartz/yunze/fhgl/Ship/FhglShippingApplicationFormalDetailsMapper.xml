@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.fhgl.Ship.FhglShippingApplicationFormalDetailsMapper">
+
+    <!-- 新增 发货申请正式合同发货信息详情 -->
+    <insert id="add_SAFDS"  parameterType="java.util.Map">
+        INSERT INTO FHGL_Shipping_Application_Formal_Details
+        (
+        SAFDS_Name,
+        SAFDS_ModelAndNumber,
+        SAFDS_Remarks,
+        SAFDS_SANID,
+        SAFDS_Sent_Quantity,
+        SAFDS_Owe_Quantity,
+        SAFDS_Sort
+        )VALUE
+        <foreach item="SAFDS_arr" collection="SAFDS_arr"  separator="," >
+            (
+            #{SAFDS_arr.SAFDS_Name},
+            #{SAFDS_arr.SAFDS_ModelAndNumber},
+            #{SAFDS_arr.SAFDS_Remarks},
+            #{SAN_ID},
+            <if test="SAFDS_arr.SAFDS_Sent_Quantity!=null">
+                #{SAFDS_arr.SAFDS_Sent_Quantity},
+            </if>
+            <if test="SAFDS_arr.SAFDS_Sent_Quantity==null">
+                0,
+            </if>
+            <if test="SAFDS_arr.SAFDS_Owe_Quantity!=null">
+                #{SAFDS_arr.SAFDS_Owe_Quantity}
+            </if>
+            <if test="SAFDS_arr.SAFDS_Owe_Quantity==null">
+                #{SAFDS_arr.SAFDS_ModelAndNumber}
+            </if>
+            ,#{SAFDS_arr.SAFDS_Sort}
+            )
+        </foreach>
+    </insert>
+
+
+    <!-- 查询 发货申请正式合同发货信息 -->
+    <select id="find_data" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        SAFDS_ID,
+        SAFDS_Name,
+        SAFDS_ModelAndNumber,
+        SAFDS_Remarks,
+        SAFDS_Sent_Quantity,
+        SAFDS_Owe_Quantity
+        FROM
+        FHGL_Shipping_Application_Formal_Details
+        <where>
+            SAFDS_SANID = #{SAN_ID}
+        </where>
+    </select>
+
+
+    <!-- 删除 正式合同发货信息详情-->
+    <delete id="del_date" parameterType="java.util.HashMap">
+        DELETE FROM FHGL_Shipping_Application_Formal_Details <where>SAFDS_SANID = #{SAN_ID}  </where>
+    </delete>
+
+
+    <!-- 修改  正式合同发货信息-->
+    <update id="upd_date"  parameterType="java.util.HashMap">
+        UPDATE FHGL_Shipping_Application_Formal_Details
+        <set>
+            SAFDS_Sent_Quantity = #{SAFDS_Sent_Quantity},
+            SAFDS_Owe_Quantity = #{SAFDS_Owe_Quantity}
+        </set>
+        <where>
+            SAFDS_ID = #{SAFDS_ID}
+        </where>
+    </update>
+
+    <!--合同发货-->
+    <select id="find_out" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            a.SAFDS_ID ,
+            a.SAFDS_Name as 'Cy_Name',
+            a.SAFDS_ModelAndNumber,
+            a.SAFDS_Remarks,
+            a.SAFDS_SANID,
+            a.SAFDS_Sent_Quantity as 'CSDS_Storage_Quantity',
+            a.SAFDS_Owe_Quantity,
+            a.SAFDS_Sort as 'Cy_Sort',
+            b.Csd_CyID as 'Cy_ID',
+            b.Csd_Category as 'Cy_Category',
+            b.Csd_ModelAndNumber as 'Cy_ModelAndNumber',
+            b.Csd_CyUnit as 'Cy_Unit'
+        FROM
+            fhgl_shipping_application_formal_details a,
+            yz_xsgl_contract_standard b,
+            fhgl_shipping_application_formal c
+        WHERE
+            b.Csd_CyName = a.SAFDS_Name
+          and c.SAFL_ODYContractID = b.Csd_CtID
+          and c.SAFL_SANID = a.SAFDS_SANID
+          and a.SAFDS_SANID = #{SAN_ID}
+    </select>
+
+    <!--普通发货-->
+    <select id="find_arr" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            a.Cy_ID  as 'Cy_ID',
+            b.ASOY_ID,
+            b.ASOY_Sort as 'Cy_Sort',
+            ASOY_Category as 'Cy_Category',
+            b.ASOY_Name as 'Cy_Name',
+            b.ASOY_ModelAndNumber as 'Cy_ModelAndNumber',
+            b.ASOY_Unit as 'Cy_Unit',
+            b.ASOY_Quantity ,
+            b.ASOY_SANID,
+            b.ASOY_Sent_Quantity as 'CSDS_Storage_Quantity' ,
+            b.ASOY_Owe_Quantity
+        FROM
+            yz_ckgl_commodity a,
+            fhgl_shipping_application_ordinary b
+        WHERE
+            a.Cy_Name = b.ASOY_Name
+          and b.ASOY_SANID = #{SAN_ID}
+    </select>
+
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

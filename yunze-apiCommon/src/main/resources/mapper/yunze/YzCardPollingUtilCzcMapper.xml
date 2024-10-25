@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.apiCommon.mapper.YzCardPollingUtilCzcMapper">
+
+<!--1.查询现有通道-->
+    <select id="selAllRoute" resultType="java.lang.String">
+        select cd_id from yz_card_route yz_card_route where cd_state = '1' and cd_lunxun = '1'
+    </select>
+<!--2.查询传入的通道ID下游多少张卡-->
+    <select id="selRouteCardCount" parameterType="java.lang.String" resultType="java.lang.String">
+        select count(*) as cd_count from yz_card_info where channel_id = #{route_id}
+    </select>
+<!--3.修改传入的通道ID下的卡总数    -->
+    <update id="updRouteCount" parameterType="java.util.Map">
+        update yz_card_route set cd_count =#{cd_count} where cd_id =#{route_id}
+    </update>
+<!--查询通道下的卡iccid 状态为1-->
+    <select id="selCardIccid" parameterType="java.util.Map" resultType="java.lang.String">
+        select iccid from yz_card_info where channel_id = #{route_id} and  status_ShowId = '4'
+    </select>
+<!--    查询通道信息-->
+    <select id="selRouteParma" parameterType="java.util.Map" resultType="java.util.Map">
+        select cd_code,cd_name,cd_username,cd_pwd,cd_key,cd_status,cd_operator_type from yz_card_route where cd_id = #{route_id}
+    </select>
+<!--    查询真实号码-->
+    <select id="selMsidn" parameterType="java.lang.String" resultType="java.lang.String">
+        select msisdn from yz_card_info where iccid = #{iccid}
+    </select>
+
+    <select id="selRoute"  resultType="java.lang.String">
+        select distinct route_id from yz_auto_polling
+    </select>
+
+    <select id="selRouteCode" parameterType="java.lang.String" resultType="java.lang.String">
+        select cd_code from yz_card_route where cd_id = #{route}
+    </select>
+
+    <select id="selCountByRoute" resultType="java.lang.Integer" parameterType="java.lang.String">
+        select count(*) from yz_auto_polling where route_id =#{route}
+    </select>
+
+    <select id="selIccids" resultType="java.lang.String" parameterType="java.lang.String">
+        select iccid from yz_auto_polling where route_id=#{route}
+    </select>
+
+    <select id="selIccidsLimit" resultType="java.lang.String" parameterType="java.util.Map">
+        select iccid from yz_auto_polling where route_id =#{route} limit #{li} ,100
+    </select>
+
+    <select id="selRouteMap" resultType="java.util.Map" parameterType="java.lang.String">
+        SELECT
+            cd_status,
+            cd_code,
+            cd_username,
+            cd_pwd,
+            cd_key,
+            cd_control_type
+        FROM
+            yz_card_route
+        where
+            cd_id=#{route}
+
+
+    </select>
+
+    <select id="selCardPacket" parameterType="java.lang.String" resultType="java.util.Map">
+        select p.packet_valid_name
+        from yz_card_info i left JOIN yz_order o on i.iccid = o.iccid
+                            left Join yz_card_packet p on o.packet_id = p.packet_id
+        where i.iccid =#{iccid}  LIMIT 1
+    </select>
+
+    <select id="selCardUseInfo" parameterType="java.lang.String" resultType="java.util.Map">
+        select o.validate_type,o.packet_id,p.packet_valid_name ,p.error_flow from yz_order o
+                                                                                      LEFT JOIN yz_card_packet p on o.packet_id = p.packet_id
+        where iccid=#{iccid} LIMIT 1
+    </select>
+
+    <update id="updCardUsedByDayIsFastDayInMonth" parameterType="java.util.Map">
+        update yz_card_info set used=#{used},remaining=#{remaining} where iccid =#{iccid}
+    </update>
+
+    <select id="selCardOne" parameterType="java.lang.String" resultType="java.util.Map">
+       select used,remaining from yz_card_info where iccid =#{iccid}
+    </select>
+
+    <insert id="insertMonth" parameterType="java.util.Map">
+        insert into yz_card_month (iccid,used,year_month)values (
+                                                                 #{iccid},#{used},#{month}
+                                                                )
+    </insert>
+
+    <update id="updAutoPollingInfo" parameterType="java.util.Map">
+        update yz_auto_polling set day_auto ='1' ,day_type='1' where iccid =#{iccid}
+    </update>
+
+    <update id="updAutoPollingError" parameterType="java.util.Map">
+        update yz_auto_polling set day_auto ='1' ,day_type='0' where iccid =#{iccid}
+    </update>
+
+    <update id="updAutoPollingAll" >
+        update yz_auto_polling set day_auto ='0' ,day_type='0'
+    </update>
+</mapper>

@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.fhgl.Ship.FhglShippingApplicationOtherMapper">
+
+    <!-- 新增 发货申请其他发货信息 -->
+    <insert id="add_SAOR"  parameterType="java.util.Map">
+        INSERT INTO FHGL_Shipping_Application_Other
+        (
+        SAOR_Name,
+        SAOR_ModelAndNumber,
+        SAOR_Unit,
+        SAOR_Quantity,
+        SAOR_SANID,
+        SAOR_Sent_Quantity,
+        SAOR_Owe_Quantity
+        )
+        VALUE
+        <foreach item="SAOR_arr" collection="SAOR_arr"  separator="," >
+            (
+            #{SAOR_arr.SAOR_Name},
+            #{SAOR_arr.SAOR_ModelAndNumber},
+            #{SAOR_arr.SAOR_Unit},
+            #{SAOR_arr.SAOR_Quantity},
+            #{SAN_ID},
+            <if test="SAOR_arr.SAOR_Sent_Quantity!=null">
+                #{SAOR_arr.SAOR_Sent_Quantity},
+            </if>
+            <if test="SAOR_arr.SAOR_Sent_Quantity==null">
+                0,
+            </if>
+            <if test="SAOR_arr.SAOR_Owe_Quantity!=null">
+                #{SAOR_arr.SAOR_Owe_Quantity}
+            </if>
+            <if test="SAOR_arr.SAOR_Owe_Quantity==null">
+                #{SAOR_arr.SAOR_Quantity}
+            </if>
+            )
+        </foreach>
+    </insert>
+
+
+    <!-- 查询 发货申请其他发货信息 -->
+    <select id="find_data" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        SAOR_ID,
+        SAOR_Name,
+        SAOR_ModelAndNumber,
+        SAOR_Unit,
+        SAOR_Quantity,
+        SAOR_Sent_Quantity,
+        SAOR_Owe_Quantity
+        FROM
+        FHGL_Shipping_Application_Other
+        <where>
+            SAOR_SANID = #{SAN_ID}
+        </where>
+    </select>
+
+
+    <!-- 删除 其他发货信息-->
+    <delete id="del_date" parameterType="java.util.HashMap">
+        DELETE FROM FHGL_Shipping_Application_Other <where>SAOR_SANID = #{SAN_ID}  </where>
+    </delete>
+
+    <!-- 修改 其他发货信息-->
+    <update id="upd_date"  parameterType="java.util.HashMap">
+        UPDATE FHGL_Shipping_Application_Other
+        <set>
+            SAOR_Sent_Quantity = #{SAOR_Sent_Quantity},
+            SAOR_Owe_Quantity = #{SAOR_Owe_Quantity}
+        </set>
+        <where>
+            SAOR_ID = #{SAOR_ID}
+        </where>
+    </update>
+
+
+    <!-- 修改所属发货申请ID -->
+    <update id="upd_SANID" parameterType="java.util.HashMap">
+        UPDATE FHGL_Shipping_Application_Other
+        <set>
+            SAOR_SANID = #{SAN_ID}
+        </set>
+        <where>
+            SAOR_SANID IN
+            <foreach item="SANID_arr" collection="SANID_arr"   open="("  close=")"  separator="," >
+                #{SANID_arr}
+            </foreach>
+        </where>
+    </update>
+
+
+
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.cwgl.CwglBillingApplicationMapper">
+
+
+    <!-- 新增开票申请记录 -->
+    <insert id="add_BAN" parameterType="java.util.HashMap">
+		INSERT INTO CWGL_Billing_Application(
+			BAN_ID,
+			BAN_TotalBilling,
+			BAN_BillingRemaining,
+			BAN_IrdID
+		)
+		VALUES(
+			#{BAN_ID},
+			#{BAN_TotalBilling},
+			#{BAN_BillingRemaining},
+			#{Ird_ID}
+		)
+	</insert>
+
+    <!-- 查询今日注册商品数量 -->
+    <select id="sel_data_count" resultType="java.lang.Integer">
+		SELECT MAX(substring(BAN_ID, 13,4)) from CWGL_Billing_Application where substring(BAN_ID, 5,8)=NOW()
+	</select>
+
+    <!-- 查询开票申请信息 -->
+    <select id="find_data" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        BAN_ID,
+        BAN_TotalBilling,
+        BAN_BillingRemaining,
+        BAN_IrdID
+        FROM
+        CWGL_Billing_Application
+        <where>
+            BAN_IrdID = #{Ird_ID}
+        </where>
+    </select>
+
+    <!-- 删除开票申请信息 -->
+    <delete id="del_all" parameterType="java.util.HashMap">
+        DELETE FROM CWGL_Billing_Application <where> BAN_IrdID = #{Ird_ID} </where>
+    </delete>
+
+    <!-- 修改开票申请 -->
+    <update id="upd_BAN" parameterType="java.util.HashMap">
+        UPDATE
+        CWGL_Billing_Application
+        <set>
+            <if test="BAN_TotalBilling!=null">
+                BAN_TotalBilling= #{BAN_TotalBilling},
+            </if>
+            <if test="BAN_BillingRemaining!=null">
+                BAN_BillingRemaining= #{BAN_BillingRemaining},
+            </if>
+        </set>
+        <where>
+            BAN_ID = #{BAN_ID}
+        </where>
+    </update>
+
+    <!-- 查询所属开票申请信息 -->
+    <select id="find_BAN_ID" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        BAN_ID,
+        BAN_TotalBilling,
+        BAN_BillingRemaining
+        FROM
+        CWGL_Billing_Application
+        <where>
+            BAN_IrdID = #{Ird_ID}
+        </where>
+    </select>
+
+
+    <!-- 查询合同所属开票总计 -->
+    <select id="find_Sum_TotalBilling" parameterType="java.util.HashMap" resultType="java.lang.String">
+        SELECT
+        SUM(BAN_TotalBilling)
+        FROM
+        CWGL_Billing_Application
+        <where>
+            BAN_IrdID = #{Ird_ID}
+        </where>
+    </select>
+
+    <!-- 查询发票申请ID下的开票 ID -->
+    <select id="find_BAN_ID_arr" parameterType="java.util.HashMap" resultType="java.lang.String">
+        SELECT
+        BAN_ID
+        FROM
+        CWGL_Billing_Application
+        <where>
+            BAN_IrdID = #{Ird_ID}
+        </where>
+    </select>
+
+
+
+
+
+
+
+
+</mapper>

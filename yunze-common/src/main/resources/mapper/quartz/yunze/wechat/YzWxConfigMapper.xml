@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.wechat.YzWxConfigMapper">
+
+    <sql id="selwhere">
+        <where>
+
+            <if test="agent_id != null and agent_id != '' ">
+                AND agent_id = #{agent_id}
+            </if>
+            <if test="id != null and id != '' ">
+                AND id = #{id}
+            </if>
+        </where>
+    </sql>
+
+
+    <select id="findOne" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+            id,
+            app_id,
+            app_secret,
+            app_token,
+            origin_id,
+            mch_id,
+            paterner_key,
+            index_url,
+            back_url,
+            status,
+            create_time,
+            update_time,
+            create_user,
+            company_id,
+            agent_id,
+            native_url,
+            auth_txt
+        from
+            yz_wx_config
+        <include refid="selwhere"/>
+        ORDER BY create_time desc
+        LIMIT 1
+    </select>
+
+
+    <select id="getWxConfigs"  resultType="java.util.HashMap">
+        select
+            id,
+            app_id,
+            app_secret,
+            app_token,
+            origin_id,
+            mch_id,
+            paterner_key,
+            index_url,
+            back_url,
+            status,
+            create_time,
+            update_time,
+            create_user,
+            company_id,
+            agent_id,
+            native_url,
+            auth_txt
+        from
+            yz_wx_config
+    </select>
+
+
+
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

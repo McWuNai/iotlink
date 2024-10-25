@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.xsgl.customer.YzXsglCustomerImgMapper">
+
+    <!--图片新增-->
+    <insert id="guestFile" parameterType="java.util.HashMap">
+        insert into
+        yz_xsgl_customer_img
+        (
+        dept_id,
+        pic_url,
+        is_master,
+        pic_order,
+        pic_status,
+        modified_time,
+        type
+        )value
+        <foreach item="UpdimgArr" collection="UpdimgArr" index="index" separator=",">
+            (
+            #{UpdimgArr.dept_id},
+            #{UpdimgArr.pic_url},
+            #{UpdimgArr.is_master},
+            #{UpdimgArr.pic_order},
+            1,
+            now(),
+            1
+            )
+        </foreach>
+    </insert>
+
+    <!--加载图片信息-->
+    <select id="urlID" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT id,
+               pic_url,
+               cu_desc
+        FROM yz_xsgl_customer_img
+        WHERE dept_id = #{dept_id}
+
+    </select>
+
+    <sql id="selwhere">
+        <where>
+            <if test="value!=null and value!='' ">
+                <if test="type==1">
+                    and b.c_name LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type==2">
+                    and b.tax_number LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type==3">
+                    and b.address LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type==4">
+                    and b.alias LIKE CONCAT(#{value},'%')
+                </if>
+            </if>
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+                and
+                <if test="timetype == 0">
+                     b.create_time
+                </if>
+                <if test="timetype == 1">
+                    b.modified_time
+                </if>
+                BETWEEN #{staTime} and #{endTime}
+            </if>
+            <if test="gradeIdArr != null  and gradeIdArr != '' and gradeIdArr.size>0">
+                and b.grade_id in
+                <foreach item="gradeIdArr" collection="gradeIdArr" index="gradeIdArr" open="(" separator="," close=")">
+                    #{gradeIdArr}
+                </foreach>
+            </if>
+            <if test="oneIdArr != null  and oneIdArr != '' and oneIdArr.size>0">
+                and b.one_category_id in
+                <foreach item="oneIdArr" collection="oneIdArr" index="oneIdArr" open="(" separator="," close=")">
+                    #{oneIdArr}
+                </foreach>
+            </if>
+            <if test="TowIdArr != null  and TowIdArr != '' and TowIdArr.size>0">
+                and b.two_category_id in
+                <foreach item="TowIdArr" collection="TowIdArr" index="TowIdArr" open="(" separator="," close=")">
+                    #{TowIdArr}
+                </foreach>
+            </if>
+            <if test="sourceIdArr != null  and sourceIdArr != '' and sourceIdArr.size>0">
+                and b.source_id in
+                <foreach item="sourceIdArr" collection="sourceIdArr" index="sourceIdArr" open="(" separator=","
+                         close=")">
+                    #{sourceIdArr}
+                </foreach>
+            </if>
+            <if test="sales_idArr != null  and sales_idArr != '' and sales_idArr.size>0">
+                and b.sales_id in
+                <foreach item="sales_idArr" collection="sales_idArr" index="sales_idArr" open="(" separator=","
+                         close=")">
+                    #{sales_idArr}
+                </foreach>
+            </if>
+            <if test="is_Recycle != null and is_Recycle != '' ">
+                and b.is_Recycle = #{is_Recycle}
+            </if>
+            <if test="province != null and province != '' ">
+                and b.province = #{province}
+            </if>
+            <if test="city != null and city != '' ">
+                and b.city = #{city}
+            </if>
+            <if test="district != null and district != '' ">
+                and b.district = #{district}
+            </if>
+            <if test="affiliation_id != null and affiliation_id != '' ">
+                and b.affiliation_id = #{affiliation_id}
+            </if>
+            <if test="Co_Discount != null and Co_Discount != '' ">
+                and b.Co_Discount  <![CDATA[ >= ]]> #{Co_Discount}
+            </if>
+            <if test="pic_status != null and pic_status != ''">
+                and a.pic_status =#{pic_status}
+            </if>
+            and a.dept_id = b.dept_id
+        </where>
+    </sql>
+
+    <!--查询客户图片列表-->
+    <select id="contactsList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        a.id,
+        a.dept_id,
+        a.cu_desc,
+        a.pic_url,
+        a.is_master,
+        a.pic_order,
+        a.pic_status,
+        DATE_FORMAT( a.modified_time, "%Y-%m-%d %H:%i:%S" ) AS modified_time,
+        a.type,
+        b.id,
+        b.c_name,
+        b.dept_id,
+        b.grade_id,
+        b.province,
+        b.city,
+        b.district,
+        b.address,
+        DATE_FORMAT( b.create_time, "%Y-%m-%d %H:%i:%S" ) AS create_time,
+        DATE_FORMAT( b.modified_time, "%Y-%m-%d %H:%i:%S" ) AS modified_time,
+        b.one_category_id,
+        b.two_category_id,
+        b.remarks,
+        b.source_id,
+        b.is_Recycle,
+        b.affiliation_id,
+        b.tax_number,
+        b.Co_Discount,
+        b.state_id,
+        b.sales_id,
+        b.afterSale_rate,
+        b.affiliation_rate,
+        b.sales_rate,
+        b.sort_id,
+        b.credit_code,
+        b.id_card,
+        alias
+        FROM
+        yz_xsgl_customer_img a,
+        yz_xsgl_customer b
+        <include refid="selwhere"/>
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+    <!--查询客户图片列表总数-->
+    <select id="selMapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        SELECT
+        COUNT(1)
+        FROM
+        yz_xsgl_customer_img a,
+        yz_xsgl_customer b
+        <include refid="selwhere"/>
+    </select>
+
+    <!--删除单个图片-->
+    <delete id="singleUrl" parameterType="java.util.HashMap">
+        delete from yz_xsgl_customer_img
+        <where>
+            id =#{id}
+        </where>
+    </delete>
+
+    <!--删除  修改 无效状态 -->
+    <update id="picStatus" parameterType="java.util.HashMap">
+        UPDATE
+        yz_xsgl_customer_img
+        <set>
+            pic_status = '0'
+        </set>
+        <where>
+            id =#{id}
+        </where>
+    </update>
+
+    <!--回收  修改 有效状态-->
+    <update id="effectiveStatus" parameterType="java.util.HashMap">
+        UPDATE
+        yz_xsgl_customer_img
+        <set>
+            pic_status = '1'
+        </set>
+        <where>
+            id =#{id}
+        </where>
+    </update>
+
+
+</mapper>

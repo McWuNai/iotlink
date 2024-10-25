@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.cwgl.CwglInvoiceRecordMapper">
+
+
+    <sql id="selwhere">
+        <where>
+            <if test="value!=null and value!=''">
+                <if test="type==1">
+                    AND Ird_CoName  LIKE CONCAT('%',#{value},'%')
+                </if>
+            </if>
+            <if test="Ird_FatAbbreviation!=null">
+                AND Ird_FatAbbreviation = #{Ird_FatAbbreviation}
+            </if>
+            <if test="Ird_UserID!=null">
+                AND Ird_UserID = #{Ird_UserID}
+            </if>
+            <if test="Ird_Nature!=null">
+                AND Ird_Nature IN
+                <foreach item="Ird_Nature" collection="Ird_Nature" index="index"  open="(" separator=","  close=")">
+                    #{Ird_Nature}
+                </foreach>
+            </if>
+            <if test="Ird_Status!=null">
+                AND Ird_Status IN
+                <foreach item="Ird_Status" collection="Ird_Status" index="index"  open="(" separator=","  close=")">
+                    #{Ird_Status}
+                </foreach>
+            </if>
+        </where>
+    </sql>
+
+
+
+
+
+
+
+
+    <!-- 新增发票记录 -->
+    <insert id="add_IRD" parameterType="java.util.HashMap">
+        INSERT INTO CWGL_Invoice_Record(
+        Ird_ID,
+        Ird_Time,
+        Ird_CoID,
+        Ird_CoName,
+        Ird_FatAbbreviation,
+        Ird_UserID,
+        Ird_UserName,
+        Ird_Nature,
+        Ird_Status,
+        Ird_ContractAmount,
+        Ird_InvoicedAmount,
+        Ird_UnopenedAmount
+        <if test="Ird_CtID!=null">
+            ,Ird_CtID
+        </if>
+        <if test="Ird_BillingContent!=null">
+            ,Ird_BillingContent
+        </if>
+        <if test="Ird_TaxNumber!=null">
+            ,Ird_TaxNumber
+        </if>
+        <if test="Ird_Address!=null">
+            ,Ird_Address
+        </if>
+        <if test="Ird_AccountAndOpeningBank!=null">
+            ,Ird_AccountAndOpeningBank
+        </if>
+        )
+        VALUES(
+        #{Ird_ID},
+        #{c_time},
+        #{c_id},
+        #{c_name},
+        #{c_fatName},
+        #{c_userId},
+        #{c_userName},
+        #{Ird_Nature},
+        <if test="Ird_Status!=null">
+            #{Ird_Status},
+        </if>
+        <if test="Ird_Status==null">
+            1,
+        </if>
+        #{Ird_ContractAmount},
+        <if test="Ird_InvoicedAmount!=null">
+            #{Ird_InvoicedAmount},
+        </if>
+        <if test="Ird_InvoicedAmount==null">
+            0,
+        </if>
+        #{Ird_UnopenedAmount}
+        <if test="Ird_CtID!=null">
+            ,#{Ird_CtID}
+        </if>
+        <if test="Ird_BillingContent!=null">
+            ,#{Ird_BillingContent}
+        </if>
+        <if test="Ird_TaxNumber!=null">
+            ,#{Ird_TaxNumber}
+        </if>
+        <if test="Ird_Address!=null">
+            ,#{Ird_Address}
+        </if>
+        <if test="Ird_AccountAndOpeningBank!=null">
+            ,#{Ird_AccountAndOpeningBank}
+        </if>
+        )
+    </insert>
+
+    <!-- 查询今日注册商品数量 -->
+    <select id="sel_data_count" resultType="java.lang.Integer">
+		SELECT MAX(substring(Ird_ID, 13,4)) from CWGL_Invoice_Record where substring(Ird_ID, 5,8)=NOW()
+	</select>
+
+
+    <!-- 查询快递查询信息 -->
+    <select id="selMap" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        Ird_ID,
+        DATE_FORMAT(Ird_Time,'%Y-%m-%d') AS Ird_Time,
+        Ird_CoName,
+        Ird_FatAbbreviation,
+        Ird_UserID,
+        Ird_UserName,
+        Ird_Nature,
+        Ird_Status,
+        Ird_ContractAmount,
+        Ird_InvoicedAmount,
+        Ird_UnopenedAmount,
+        Ird_CtID,
+        Ird_CoID,
+        (SELECT COUNT(1) from CWGL_Billing_Application where BAN_IrdID = Ird_ID ) AS Ex
+        FROM
+        CWGL_Invoice_Record
+        <include refid="selwhere"/>
+        ORDER BY Ird_Time DESC
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+
+    <!-- 查询快递查询信息 -->
+    <select id="selMapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        SELECT
+            COUNT(1)
+        FROM
+            CWGL_Invoice_Record
+        <include refid="selwhere"/>
+    </select>
+
+    <!-- 查询单条发票信息 -->
+    <select id="find_data" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        Ird_ID,
+        DATE_FORMAT(Ird_Time, '%Y-%m-%d') AS Ird_Time,
+        Ird_CoID,
+        Ird_CoName,
+        Ird_FatAbbreviation,
+        Ird_UserID,
+        Ird_UserName,
+        Ird_Nature,
+        Ird_Status,
+        Ird_ContractAmount,
+        Ird_InvoicedAmount,
+        Ird_UnopenedAmount,
+        Ird_BillingContent,
+        Ird_TaxNumber,
+        Ird_Address,
+        Ird_AccountAndOpeningBank
+        FROM
+        CWGL_Invoice_Record
+        <where>
+            Ird_ID = #{Ird_ID}
+        </where>
+    </select>
+
+    <!-- 修改发票信息 -->
+    <update id="upd_IRD" parameterType="java.util.HashMap">
+        UPDATE
+        CWGL_Invoice_Record
+        <set>
+            <if test="Ird_UserID!=null">
+                Ird_UserID= #{Ird_UserID},
+            </if>
+            <if test="Ird_UserName!=null">
+                Ird_UserName= #{Ird_UserName},
+            </if>
+            <if test="Ird_Nature!=null">
+                Ird_Nature= #{Ird_Nature},
+            </if>
+            <if test="Ird_Status!=null">
+                Ird_Status= #{Ird_Status},
+            </if>
+            <if test="Ird_InvoicedAmount!=null">
+                Ird_InvoicedAmount= #{Ird_InvoicedAmount},
+            </if>
+            <if test="Ird_UnopenedAmount!=null">
+                Ird_UnopenedAmount= #{Ird_UnopenedAmount},
+            </if>
+            <if test="Ird_FatAbbreviation!=null">
+                Ird_FatAbbreviation= #{Ird_FatAbbreviation},
+            </if>
+            <if test="Ird_BillingContent!=null">
+                Ird_BillingContent= #{Ird_BillingContent},
+            </if>
+            <if test="Ird_TaxNumber!=null">
+                Ird_TaxNumber= #{Ird_TaxNumber},
+            </if>
+            <if test="Ird_Address!=null">
+                Ird_Address= #{Ird_Address},
+            </if>
+            <if test="Ird_AccountAndOpeningBank!=null">
+                Ird_AccountAndOpeningBank= #{Ird_AccountAndOpeningBank},
+            </if>
+        </set>
+        <where>
+            Ird_ID = #{Ird_ID}
+        </where>
+    </update>
+
+    <!-- 通过合同编号修改发票信息 -->
+    <update id="upd_Ird_CtID"  parameterType="java.util.HashMap">
+        UPDATE
+        CWGL_Invoice_Record
+        <set>
+            <if test="Ird_Time!=null">
+                Ird_Time= #{Ird_Time},
+            </if>
+            <if test="Ird_CoID!=null">
+                Ird_CoID= #{Ird_CoID},
+            </if>
+            <if test="Ird_CoName!=null">
+                Ird_CoName= #{Ird_CoName},
+            </if>
+            <if test="Ird_FatAbbreviation!=null">
+                Ird_FatAbbreviation= #{Ird_FatAbbreviation},
+            </if>
+            <if test="Ird_UserID!=null">
+                Ird_UserID= #{Ird_UserID},
+            </if>
+            <if test="Ird_UserName!=null">
+                Ird_UserName= #{Ird_UserName},
+            </if>
+            <if test="Ird_ContractAmount!=null">
+                Ird_ContractAmount = #{Ird_ContractAmount},
+            </if>
+            <if test="Ird_UnopenedAmount!=null">
+                Ird_UnopenedAmount= #{Ird_UnopenedAmount},
+            </if>
+            <if test="Ird_Status!=null">
+                Ird_Status = #{Ird_Status},
+            </if>
+        </set>
+        <where>
+            Ird_CtID = #{Ird_CtID}
+        </where>
+    </update>
+
+    <!-- 通过合同id查询 发票信息的  已开金额-->
+    <select id="find_Ird_InvoicedAmount" parameterType="java.util.HashMap" resultType="java.lang.String">
+        SELECT Ird_InvoicedAmount FROM CWGL_Invoice_Record <where> Ird_CtID = #{Ird_CtID} </where>
+    </select>
+
+
+    <!-- 删除发票信息 -->
+    <delete id="del_IRD" parameterType="java.util.HashMap">
+        DELETE FROM CWGL_Invoice_Record <where> Ird_ID = #{Ird_ID} </where>
+    </delete>
+
+
+
+
+
+
+
+
+</mapper>

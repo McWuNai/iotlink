@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.YzCcUrlMapper">
+
+    <sql id="selwhere">
+        <where>
+            a.cc_id = b.id
+            <if test="value != null and value != ''">
+                <if test="type == 1">
+                    and a.cc_id LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 2">
+                    and b.cc_name LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 3">
+                    and a.url LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 4">
+                    and a.email LIKE CONCAT(#{value},'%')
+                </if>
+            </if>
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+                AND
+                <if test="timetype == 1">
+                     a.create_time
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+        </where>
+    </sql>
+
+    <select id="selMapCount" parameterType="java.util.HashMap"  resultType="java.lang.Integer">
+        SELECT
+            COUNT(1)
+        FROM
+            yz_automation_cc_url a,
+            yz_automation_cc b
+        <include refid="selwhere"/>
+    </select>
+
+    <select id="ListCcUrl" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            a.id,
+            a.cc_id,
+            a.url,
+            a.email,
+            DATE_FORMAT( a.create_time, '%Y-%m-%d %H:%i:%S' ) AS create_time,
+            b.cc_name
+        FROM
+            yz_automation_cc_url a,
+            yz_automation_cc b
+        <include refid="selwhere"/>
+               LIMIT #{StarRow},#{PageSize}
+    </select>
+
+    <insert id="insertCcUrl" parameterType="java.util.HashMap">
+            insert into yz_automation_cc_url(
+            cc_id,url,email
+            )values(
+            #{cc_id},#{url},#{email}
+            )
+    </insert>
+
+    <update id="updateCcUrl" parameterType="java.util.HashMap">
+        update
+            yz_automation_cc_url
+        <set>
+            url=#{url},email=#{email}
+        </set>
+        <where>
+            id =#{id}
+        </where>
+    </update>
+
+    <select id="CountId" parameterType="java.util.HashMap"  resultType="java.lang.Integer">
+        SELECT
+            COUNT(1)
+        FROM yz_automation_cc_url where cc_id =#{cc_id}
+    </select>
+
+    <delete id="DeleteCcUrl" parameterType="java.util.HashMap">
+        delete from yz_automation_cc_url
+            <where>
+                id = #{id}
+            </where>
+    </delete>
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

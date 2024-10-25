@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.warehouse.Administration.YzCkglCommodityStorageDetailsMapper">
+
+    <insert id="quantity" parameterType="java.util.HashMap">
+        insert into yz_ckgl_commodity_storage_details(
+        CSDS_CyID,
+        CSDS_Storage_Quantity,
+        CSDS_CSEID
+        )values
+        <foreach item="CatArrs" collection="CatArrs" index="CatArrs"  separator=",">
+            (
+            #{CatArrs.Cy_ID},
+            #{CatArrs.CSDS_Storage_Quantity},
+            #{CSDS_CSEID}
+            )
+        </foreach>
+    </insert>
+
+    <!--查询入库总数 ==-->
+    <select id="sle_quantity"  resultType="java.lang.Integer">
+        SELECT
+            sum( CSDS_Storage_Quantity )
+        FROM
+            yz_ckgl_commodity_storage_details
+        WHERE
+            CSDS_CyID =#{Cy_ID}
+    </select>
+
+    <!--查询 上传文件地址-->
+    <select id="sleFile" parameterType="java.util.HashMap" resultType="java.lang.String">
+        SELECT CSDS_URL FROM yz_ckgl_commodity_storage_details WHERE CSDS_ID =#{CSDS_ID}
+    </select>
+
+    <!--修改 上传文件地址-->
+    <update id="uploadFile" parameterType="java.util.HashMap">
+        UPDATE
+        yz_ckgl_commodity_storage_details
+        <set>
+            CSDS_URL =#{CSDS_URL}
+        </set>
+        <where>
+            CSDS_ID = #{CSDS_ID}
+        </where>
+    </update>
+
+
+</mapper>
+

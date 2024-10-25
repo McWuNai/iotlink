@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.YzCcHisMapper">
+
+    <sql id="selwhere">
+        <where>
+            a.cc_id = b.id
+            <if test="value != null and value != ''">
+                <if test="type == 1">
+                    and a.cc_id LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 2">
+                    and b.cc_name LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 3">
+                    and a.cc_url LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 4">
+                    and a.cc_email LIKE CONCAT(#{value},'%')
+                </if>
+            </if>
+            <if test="cc_result != null and cc_result != '' ">
+                and a.cc_result =#{cc_result}
+            </if>
+            <if test="cc_state != null and cc_state != '' ">
+                and a.cc_state =#{cc_state}
+            </if>
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+                AND
+                <if test="timetype == 1">
+                    a.create_time
+                </if>
+                <if test="timetype == 2">
+                     a.cc_time
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+        </where>
+    </sql>
+
+    <select id="selMapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        SELECT
+        COUNT(1)
+        FROM
+        yz_automation_cc_his a,
+        yz_automation_cc b
+        <include refid="selwhere"/>
+    </select>
+
+    <select id="ListCcHis" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            a.id,
+            a.cc_id,
+            a.cc_url,
+            a.cc_email,
+            a.cc_state,
+            a.cc_result,
+            a.remark,
+            a.cc_parameter,
+            DATE_FORMAT( a.create_time, '%Y-%m-%d %H:%i:%S' ) AS create_time,
+            cc_count,
+            DATE_FORMAT( a.cc_time, '%Y-%m-%d %H:%i:%S' ) AS cc_time,
+            b.id,
+            b.cc_name
+        FROM
+            yz_automation_cc_his a,
+            yz_automation_cc b
+        <include refid="selwhere"/>
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+
+</mapper>

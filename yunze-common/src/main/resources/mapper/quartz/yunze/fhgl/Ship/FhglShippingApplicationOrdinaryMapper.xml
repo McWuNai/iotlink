@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.fhgl.Ship.FhglShippingApplicationOrdinaryMapper">
+
+    <!-- 新增 发货申请普通发货信息 -->
+    <insert id="add_ASOY"  parameterType="java.util.Map">
+        INSERT INTO FHGL_Shipping_Application_Ordinary
+        (
+        ASOY_Sort,
+        ASOY_Category,
+        ASOY_Name,
+        ASOY_ModelAndNumber,
+        ASOY_Unit,
+        ASOY_Quantity,
+        ASOY_SANID,
+        ASOY_Sent_Quantity,
+        ASOY_Owe_Quantity
+        )VALUE
+        <foreach item="ASOY_arr" collection="ASOY_arr"  separator="," >
+            (
+            #{ASOY_arr.Cy_Sort},
+            #{ASOY_arr.Cy_Category},
+            #{ASOY_arr.Cy_Name},
+            #{ASOY_arr.Cy_ModelAndNumber},
+            #{ASOY_arr.Cy_Unit},
+            #{ASOY_arr.Csd_Quantity},
+            #{SAN_ID},
+            <if test="ASOY_arr.ASOY_Sent_Quantity!=null">
+                #{ASOY_arr.ASOY_Sent_Quantity},
+            </if>
+            <if test="ASOY_arr.ASOY_Sent_Quantity==null">
+                0,
+            </if>
+            <if test="ASOY_arr.ASOY_Owe_Quantity!=null">
+                #{ASOY_arr.ASOY_Owe_Quantity}
+            </if>
+            <if test="ASOY_arr.ASOY_Owe_Quantity==null">
+                #{ASOY_arr.Csd_Quantity}
+            </if>
+            )
+        </foreach>
+    </insert>
+
+    <!-- 查询发货申请普通发货信息 -->
+    <select id="find_data" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        ASOY_ID,
+        ASOY_Sort as 'Cy_Sort',
+        ASOY_Category as 'Cy_Category',
+        ASOY_Name as 'Cy_Name',
+        ASOY_ModelAndNumber as 'Cy_ModelAndNumber',
+        ASOY_Unit as 'Cy_Unit',
+        ASOY_Quantity as 'Csd_Quantity',
+        ASOY_Sent_Quantity,
+        ASOY_Owe_Quantity
+        FROM
+        FHGL_Shipping_Application_Ordinary
+        <where>
+            ASOY_SANID	= #{SAN_ID}
+        </where>
+    </select>
+
+    <!-- 删除 普通发货信息-->
+    <delete id="del_date" parameterType="java.util.HashMap">
+        DELETE FROM FHGL_Shipping_Application_Ordinary <where>ASOY_SANID = #{SAN_ID}  </where>
+    </delete>
+
+    <!-- 修改  普通发货信息-->
+    <update id="upd_date"  parameterType="java.util.HashMap">
+        UPDATE FHGL_Shipping_Application_Ordinary
+        <set>
+            ASOY_Sent_Quantity = #{ASOY_Sent_Quantity},
+            ASOY_Owe_Quantity = #{ASOY_Owe_Quantity}
+        </set>
+        <where>
+            ASOY_ID = #{ASOY_ID}
+        </where>
+    </update>
+
+
+    <!-- 修改所属发货申请ID -->
+    <update id="upd_SANID" parameterType="java.util.HashMap">
+        UPDATE FHGL_Shipping_Application_Ordinary
+        <set>
+            ASOY_SANID = #{SAN_ID}
+        </set>
+        <where>
+            ASOY_SANID IN
+            <foreach item="SANID_arr" collection="SANID_arr" open="("  close=")" separator="," >
+                #{SANID_arr}
+            </foreach>
+        </where>
+    </update>
+
+
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

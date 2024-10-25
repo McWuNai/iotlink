@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.cn.mapper.YzSysLogsMapper">
+
+    <select id="Listwhole" resultType="java.util.HashMap">
+        select id,res_url,create_time,class_method,ip,
+               CONVERT(request_args USING utf8mb4) AS request_args,
+               CONVERT(response_args USING utf8mb4) AS response_args,
+               user_name,project,action_name from yz_sys_logs
+    </select>
+
+
+
+   <delete id="deleteById" parameterType="java.util.HashMap">
+        delete from
+            yz_sys_logs
+        <where>
+            <if test="CCC != null  and CCC != '' and CCC.size>0">
+                and  id in
+                <foreach item="CCC" collection="CCC" index="CCC" open="(" separator="," close=")">
+                    #{CCC.id}
+                </foreach>
+            </if>
+        </where>
+   </delete>
+
+</mapper>

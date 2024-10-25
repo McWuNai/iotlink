@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.bulk.YzBulkBusinessDtailsMapper">
+
+
+
+
+	<insert id="add" parameterType="java.util.HashMap" >
+		INSERT INTO yz_bulk_business_dtails
+		(
+			b_id,
+			card_number,
+			create_time,
+			update_time,
+			state_id
+		 )
+		value
+		<foreach item="bus_arrs" collection="bus_arrs" index="index"  separator="," >
+		(
+			#{b_id},
+			#{bus_arrs.iccid},
+			now(),
+			now(),
+			0
+		)
+		</foreach>
+	</insert>
+
+
+	<update id="update" parameterType="java.util.HashMap">
+		UPDATE
+			yz_bulk_business_dtails
+		<set>
+			update_time = now(),
+			<if test="end_time!=null">
+				end_time = #{end_time},
+			</if>
+			<if test="mydescribe!=null">
+				mydescribe = #{mydescribe},
+			</if>
+			<if test="url!=null">
+				url = #{url},
+			</if>
+			<if test="state_id!=null">
+				state_id = #{state_id},
+			</if>
+		</set>
+		<where>
+			b_id = #{b_id}
+			and card_number =#{card_number}
+		</where>
+	</update>
+
+
+
+	<update id="updateArr" parameterType="java.util.HashMap">
+		UPDATE
+		yz_bulk_business_dtails
+		<set>
+			update_time = now(),
+			<if test="end_time!=null">
+				end_time = #{end_time},
+			</if>
+			<if test="mydescribe!=null">
+				mydescribe = #{mydescribe},
+			</if>
+			<if test="url!=null">
+				url = #{url},
+			</if>
+			<if test="state_id!=null">
+				state_id = #{state_id},
+			</if>
+		</set>
+		<where>
+			b_id = #{b_id}
+			and card_number in
+			<foreach item="bus_arrs" collection="bus_arrs" index="index" open="("  separator=","  close=")">
+				#{bus_arrs.iccid}
+			</foreach>
+		</where>
+	</update>
+
+
+
+
+	<sql id="selwhere">
+		<where>
+			<if test="value != null and value != ''">
+				<if test="type == 1">
+					and card_number LIKE CONCAT(#{value},'%')
+				</if>
+				<if test="type == 2">
+					and mydescribe LIKE CONCAT(#{value},'%')
+				</if>
+			</if>
+			<if test="state_id != null and state_id != ''">
+				and state_id =#{state_id}
+			</if>
+			<if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+				AND
+				<if test="timetype == 1">
+					 create_time
+				</if>
+				BETWEEN #{staTime} AND #{endTime}
+			</if>
+		</where>
+	</sql>
+
+	<select id="selMap" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+		id,
+		b_id,
+		card_number,
+		DATE_FORMAT( create_time, "%Y-%m-%d " ) AS create_time,
+		DATE_FORMAT( update_time, "%Y-%m-%d " ) AS update_time,
+		DATE_FORMAT( end_time, "%Y-%m-%d " ) AS end_time,
+		mydescribe,
+		state_id
+		FROM
+		yz_bulk_business_dtails
+		<include refid="selwhere"/>
+		LIMIT #{StarRow},#{PageSize}
+	</select>
+
+	<select id="selMapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		SELECT
+		COUNT(1)
+		FROM
+		yz_bulk_business_dtails
+		<include refid="selwhere"/>
+	</select>
+
+
+	<sql id="common">
+		<where>
+			b_id =#{b_id}
+			<if test="type != null">
+				<if test="type == 'success'">
+					AND state_id = 1
+				</if>
+				<if test="type == 'fail'">
+					AND state_id = 2
+				</if>
+				<if test="type == 'Pending'">
+					AND state_id = 0
+				</if>
+			</if>
+			<if test="bIdArr != null and bIdArr != '' and bIdArr.size>0">
+				and b_id in
+				<foreach item="bIdArr" collection="bIdArr" index="index" open="("  separator=","  close=")">
+					#{bIdArr}
+				</foreach>
+			</if>
+		</where>
+	</sql>
+	<!--只查询状态-->
+	<select id="successArr" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+		id,
+		b_id,
+		card_number,
+		DATE_FORMAT( create_time, "%Y-%m-%d %H:%i:%S" ) AS create_time,
+		DATE_FORMAT( update_time, "%Y-%m-%d %H:%i:%S" ) AS update_time,
+		DATE_FORMAT( end_time, "%Y-%m-%d %H:%i:%S" ) AS end_time,
+		mydescribe,
+		state_id
+		FROM
+		yz_bulk_business_dtails
+		<include refid="common"/>
+		LIMIT #{StarRow},#{PageSize}
+	</select>
+	<select id="publicCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		SELECT
+		COUNT(1)
+		FROM
+		yz_bulk_business_dtails
+		<include refid="common"/>
+	</select>
+
+
+	<!--导出查询-->
+	<select id="exportallorders" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+		id,
+		b_id,
+		card_number,
+		DATE_FORMAT( create_time, "%Y-%m-%d %H:%i:%S" ) AS create_time,
+		DATE_FORMAT( update_time, "%Y-%m-%d %H:%i:%S" ) AS update_time,
+		DATE_FORMAT( end_time, "%Y-%m-%d %H:%i:%S" ) AS end_time,
+		mydescribe,
+		state_id
+		FROM
+		yz_bulk_business_dtails
+		<include refid="common"/>
+	</select>
+
+
+
+</mapper>

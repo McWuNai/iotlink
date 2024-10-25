@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.sysgl.YzIndexpageMapper">
+
+    <!--查询首页数据-->
+    <select id="findToDay" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+        id ,
+        downCount ,
+        overdoseCount ,
+        expiringSoonCount ,
+        thresholdReachedCount ,
+        simCardCount ,
+        simCardNewCount ,
+        currentMonth ,
+        simActivity ,
+        CONVERT(lifeCycleDistribution USING utf8mb4) AS 'lifeCycleDistribution',
+        CONVERT(businessVolumeFlow USING utf8mb4) AS 'businessVolumeFlow',
+        CONVERT(businessVolumeVoice USING utf8mb4) AS 'businessVolumeVoice',
+        CONVERT(businessVolumeMessage USING utf8mb4) AS 'businessVolumeMessage',
+        customerCount ,
+        customerNewCount ,
+        salesContractCount ,
+        salesContractDepositCount ,
+        weChatOrderCollection ,
+        orderAmount ,
+        systemCliqueCount ,
+        systemUserCount ,
+        activationCardCount ,
+        shipCard ,
+        logInIp ,
+        DATE_FORMAT(create_date,'%Y-%m-%d %H:%i:%S') as create_date,
+        DATE_FORMAT(update_date,'%Y-%m-%d %H:%i:%S') as update_date,
+        DATE_FORMAT(record_date,'%Y-%m-%d') as record_date,
+        dept_id,
+        CONVERT(requestMap USING utf8mb4) AS 'requestMap',
+        api_pending_order
+        from yz_indexpage
+        <where>
+            <choose>
+                <when test="id!=null and id != '' ">
+                    AND  id = #{id}
+                </when>
+                <otherwise>
+                    record_date  = #{record_date}
+                    and dept_id = #{dept_id}
+                </otherwise>
+            </choose>
+        </where>
+        LIMIT 1
+    </select>
+
+
+
+    <!-- 判断修改时间是否在 Xminute 分钟内 -->
+    <select id="findEffectiveTime" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        select
+        id
+        from yz_indexpage
+        <where>
+            record_date = #{record_date}
+            and dept_id = #{dept_id}
+            and
+            <![CDATA[
+                (round((UNIX_TIMESTAMP(now())-UNIX_TIMESTAMP(update_date))/60) <= #{Xminute}  )=1
+             ]]>
+        </where>
+        order by update_date desc
+        LIMIT 1
+    </select>
+
+    <!-- 获取最近一次修改的数据用量数据 -->
+    <select id="findBusinessVolumeFlow" parameterType="java.util.HashMap" resultType="java.lang.String">
+        select
+        businessVolumeFlow
+        from yz_indexpage
+        <where>
+            dept_id = #{dept_id}
+        </where>
+        order by update_date desc
+        LIMIT 1
+    </select>
+
+
+
+    <!-- 判断 代理下是否已生成 首页数据 -->
+    <select id="findExist" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        select
+        id
+        from yz_indexpage
+        <where>
+           record_date  = #{record_date}
+            and dept_id = #{dept_id}
+        </where>
+        order by update_date desc
+        LIMIT 1
+    </select>
+
+
+    <!-- 新增首页数据 -->
+    <insert id="addIndexpage" parameterType="java.util.HashMap">
+        INSERT INTO yz_indexpage
+        (downCount ,overdoseCount ,expiringSoonCount ,thresholdReachedCount ,simCardCount ,simCardNewCount ,currentMonth ,
+         simActivity ,lifeCycleDistribution ,businessVolumeFlow ,businessVolumeVoice ,businessVolumeMessage ,customerCount
+        ,customerNewCount ,salesContractCount ,salesContractDepositCount ,weChatOrderCollection ,orderAmount ,systemCliqueCount
+        ,systemUserCount ,activationCardCount ,shipCard ,logInIp ,create_date ,update_date ,record_date ,dept_id,requestMap,api_pending_order )
+            value (
+            #{downCount },
+            #{overdoseCount },
+            #{expiringSoonCount },
+            #{thresholdReachedCount },
+            #{simCardCount },
+            #{simCardNewCount },
+            #{currentMonth },
+            #{simActivity },
+            #{lifeCycleDistribution },
+            #{businessVolumeFlow },
+            #{businessVolumeVoice },
+            #{businessVolumeMessage },
+            #{customerCount },
+            #{customerNewCount },
+            #{salesContractCount },
+            #{salesContractDepositCount },
+            #{weChatOrderCollection },
+            #{orderAmount },
+            #{systemCliqueCount },
+            #{systemUserCount },
+            #{activationCardCount },
+            #{shipCard },
+            #{logInIp },
+            now(),
+            now(),
+            #{record_date },
+            #{dept_id},
+            #{requestMap},
+            #{api_pending_order}
+            )
+    </insert>
+
+
+    <!--更新首页数据-->
+    <update id="updInfo" parameterType="java.util.HashMap">
+        UPDATE
+        yz_indexpage
+        <set>
+            downCount = #{downCount},
+            overdoseCount = #{overdoseCount},
+            expiringSoonCount = #{expiringSoonCount},
+            thresholdReachedCount = #{thresholdReachedCount},
+            simCardCount = #{simCardCount},
+            simCardNewCount = #{simCardNewCount},
+            lifeCycleDistribution = #{lifeCycleDistribution},
+            weChatOrderCollection = #{weChatOrderCollection},
+            orderAmount = #{orderAmount},
+            shipCard = #{shipCard},
+            systemCliqueCount = #{systemCliqueCount},
+            systemUserCount = #{systemUserCount},
+            activationCardCount = #{activationCardCount},
+            customerCount = #{customerCount},
+            customerNewCount = #{customerNewCount},
+            salesContractCount = #{salesContractCount},
+            salesContractDepositCount = #{salesContractDepositCount},
+            logInIp = #{logInIp},
+            requestMap = #{requestMap},
+            api_pending_order = #{api_pending_order},
+            update_date =  now()
+        </set>
+        <where>
+            id = #{id}
+        </where>
+    </update>
+
+
+    <!-- 获取指定月份内生成过首页数据的企业id -->
+    <select id="findToExist" parameterType="java.util.HashMap" resultType="java.lang.String">
+        SELECT dept_id FROM yz_indexpage WHERE record_date = #{yyyyMM} GROUP BY dept_id
+    </select>
+
+
+
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

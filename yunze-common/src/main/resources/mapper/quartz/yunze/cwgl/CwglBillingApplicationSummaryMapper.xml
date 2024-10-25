@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.cwgl.CwglBillingApplicationSummaryMapper">
+
+    <!-- 新增开票申请_发票汇总信息 -->
+    <insert id="add_CBASY" parameterType="java.util.HashMap">
+        INSERT INTO CWGL_Billing_Application_Summary(
+        CBASY_Time,
+        CBASY_Quantity,
+        CBASY_Amount,
+        CBASY_Content,
+        CBASY_Billing_Unit,
+        CBASY_Invoice_Type,
+        CBASY_BANID
+        )VALUE
+        <foreach item="CBASY_arr" collection="CBASY_arr" separator="," >
+            (
+            #{CBASY_arr.CBASY_Time},
+            #{CBASY_arr.CBASY_Quantity},
+            #{CBASY_arr.CBASY_Amount},
+            #{CBASY_arr.CBASY_Content},
+            #{CBASY_arr.CBASY_Billing_Unit},
+            #{CBASY_arr.CBASY_Invoice_Type},
+            #{BAN_ID}
+            )
+        </foreach>
+    </insert>
+
+    <!-- 查询所属开票申请_发票汇总信息 -->
+    <select id="find_data" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        DATE_FORMAT(CBASY_Time, '%Y-%m-%d') AS CBASY_Time,
+        CBASY_Quantity,
+        CBASY_Amount,
+        CBASY_Content,
+        CBASY_Billing_Unit,
+        CBASY_Invoice_Type
+        FROM
+        CWGL_Billing_Application_Summary
+        <where>
+            CBASY_BANID = #{BAN_ID}
+        </where>
+    </select>
+
+    <!-- 删除开票申请_发票汇总信息 -->
+    <delete id="del_all" parameterType="java.util.HashMap">
+        DELETE FROM CWGL_Billing_Application_Summary <where> CBASY_BANID = #{BAN_ID} </where>
+    </delete>
+
+
+
+
+
+</mapper>

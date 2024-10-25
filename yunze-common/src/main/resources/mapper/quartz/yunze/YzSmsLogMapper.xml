@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.YzSmsLogMapper">
+
+    <sql id="selwhere" >
+        <where>
+            <if test="value!=null and value!='' ">
+                <if test="type==0">
+                    AND msgid = #{value}
+                </if>
+                <if test="type==1">
+                    AND content  LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type==2">
+                    AND sms_src_TerminalId =#{value}
+                </if>
+                <if test="type==3">
+                    AND msisdn = #{value}
+                </if>
+            </if>
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+                AND
+                <if test="timetype == 1">
+                    create_date
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+        </where>
+    </sql>
+
+
+    <select id="selMap" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select id,
+               msgid,
+               msisdn,
+               content,
+               state_id,
+               type,
+               DATE_FORMAT(create_date,'%Y-%m-%d %H:%i:%S') as create_date,
+               del_flag,
+               sms_src_TerminalId
+        from yz_busi_card_sms
+        <include refid="selwhere"></include>
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+
+
+    <select id="MapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        select
+        count(1)
+        from
+            yz_busi_card_sms
+        <include refid="selwhere"></include>
+    </select>
+
+</mapper>

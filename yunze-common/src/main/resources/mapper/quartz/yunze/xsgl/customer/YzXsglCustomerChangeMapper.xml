@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.xsgl.customer.YzXsglCustomerChangeMapper">
+
+
+
+    <!-- 客户敏感信息变更记录表 新增-->
+    <insert id="addinfo" parameterType="java.util.HashMap">
+        INSERT INTO yz_xsgl_customer_change
+        (
+            dept_id,
+            ctype,
+            cbefore,
+            cafterward,
+            createTime,
+            remark,
+            execution_status,
+            user_id,
+            user_name,
+            request_args
+        )
+        value
+        <foreach item="CustomerInfoMapList" collection="CustomerInfoMapList" index="CustomerInfoMapList"  separator="," >
+            (
+                #{CustomerInfoMapList.dept_id},
+                #{CustomerInfoMapList.ctype},
+                #{CustomerInfoMapList.cbefore},
+                #{CustomerInfoMapList.cafterward},
+                now(),
+                #{CustomerInfoMapList.remark},
+                #{CustomerInfoMapList.execution_status},
+                #{CustomerInfoMapList.user_id},
+                #{CustomerInfoMapList.user_name},
+                #{CustomerInfoMapList.request_args}
+            )
+        </foreach>
+    </insert>
+
+
+
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

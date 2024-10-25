@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.YzCardInfoExpandMapper">
+
+
+    <insert id="saveInfoExpand" parameterType="java.util.HashMap">
+            insert into yz_card_info_expand(
+                iccid,test_period_last_time,silent_period_last_time
+            )values
+            <foreach item="card_arrs" collection="card_arrs" index="index"  separator="," >
+                (#{card_arrs.iccid}, #{card_arrs.test_period_last_time},#{card_arrs.silent_period_last_time})
+            </foreach>
+    </insert>
+
+    <update id="updInfoExpand" parameterType="java.util.HashMap">
+        update
+            yz_card_info_expand
+        <set>
+            <if test="test_period_last_time!=null">
+                test_period_last_time = DATE_FORMAT(#{test_period_last_time}, "%Y-%m-%d"),
+            </if>
+            <if test="silent_period_last_time!=null">
+                silent_period_last_time = DATE_FORMAT(#{silent_period_last_time}, "%Y-%m-%d"),
+            </if>
+        </set>
+        <where>
+            iccid = #{iccid}
+        </where>
+    </update>
+
+
+    <select id="findInfoExpandArr" parameterType="java.util.HashMap" resultType="java.lang.String">
+        SELECT
+            iccid
+         FROM
+            yz_card_info_expand
+        <where>
+            iccid in
+            <foreach item="card_arrs" collection="card_arrs" index="index" open="("  separator=","  close=")" >
+                #{card_arrs.iccid}
+            </foreach>
+
+        </where>
+    </select>
+
+
+    <select id="findReplaceBk" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            iccid,
+            DATE_FORMAT(test_period_last_time, "%Y-%m-%d") as test_period_last_time,
+            DATE_FORMAT(silent_period_last_time, "%Y-%m-%d") as silent_period_last_time
+        FROM
+            yz_card_info_expand
+        <where>
+            iccid in
+            <foreach item="card_arrs" collection="card_arrs" index="index" open="("  separator=","  close=")" >
+                #{card_arrs.iccid}
+            </foreach>
+        </where>
+    </select>
+
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

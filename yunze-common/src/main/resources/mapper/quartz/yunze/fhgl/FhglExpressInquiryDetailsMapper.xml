@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.fhgl.FhglExpressInquiryDetailsMapper">
+
+    <!-- 新增快递信息 -->
+    <insert id="add_EIDS" parameterType="java.util.Map">
+        INSERT INTO FHGL_Express_Inquiry_Details
+        (
+        EIDS_EIYID,
+        EIDS_Shipping_Type,
+        EIDS_Name,
+        EIDS_Quantity
+        )VALUE
+        <foreach item="EIDS_arr" collection="EIDS_arr"  separator="," >
+            (
+            #{EIY_ID},
+            #{EIDS_arr.EIDS_Shipping_Type},
+            #{EIDS_arr.EIDS_Name},
+            #{EIDS_arr.EIDS_Quantity}
+            )
+        </foreach>
+    </insert>
+
+    <!-- 查询快递查询详情 -->
+    <select id="find_data" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        EIDS_ID,
+        EIDS_EIYID,
+        EIDS_Shipping_Type,
+        EIDS_Name,
+        EIDS_Quantity
+        FROM
+        FHGL_Express_Inquiry_Details
+        <where>
+            EIDS_EIYID = #{EIY_ID}
+        </where>
+    </select>
+
+    <!-- 删除快递查询详情信息 -->
+    <delete id="del_EIDS" parameterType="java.util.HashMap">
+        DELETE FROM FHGL_Express_Inquiry_Details <where>EIDS_EIYID=#{EIY_ID}</where>
+    </delete>
+
+
+    <!-- 查询 出库需导入的商品 '销售合同' 类型-->
+    <select id="find_Name_arr" parameterType="java.util.HashMap" resultType="java.lang.String">
+        SELECT
+            EIDS_Name
+        FROM
+        FHGL_Express_Inquiry_Details
+        <where>
+            EIDS_EIYID=#{EIY_ID}
+            AND EIDS_Shipping_Type = '1'
+        </where>
+    </select>
+
+    <!-- 出库 发货单 导入 普通发货 2  -->
+    <select id="Imput_PT" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        B.Cy_ID,
+        B.Cy_Category,
+        B.Cy_Sort,
+        B.Cy_Name,
+        B.Cy_ModelAndNumber,
+        B.Cy_Unit,
+        A.EIDS_Quantity
+        FROM
+        FHGL_Express_Inquiry_Details A,
+        CKGL_Commodity B
+        <where>
+            A.EIDS_Name = B.Cy_Name
+            AND EIDS_EIYID = #{EIY_ID}
+            <if test="type==1">
+                AND EIDS_Shipping_Type = '2'
+            </if>
+            <if test="type==2">
+                AND EIDS_Name IN
+                <foreach collection="PT_name_arr" item="PT_name_arr" open="(" separator="," close=")">
+                    #{PT_name_arr}
+                </foreach>
+            </if>
+        </where>
+    </select>
+
+    <!-- 传入 快递名称  查询销售商品 信息 -->
+    <select id="Imput_Spe" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        B.Cy_ID,
+        B.Cy_Category,
+        B.Cy_Sort,
+        A.Spe_Sales_Name,
+        A.Spe_Sales_Number,
+        A.Spe_Unit,
+        C.EIDS_Quantity
+        FROM
+        XSGL_Sales_Price A,
+        CKGL_Commodity B,
+        FHGL_Express_Inquiry_Details C
+        <where>
+            A.Spe_CyID = B.Cy_ID
+            AND B.Cy_Sort = 2
+            AND C.EIDS_Name = A.Spe_Sales_Name
+            AND EIDS_EIYID = #{EIY_ID}
+            AND Spe_Sales_Name IN
+            <foreach collection="name_arr" item="name_arr" open="(" separator="," close=")">
+                #{name_arr}
+            </foreach>
+        </where>
+    </select>
+
+
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

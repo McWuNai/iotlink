@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.xsgl.Contract.YzXsglContractTariffMapper">
+
+    <insert id="save" parameterType="java.util.HashMap"  >
+            insert into
+                 yz_xsgl_contract_tariff
+            (
+                ctf_packet_id,
+                ctf_package_id,
+                ctf_packet_price,
+                ctf_quantity,
+                ctf_suggested_price,
+                ctf_remarks,
+                ctf_ctId,
+                ctf_packet_agent_name,
+                ctf_package_agent_name,
+                ctf_parameter,
+                ctf_unit_price,
+                ctf_discount,
+                ctf_amount,
+                ctf_packet_flow,
+                ctf_packet_valid_name,
+                ctf_packet_valid_time,
+                ctf_packet_valid_type,
+                state,
+                create_time
+            )
+            values
+        <foreach item="tariffList" collection="tariffList" index="tariffList"  separator="," >
+            (
+                #{tariffList.ctf_packet_id},
+                #{tariffList.ctf_package_id},
+                #{tariffList.ctf_packet_price},
+                #{tariffList.ctf_quantity},
+                #{tariffList.ctf_suggested_price},
+                <if test="tariffList.ctf_remarks!=null">
+                    #{tariffList.ctf_remarks},
+                </if>
+                <if test="tariffList.ctf_remarks==null">
+                    '',
+                </if>
+                #{code},
+                #{tariffList.ctf_packet_agent_name},
+                #{tariffList.ctf_package_agent_name},
+                #{tariffList.ctf_parameter},
+                #{tariffList.ctf_unit_price},
+                #{tariffList.ctf_discount},
+                #{tariffList.ctf_amount},
+                #{tariffList.ctf_packet_flow},
+                #{tariffList.ctf_packet_valid_name},
+                #{tariffList.ctf_packet_valid_time},
+                #{tariffList.ctf_packet_valid_type},
+                1,now()
+            )
+        </foreach>
+    </insert>
+
+
+
+
+
+    <update id="delId" parameterType="java.util.HashMap"  >
+        update  yz_xsgl_contract_tariff
+        <set>
+            state = 0
+        </set>
+        <where>
+            ctf_ctId = #{ctf_ctId}
+            and ctf_id in
+            <foreach item="PacketList_delArr" collection="PacketList_delArr" index="PacketList_delArr" open="("  separator=","  close=")">
+                #{PacketList_delArr}
+            </foreach>
+
+        </where>
+    </update>
+
+    <update id="delctf_ctId" parameterType="java.util.HashMap"  >
+        update  yz_xsgl_contract_tariff
+        <set>
+            state = 0
+        </set>
+        <where>
+            ctf_ctId = #{id}
+        </where>
+    </update>
+
+
+    <!--修改-->
+    <update id="upd" parameterType="java.util.HashMap" >
+        update  yz_xsgl_contract_tariff
+        <set>
+            ctf_packet_id = #{ctf_packet_id},
+            ctf_package_id = #{ctf_package_id},
+            ctf_packet_price = #{ctf_packet_price},
+            ctf_quantity = #{ctf_quantity},
+            ctf_suggested_price = #{ctf_suggested_price},
+            ctf_remarks = #{ctf_remarks},
+            ctf_packet_agent_name = #{ctf_packet_agent_name},
+            ctf_package_agent_name = #{ctf_package_agent_name},
+            ctf_parameter = #{ctf_parameter},
+            ctf_unit_price = #{ctf_unit_price},
+            ctf_discount = #{ctf_discount},
+            ctf_amount = #{ctf_amount},
+            ctf_packet_flow = #{ctf_packet_flow},
+            ctf_packet_valid_name = #{ctf_packet_valid_name},
+            ctf_packet_valid_time = #{ctf_packet_valid_time},
+            ctf_packet_valid_type = #{ctf_packet_valid_type}
+        </set>
+        <where>
+            ctf_id =#{ctf_id}
+        </where>
+    </update>
+
+
+    <select id="find" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+        ctf_id,
+        ctf_packet_id,
+        ctf_package_id,
+        ctf_packet_price,
+        ctf_quantity,
+        ctf_suggested_price,
+        ctf_remarks,
+        ctf_ctId,
+        ctf_packet_agent_name,
+        ctf_package_agent_name,
+        ctf_parameter,
+        ctf_unit_price,
+        ctf_discount,
+        ctf_amount,
+        ctf_packet_flow,
+        ctf_packet_valid_name,
+        ctf_packet_valid_time,
+        ctf_packet_valid_type,
+        state,
+        create_time
+        from
+            yz_xsgl_contract_tariff a
+       <where>
+           a.ctf_ctId = #{ctf_ctId}
+           <if test="state == null or state == ''">
+              and a.state = 1
+           </if>
+           <if test="state != null and state != ''">
+               and a.state = #{state}
+           </if>
+       </where>
+    </select>
+
+
+    <!-- 发货申请查询 合同 数据 -->
+    <select id="find_FH_data" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            ctf_package_agent_name,
+            ctf_packet_agent_name,
+            ctf_quantity
+        FROM
+            yz_xsgl_contract_tariff
+        <where>
+            ctf_ctId = #{CtID}
+        </where>
+    </select>
+
+
+
+
+</mapper>

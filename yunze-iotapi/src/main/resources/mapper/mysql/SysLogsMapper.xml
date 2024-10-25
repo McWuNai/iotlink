@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.iotapi.mapper.mysql.SysLogsMapper">
+
+
+
+    <insert id="save"  parameterType="java.util.HashMap">
+       insert into  yz_sys_logs (
+            id,
+           res_url,
+           create_time,
+           class_method,
+           ip,
+           request_args,
+           response_args,
+           user_name,
+           project,
+           action_name
+       )values (
+               #{id},
+              #{res_url},
+              now(),
+              <![CDATA[ #{class_method} ]]> ,
+              #{ip},
+             <![CDATA[ #{request_args} ]]> ,
+             <![CDATA[ #{response_args} ]]> ,
+              #{user_name},
+              #{project},
+              #{action_name}
+            )
+    </insert>
+
+
+
+</mapper>

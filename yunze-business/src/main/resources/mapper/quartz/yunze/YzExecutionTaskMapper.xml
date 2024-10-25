@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.cn.mapper.YzExecutionTaskMapper">
+
+    <sql id="selwhere">
+        <where>
+            <if test="value!=null and value!='' ">
+                <if test="type==1">
+                    AND task_name LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type==2">
+                    AND auth LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type==3">
+                    AND url LIKE CONCAT(#{value},'%')
+                </if>
+            </if>
+            <if test="agent_id!=null and agent_id!='' and agent_id.size>0 ">
+                AND agent_id IN
+                <foreach item="agent_id" collection="agent_id" index="index" open="(" separator="," close=")">
+                    #{agent_id}
+                </foreach>
+            </if>
+            <if test="taskType!=null and taskType!='' ">
+                AND type = #{taskType}
+            </if>
+        </where>
+    </sql>
+
+
+    <!-- 查询 -->
+    <select id="sel_Map" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        id,
+            DATE_FORMAT(
+            create_time,
+            '%Y-%m-%d %H:%i:%S'
+            ) AS create_time,
+            DATE_FORMAT(
+            update_time,
+            '%Y-%m-%d %H:%i:%S'
+            ) AS update_time,
+            DATE_FORMAT(
+            start_time,
+            '%Y-%m-%d %H:%i:%S'
+            ) AS start_time,
+            DATE_FORMAT(
+            end_time,
+            '%Y-%m-%d %H:%i:%S'
+            ) AS end_time,
+        task_name,
+        url,
+        auth,
+        agent_id,
+        type
+        FROM
+        yz_execution_task
+        <include refid="selwhere"/>
+        ORDER BY
+        <if test="ORDER_BY_type==null or ORDER_BY_type==1">
+            create_time
+        </if>
+        <if test="ORDER_BY_type==2">
+            task_name
+        </if>
+        <if test="ORDER_BY_type==3">
+            update_time
+        </if>
+        <if test="ORDER_BY_rule==1">
+            ASC
+        </if>
+        <if test="ORDER_BY_rule==null or ORDER_BY_rule==2">
+            DESC
+        </if>
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+
+    <!-- 查询 总数-->
+    <select id="sel_Map_Count" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        SELECT
+        COUNT(*)
+        FROM
+        yz_execution_task
+        <include refid="selwhere"/>
+    </select>
+
+    <!--新增任务-->
+    <insert id="add" parameterType="java.util.HashMap" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO yz_execution_task
+        (create_time,
+         update_time,
+         start_time,
+         task_name,
+         url,
+         auth,
+         agent_id,
+         type)
+        VALUES (now(),
+                now(),
+                now(),
+                #{task_name},
+                #{url},
+                #{auth},
+                #{agent_id},
+                #{type})
+    </insert>
+
+
+    <!--  修改任务结束时间 -->
+    <update id="set_end_time" parameterType="java.util.HashMap">
+        update
+        yz_execution_task
+        <set>
+            end_time = now(),
+            update_time = now()
+        </set>
+        <where>
+            id = #{id}
+        </where>
+    </update>
+
+    <!--  修改 地址 -->
+    <update id="upd" parameterType="java.util.HashMap">
+        update
+        yz_execution_task
+        <set>
+            url = #{url},
+            update_time = now()
+        </set>
+        <where>
+            id = #{id}
+        </where>
+    </update>
+
+
+</mapper>

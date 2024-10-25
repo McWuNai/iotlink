@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.sysgl.YzMoneyChangeRecordMapper">
+
+
+
+
+    <!-- 新增 金额变更记录表 -->
+    <insert id="saveMoneyChange" parameterType="java.util.HashMap">
+        INSERT INTO yz_money_change_record
+        (
+            field_key,
+            field_val,
+            mytable_name,
+            mytype,
+            mybefore,
+            change_value,
+            myfunction_name,
+            remarks,
+            par_val,
+            result,
+            sel_key,
+            sel_val,
+            create_date,
+            update_date
+        )
+       values
+        <foreach item="saveArr" collection="saveArr" index="index"  separator="," >
+            (
+            #{saveArr.field_key},
+            #{saveArr.field_val},
+            #{mytable_name},
+            #{mytype},
+            #{saveArr.mybefore},
+            #{saveArr.change_value},
+            #{myfunction_name},
+            #{remarks},
+            #{par_val},
+            #{result},
+            #{sel_key},
+            #{sel_val},
+            now(),
+            now()
+            )
+        </foreach>
+    </insert>
+
+
+
+
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

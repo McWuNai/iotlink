@@ -1,0 +1,995 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.YzOrderMapper">
+
+
+
+
+	<sql id="selwhere" >
+		<where>
+			<if test="value!=null and value!=''">
+				<if test="type==1">
+					and a.iccid = #{value}
+				</if>
+				<if test="type==2 ">
+					and a.ord_no = #{value}
+				</if>
+				<if test="type==3">
+					and a.ord_name LIKE CONCAT('%',#{value},'%')
+				</if>
+				<if test="type==4">
+					and a.wx_ord_no = #{value}
+				</if>
+				<if test="type==5 ">
+					and a.info LIKE CONCAT('%',#{value},'%')
+				</if>
+			</if>
+			<if test="batch_query_arr!=null and batch_query_arr!=''">
+				<if test="batch_query_type==1">
+					and a.iccid in
+					<foreach item="batch_query_arr" collection="batch_query_arr" open="(" separator="," close=")">
+						#{batch_query_arr}
+					</foreach>
+				</if>
+				<if test="batch_query_type==2 ">
+					and a.ord_no in
+					<foreach item="batch_query_arr" collection="batch_query_arr" open="(" separator="," close=")">
+						#{batch_query_arr}
+					</foreach>
+				</if>
+				<if test="batch_query_type==3">
+					and a.wx_ord_no in
+					<foreach item="batch_query_arr" collection="batch_query_arr" open="(" separator="," close=")">
+						#{batch_query_arr}
+					</foreach>
+				</if>
+			</if>
+			<if test="payment!=null and payment!=''">
+				and a.pay_type = #{payment}
+			</if>
+			<if test="Addpackage != null and Addpackage != '' ">
+				and a.add_package = #{Addpackage}
+			</if>
+			<if test="status!=null  and status != ''">
+				and a.status = #{status}
+			</if>
+			<if test="ord_type!=null  and ord_type != ''">
+				and a.ord_type = #{ord_type}
+			</if>
+			<if test="packet_idSig!=null and packet_idSig != ''">
+				and a.packet_id = #{packet_idSig}
+			</if>
+			<if test="pay_type!=null and pay_type != ''">
+				and a.pay_type = #{pay_type}
+			</if>
+			<if test="cre_type!=null and cre_type != ''">
+				and a.cre_type = #{cre_type}
+			</if>
+			<if test="is_profit!=null and is_profit != ''">
+				and a.is_profit = #{is_profit}
+			</if>
+			<if test="add_package!=null and add_package != ''">
+				and a.add_package = #{add_package}
+			</if>
+			<if test="show_status!=null and show_status != ''">
+				and a.show_status = #{show_status}
+			</if>
+			<if test="open_id!=null and open_id != ''">
+				and a.open_id = #{open_id}
+			</if>
+			<if test="is_audit!=null and is_audit != ''">
+				and a.is_audit = #{is_audit}
+			</if>
+			<if test="agent_id != null  and agent_id != '' and agent_id.size>0">
+				and  a.agent_id in
+				<foreach item="agent_id" collection="agent_id" index="agent_id" open="(" separator="," close=")">
+					#{agent_id}
+				</foreach>
+			</if>
+			<if test="StartAndEndtype != null  and StartAndEndtype != '' and StartValue!=null and EndValue!=null">
+				and
+				<if test="StartAndEndtype == 1">
+					a.iccid
+				</if>
+				BETWEEN #{StartValue} AND #{EndValue}
+			</if>
+			<if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+				and
+				<if test="timetype == 1">
+					 a.create_time
+				</if>
+				<if test="timetype == 2">
+					 a.add_package_time
+				</if>
+				BETWEEN #{staTime} AND #{endTime}
+			</if>
+			<if test="del_flag != null and del_flag != ''">
+				and a.del_flag =#{del_flag}
+			</if>
+
+			<if test="UpType != null and UpType != '' ">
+				and
+				<if test="UpType == 1">
+					a.ord_no
+				</if>
+				<if test="UpType == 2">
+					a.iccid
+				</if>
+				<if test="UpType == 3">
+					a.wx_ord_no
+				</if>
+				IN
+				<if test="UpArrList != null and UpArrList != '' and UpArrList.size>0">
+					<foreach item="UpArrList" collection="UpArrList" index="UpArrList" open="(" separator="," close=")">
+						#{UpArrList.cardNumberAge}
+					</foreach>
+				</if>
+			</if>
+
+		</where>
+	</sql>
+
+	<!--获取订单金额sum-->
+	<select id="getOrderSum"  parameterType="java.util.HashMap" resultType="java.lang.String">
+		SELECT
+		Sum(price)
+		FROM
+		yz_order a
+		<include refid="selwhere"/>
+	</select>
+
+
+
+
+	<select id="selMap"  parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+		id,
+		ord_no,
+		ord_type,
+		ord_name,
+		iccid,
+		wx_ord_no,
+		status,
+		price,
+		account,
+		pay_type,
+		cre_type,
+		<if test="selType!=null and selType!='' and selType=='Tariff'">
+			packet_id,
+			is_profit,
+			add_package,
+			show_status,
+			open_id,
+			profit_type,
+			add_parameter,
+			DATE_FORMAT( add_package_time, "%Y-%m-%d %H:%i:%S" ) AS 'add_package_time',
+			is_profit_sharing,
+			is_audit,
+			DATE_FORMAT( profit_sharing_time, "%Y-%m-%d %H:%i:%S" ) AS 'profit_sharing_time',
+			is_dd_status,
+			DATE_FORMAT( is_dd_exTime, "%Y-%m-%d %H:%i:%S" ) AS 'is_dd_exTime',
+			is_dd_exStatus,
+			is_openNet_status,
+			DATE_FORMAT( is_openNet_exTime, "%Y-%m-%d %H:%i:%S" ) AS 'is_openNet_exTime',
+			is_openNet_exStatus,
+			is_boot_status,
+			DATE_FORMAT( is_boot_exTime, "%Y-%m-%d %H:%i:%S" ) AS 'is_boot_exTime',
+			is_boot_exStatus,
+		</if>
+		agent_id,
+		DATE_FORMAT( create_time, "%Y-%m-%d %H:%i:%S" ) AS create_time,
+		validate_type,
+		info
+		FROM
+		yz_order a
+		<include refid="selwhere"/>
+		ORDER BY a.create_time DESC
+		LIMIT #{StarRow},#{PageSize}
+	</select>
+
+	<select id="selMapCount" parameterType="java.util.HashMap"  resultType="java.lang.Integer">
+		SELECT
+		COUNT(1)
+		FROM
+		yz_order a
+		<include refid="selwhere"/>
+	</select>
+
+
+
+
+	<!-- 获取执行的加包订单 去生产任务 -->
+	<select id="findAddPackage" resultType="java.util.HashMap"  parameterType="java.util.HashMap">
+		SELECT
+		a.id,
+		a.ord_no,
+		a.iccid,
+		a.add_parameter,
+		a.validate_type,
+		DATE_FORMAT( a.create_time, "%Y-%m-%d %H:%i:%S"  ) AS create_time,
+		b.id as Bid,
+		b.activate_date
+		FROM
+		yz_order a,
+		yz_card_info b
+		<where>
+			a.ord_type = 2
+			and a.status = 1
+			and a.add_package = 0
+			and a.iccid = b.iccid
+			and a.is_audit = 1
+			<if test="validate_type!=null and validate_type!=''" >
+				AND a.validate_type
+				<if test="type!=null and type!='' and type=='in' " >
+					=
+				</if>
+				<if test="type!=null and type!='' and type=='notin' " >
+					!=
+				</if>
+				#{validate_type}
+			</if>
+			<if test="activate_date=='notnull' " >
+				and b.activate_date <![CDATA[ <= ]]>  now()
+			</if>
+			<if test="activate_date=='null' " >
+				and ISNULL( b.activate_date) =0
+			</if>
+			<if test="channel_id=='notnull' " >
+				and b.channel_id !=''
+			</if>
+			<if test="iccid!=null and iccid!=''" >
+				AND a.iccid = #{iccid}
+			</if>
+		</where>
+		ORDER BY
+		a.create_time DESC
+	</select>
+
+
+
+	<!--  修改已经加包的订单 加包状态 -->
+	<update id="updAddPackage"  parameterType="java.util.HashMap">
+		update
+		yz_order
+		<set>
+			add_package = 1
+		</set>
+		<where>
+			id = #{id}
+		</where>
+	</update>
+
+	<!--勾选操作执行加包-->
+	<update id="updBatch" parameterType="java.util.HashMap">
+		UPDATE yz_order
+		<set>
+			add_package = 1,
+			add_package_time = now()
+		</set>
+		<where>
+			id in
+			<foreach item="UpdaArr" collection="UpdaArr" index="UpdaArr" open="(" separator="," close=")">
+				#{UpdaArr}
+			</foreach>
+		</where>
+	</update>
+
+	<!-- 批量 获取执行的加包订单 去生产任务 -->
+	<select id="findAddPackageBatch" resultType="java.util.HashMap"  parameterType="java.util.HashMap">
+		SELECT
+		a.id,
+		a.ord_no,
+		a.iccid,
+		a.add_parameter,
+		a.validate_type,
+		DATE_FORMAT( a.create_time, "%Y-%m-%d %H:%i:%S"  ) AS create_time,
+		b.id as Bid,
+		b.activate_date
+		FROM
+		yz_order a,
+		yz_card_info b
+		<where>
+			a.ord_type = 2
+			and a.status = 1
+			and a.add_package = 0
+			and a.iccid = b.iccid
+			and a.is_audit = 1
+			<if test="validate_type!=null and validate_type!=''" >
+				AND a.validate_type
+				<if test="type!=null and type!='' and type=='in' " >
+					=
+				</if>
+				<if test="type!=null and type!='' and type=='notin' " >
+					!=
+				</if>
+				#{validate_type}
+			</if>
+			<if test="activate_date=='notnull' " >
+				and b.activate_date <![CDATA[ <= ]]>  now()
+			</if>
+			<if test="activate_date=='null' " >
+				and ISNULL( b.activate_date) =0
+			</if>
+			<if test="channel_id=='notnull' " >
+				and b.channel_id !=''
+			</if>
+			<if test="UpdaArr != null and UpdaArr != '' and UpdaArr.size>0">
+				and a.id in
+				<foreach item="UpdaArr" collection="UpdaArr" index="UpdaArr" open="(" separator="," close=")">
+					#{UpdaArr}
+				</foreach>
+			</if>
+		</where>
+	</select>
+
+	<!--自动 修改已经加包的订单加包状态-->
+	<update id="updAutomatic"  >
+		update yz_order
+		<set>
+			add_package = 1
+		</set>
+
+		<where>
+			id in (
+			SELECT
+			b.id
+			FROM
+			yz_card_flow a,
+			yz_order b
+			where
+			a.ord_no = b.ord_no
+			and a.iccid = b.iccid
+			and b.add_package = 0
+			)
+		</where>
+	</update>
+
+
+	<!-- 修改 卡激活时间 开卡日期-->
+	<update id="updActivate" parameterType="java.util.HashMap" >
+		update yz_card_info
+		<set>
+			<if test="activate_date!=null">
+				activate_date =  #{activate_date},
+			</if>
+			<if test="open_date!=null">
+				open_date =  #{open_date},
+			</if>
+			syn_Time =now()
+		</set>
+		<where>
+			iccid =#{iccid}
+		</where>
+	</update>
+
+
+	<!-- 修改 加包执行状态-->
+	<update id="updAddPackageInfo" parameterType="java.util.HashMap" >
+		update yz_order
+		<set>
+			add_package = '1',
+			add_package_time = now()
+			<if test="info!=null">
+				,info =  #{info}
+			</if>
+		</set>
+		<where>
+			iccid =#{iccid}
+			and ord_no = #{ord_no}
+		</where>
+	</update>
+
+
+	<!--查询订单加包参数-->
+	<select id="findOrder" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+		SELECT
+		add_parameter
+		FROM
+		yz_order
+		<where>
+			iccid = #{iccid}
+			and ord_no =#{ord_no}
+		</where>
+	</select>
+
+
+
+
+	<!--批量插入订单-->
+	<insert id="importOrder" parameterType="java.util.HashMap"  >
+		insert into
+		yz_order
+		(
+		ord_no,ord_type,ord_name,iccid,wx_ord_no,
+		status,price,account,packet_id,pay_type,
+		cre_type,is_profit,add_package,show_status,open_id,agent_id,
+		profit_type,create_time,validate_type,info,add_parameter,del_flag,is_profit_sharing,is_audit,callback_address,
+		is_dd_status,
+		is_openNet_status,
+		is_boot_status
+		)
+		value
+		<foreach item="order_arrs" collection="order_arrs" index="index"  separator="," >
+			(#{order_arrs.ord_no},#{order_arrs.ord_type},#{order_arrs.ord_name},#{order_arrs.iccid},#{order_arrs.wx_ord_no},
+			#{order_arrs.status},#{order_arrs.price},#{order_arrs.account},#{order_arrs.packet_id},#{order_arrs.pay_type},
+			#{order_arrs.cre_type},#{order_arrs.is_profit},#{order_arrs.add_package},#{order_arrs.show_status},#{order_arrs.open_id},#{order_arrs.agent_id},
+			#{order_arrs.profit_type},now(),#{order_arrs.validate_type},#{order_arrs.info}, #{order_arrs.add_parameter} ,0,0
+			<choose>
+				<when test="order_arrs.is_audit!=null">
+					,#{order_arrs.is_audit}
+				</when>
+				<otherwise>
+					,1
+				</otherwise>
+			</choose>
+			<choose>
+				<when test="order_arrs.callback_address!=null">
+					,#{order_arrs.callback_address}
+				</when>
+				<otherwise>
+					,""
+				</otherwise>
+			</choose>
+			<choose>
+				<when test="order_arrs.is_dd_status!=null">
+					,#{order_arrs.is_dd_status}
+				</when>
+				<otherwise>
+					,0
+				</otherwise>
+			</choose>
+			<choose>
+				<when test="order_arrs.is_openNet_status!=null">
+					,#{order_arrs.is_openNet_status}
+				</when>
+				<otherwise>
+					,0
+				</otherwise>
+			</choose>
+			<choose>
+				<when test="order_arrs.is_boot_status!=null">
+					,#{order_arrs.is_boot_status}
+				</when>
+				<otherwise>
+					,0
+				</otherwise>
+			</choose>
+			)
+		</foreach>
+	</insert>
+
+
+	<!--插入订单-->
+	<insert id="save" parameterType="java.util.HashMap"  >
+		insert into
+		yz_order
+		(
+		ord_no,ord_type,ord_name,iccid,wx_ord_no,
+		status,price,account,packet_id,pay_type,
+		cre_type,is_profit,add_package,show_status,open_id,agent_id,
+		profit_type,create_time,validate_type,info,add_parameter,del_flag,is_profit_sharing,is_audit,callback_address,
+		is_dd_status,
+		is_openNet_status,
+		is_boot_status
+		)
+		value
+		(#{ord_no},#{ord_type},#{ord_name},#{iccid},#{wx_ord_no},
+		#{status},#{price},#{account},#{packet_id},#{pay_type},
+		#{cre_type},#{is_profit},#{add_package},#{show_status},#{open_id},#{agent_id},
+		#{profit_type},now(),#{validate_type},#{info}, #{add_parameter},0,0
+		<choose>
+			<when test="is_audit!=null">
+				,#{is_audit}
+			</when>
+			<otherwise>
+				,1
+			</otherwise>
+		</choose>
+		<choose>
+			<when test="callback_address!=null">
+				,#{callback_address}
+			</when>
+			<otherwise>
+				,""
+			</otherwise>
+		</choose>
+		<choose>
+			<when test="is_dd_status!=null">
+				,#{is_dd_status}
+			</when>
+			<otherwise>
+				,0
+			</otherwise>
+		</choose>
+		<choose>
+			<when test="is_openNet_status!=null">
+				,#{is_openNet_status}
+			</when>
+			<otherwise>
+				,0
+			</otherwise>
+		</choose>
+		<choose>
+			<when test="is_boot_status!=null">
+				,#{is_boot_status}
+			</when>
+			<otherwise>
+				,0
+			</otherwise>
+		</choose>
+		)
+	</insert>
+
+
+	<!--购物插入订单-->
+	<insert id="ShoppingSave" parameterType="java.util.HashMap"  >
+		insert into
+			yz_order
+		(
+			ord_no,ord_type,ord_name,iccid,wx_ord_no,
+			status,price,account,pay_type,
+			cre_type,is_profit,add_package,show_status,open_id,agent_id,
+			create_time,del_flag,info,is_audit
+		)
+			value
+			(#{ord_no},#{ord_type},#{ord_name},#{iccid},#{wx_ord_no},
+			#{status},#{price},#{account},#{pay_type},
+			#{cre_type},#{is_profit},#{add_package},#{show_status},#{open_id},#{agent_id},
+			now(),0, <![CDATA[ #{info} ]]>,1
+			)
+	</insert>
+
+	<select id="exportallorders" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+		ord_no,
+		ord_name,
+		wx_ord_no,
+		status,
+		price,
+		account,
+		pay_type,
+		add_package,
+		DATE_FORMAT( create_time, "%Y-%m-%d %H:%i:%S" ) AS create_time,
+		validate_type,
+		info,
+		DATE_FORMAT( add_package_time, "%Y-%m-%d %H:%i:%S" ) AS add_package_time,
+		packet_id,
+		iccid,
+		agent_id
+		FROM
+		yz_order a
+		<include refid="selwhere"/>
+		ORDER BY
+		a.create_time DESC
+	</select>
+
+	<select id="arrorders" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+		a.packet_id,
+		b.packet_wx_name,
+		b.packet_valid_name,
+		b.packet_valid_time,
+		b.packet_flow
+		FROM
+		yz_card_packet b LEFT JOIN
+		yz_order a on a.packet_id = b.packet_id
+		<include refid="selwhere"/>
+		GROUP BY b.packet_id
+
+	</select>
+
+	<!--获取交易总金额-->
+	<select id="getSumPrice" parameterType="java.util.HashMap" resultType="java.lang.String">
+		SELECT
+		Sum(a.price)
+		FROM
+		yz_order a
+		<include refid="selwhere"/>
+	</select>
+
+	<!--获取 订单简要 信息 -->
+	<select id="getOrderBriefly" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+		SELECT
+		id,
+		ord_type,
+		status,
+		iccid,
+		agent_id,
+		price
+		FROM
+		yz_order
+		<where>
+			ord_no =#{ord_no}
+		</where>
+	</select>
+
+	<!-- 修改 微信订单号订单支付状态-->
+	<update id="updStatus" parameterType="java.util.HashMap" >
+		update yz_order
+		<set>
+			status = #{status}
+			<if test="wx_ord_no!=null">
+				,wx_ord_no =  #{wx_ord_no}
+			</if>
+		</set>
+		<where>
+			id =#{id}
+		</where>
+	</update>
+
+
+	<!-- 卡详情界面 获取 订单信息   -->
+	<select id="getOrderCard" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+		SELECT
+		a.id,
+		a.package_id,
+		b.packet_wx_name,
+		a.packet_id,
+		a.ord_no,
+		a.ord_type,
+		a.iccid,
+		(
+		IF
+		( a.use_so_flow > 0, a.use_so_flow, 0 )+
+		IF
+		( a.use_flow > 0, a.use_flow, 0 )) AS use_so_flow,
+		c.ord_name,
+		c.wx_ord_no,
+		c.STATUS AS ord_status,
+		DATE_FORMAT( c.create_time, "%Y-%m-%d %H:%i:%S" ) AS create_time,
+		DATE_FORMAT( min( a.start_time ), "%Y-%m-%d %H:%i:%S" ) AS 'minStart_time',
+		DATE_FORMAT( max( a.end_time ), "%Y-%m-%d %H:%i:%S" ) AS 'maxEnd_time',
+		SUM( a.STATUS )> 1 AS 'sumStatus',
+		c.validate_type
+		FROM
+		yz_card_flow a,
+		yz_card_packet b,
+		yz_order c
+		<where>
+			a.iccid = #{iccid}
+			AND a.packet_id = b.packet_id
+			AND a.ord_no = c.ord_no
+			GROUP BY
+			c.ord_no
+			ORDER BY
+			c.create_time DESC
+		</where>
+		LIMIT 10
+	</select>
+
+	<!--备份order表-->
+	<select id="backupsOr" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+		SELECT
+		id,
+		ord_no,
+		ord_type,
+		ord_name,
+		iccid,
+		wx_ord_no,
+		status,
+		price,
+		account,
+		packet_id,
+		pay_type,
+		cre_type,
+		is_profit,
+		add_package,
+		show_status,
+		open_id,
+		agent_id,
+		profit_type,
+		DATE_FORMAT( create_time, "%Y-%m-%d %H:%i:%S" ) AS create_time,
+		validate_type,
+		info,
+		add_parameter,
+		DATE_FORMAT( add_package_time, "%Y-%m-%d %H:%i:%S" ) AS add_package_time,
+		del_flag,
+		is_profit_sharing,
+		profit_sharing_time
+		FROM
+		yz_order a
+		<include refid="selwhere"/>
+	</select>
+
+	<!--修改状态-->
+	<update id="updState" parameterType="java.util.HashMap">
+		UPDATE
+		yz_order
+		<set>
+			status ='2'
+		</set>
+		<where>
+			ord_no IN
+			<foreach item="ordNoID" collection="ordNoID" index="ordNoID" open="(" separator="," close=")">
+				#{ordNoID}
+			</foreach>
+		</where>
+	</update>
+
+	<!--删除订单号-->
+	<delete id="delFloArr" parameterType="java.util.HashMap">
+		DELETE  from yz_order
+		<where>
+			ord_no IN
+			<foreach item="delFlo" collection="delFlo" index="delFlo" open="(" separator="," close=")">
+				#{delFlo}
+			</foreach>
+		</where>
+	</delete>
+
+	<!--  修改已经加包的订单 加包状态 -->
+	<update id="resetAddPackage"  parameterType="java.util.HashMap">
+		update
+		yz_order
+		<set>
+			add_package = 0
+		</set>
+		<where>
+			info LIKE '未找到加%' and add_package = '1'
+		</where>
+	</update>
+
+
+	<!-- 批量 获取执行的加包订单 去生产任务 -->
+	<select id="findAddPackageNoAddPackage" resultType="java.util.HashMap"  parameterType="java.util.HashMap">
+		SELECT
+		a.id,
+		a.ord_no,
+		a.iccid,
+		a.add_parameter,
+		a.validate_type,
+		DATE_FORMAT( a.create_time, "%Y-%m-%d %H:%i:%S"  ) AS create_time,
+		b.id as Bid,
+		b.activate_date
+		FROM
+		yz_order a,
+		yz_card_info b
+		<where>
+			a.ord_type = 2
+			and a.status = 1
+			and a.iccid = b.iccid
+			and a.is_audit = 1
+			<if test="validate_type!=null and validate_type!=''" >
+				AND a.validate_type
+				<if test="type!=null and type!='' and type=='in' " >
+					=
+				</if>
+				<if test="type!=null and type!='' and type=='notin' " >
+					!=
+				</if>
+				#{validate_type}
+			</if>
+			<if test="activate_date=='notnull' " >
+				and b.activate_date <![CDATA[ <= ]]>  now()
+			</if>
+			<if test="activate_date=='null' " >
+				and ISNULL( b.activate_date) =0
+			</if>
+			<if test="channel_id=='notnull' " >
+				and b.channel_id !=''
+			</if>
+			<if test="UpdaArr != null and UpdaArr != '' and UpdaArr.size>0">
+				and a.id in
+				<foreach item="UpdaArr" collection="UpdaArr" index="UpdaArr" open="(" separator="," close=")">
+					#{UpdaArr}
+				</foreach>
+			</if>
+		</where>
+	</select>
+
+
+
+	<!--查询已充值的卡号数据-->
+	<select id="findRecharged" resultType="java.util.HashMap"  parameterType="java.lang.String">
+		SELECT
+		iccid
+		FROM
+		yz_order
+		<where>
+			STATUS IN ( '1', '2' )
+			AND iccid in
+			<foreach item="iccidArr" collection="iccidArr" index="iccidArr" open="(" separator="," close=")">
+				#{iccidArr}
+			</foreach>
+		</where>
+	</select>
+
+
+	<!--查询卡号是否首次充值-->
+	<select id="findFirstOrder" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		SELECT
+		COUNT(1)
+		FROM
+		yz_order
+		<where>
+			del_flag = 0
+			and iccid = #{iccid}
+			and status = 1
+		</where>
+	</select>
+
+	<!--  修改已经加包的订单 加包状态 -->
+	<update id="updaudit"  parameterType="java.util.HashMap">
+		update
+		yz_order
+		<set>
+			is_audit = #{is_audit}
+		</set>
+		<where>
+			id in
+			<foreach item="idArr" collection="idArr" index="idArr" open="(" separator="," close=")">
+				#{idArr}
+			</foreach>
+		</where>
+	</update>
+
+
+
+	<!-- 修改 回调信息-->
+	<update id="updOrderCallback" parameterType="java.util.HashMap" >
+		update yz_order
+		<set>
+			callback_status = #{callback_status},
+			callback_time = now(),
+			callback_info = #{callback_info}
+		</set>
+		<where>
+			id =#{id}
+		</where>
+	</update>
+
+	<!--查询 传入id中填写了返回地址的订单-->
+	<select id="findCallbackAddress" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+		id,
+		iccid,
+		ord_no,
+		is_audit,
+		callback_address
+		FROM
+		yz_order
+		<where>
+			id in
+			<foreach item="idArr" collection="idArr" index="idArr" open="(" separator="," close=")">
+				#{idArr}
+			</foreach>
+			and length(callback_address)>0
+		</where>
+	</select>
+
+
+
+	<!-- 修改 订购达量断网/开机/开网  信息-->
+	<update id="updIsInfo" parameterType="java.util.HashMap" >
+		update yz_order
+		<set>
+			<if test="is_dd_status!=null">
+				is_dd_status = #{is_dd_status},
+			</if>
+			<if test="is_dd_exStatus!=null">
+				is_dd_exStatus = #{is_dd_exStatus},
+				is_dd_exTime = now(),
+				is_dd_exCount = is_dd_exCount+1,
+				is_dd_quota =#{is_dd_quota}
+			</if>
+			<if test="is_boot_status!=null">
+				is_boot_status = #{is_boot_status},
+			</if>
+			<if test="is_boot_exStatus!=null">
+				is_boot_exStatus = #{is_boot_exStatus},
+				is_boot_exTime = now(),
+				is_boot_exCount = is_boot_exCount+1,
+			</if>
+			<if test="is_openNet_status!=null">
+				is_openNet_status = #{is_openNet_status},
+			</if>
+			<if test="is_openNet_exStatus!=null">
+				is_openNet_exStatus = #{is_openNet_exStatus},
+				is_openNet_exTime = now(),
+				is_openNet_exCount = is_openNet_exCount+1,
+			</if>
+		</set>
+		<where>
+			ord_no =#{ord_no}
+		</where>
+	</update>
+
+	<!--查询 订单执行次数-->
+	<select id="findExCount" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+		is_openNet_exCount,
+		is_boot_exCount,
+		is_dd_exCount
+		FROM
+		yz_order
+		<where>
+			ord_no =#{ord_no}
+		</where>
+		limit 1
+	</select>
+
+
+	<!--获取需要请求执行 api的 iccid卡号订单情况-->
+	<select id="findIccidOrderApi" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+		cre_type,
+		pay_type,
+		add_parameter,
+		ord_no,
+		iccid,
+		is_dd_exStatus,
+		add_package,
+		validate_type
+		FROM
+		yz_order
+		<where>
+			status = 1
+			and del_flag = 0
+			and is_dd_Status = 1
+			and iccid = #{iccid}
+		</where>
+	</select>
+
+
+
+	<!--查询 已支付 未删除 指定时间段内 需要 执行 API请求但未执行成功 卡号且 在执行次数最大值以下卡号  [GROUP BY iccid 放置卡号同批次 多次操作]-->
+	<select id="findRetryOrderApi" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+		cre_type,
+		pay_type,
+		add_parameter,
+		ord_no,
+		iccid,
+		is_dd_exStatus,
+		is_boot_exStatus,
+		is_openNet_exStatus,
+		add_package
+		FROM
+		yz_order
+		<where>
+			status = 1
+			and del_flag = 0
+			and  create_time BETWEEN #{staTime} AND #{endTime}
+			and
+			<if test="type==1 ">
+				is_dd_exCount
+			</if>
+			<if test="type==2 ">
+				is_boot_exCount
+			</if>
+			<if test="type==3 ">
+				is_openNet_exCount
+			</if>
+			<![CDATA[ < ]]> #{MaxCount}
+			and
+			<if test="type==1 ">
+				(is_dd_exStatus = 0 or is_dd_exStatus is null)
+			</if>
+			<if test="type==2 ">
+				(is_boot_exStatus = 0 or is_boot_exStatus is null)
+			</if>
+			<if test="type==3 ">
+				(is_openNet_exStatus = 0 or is_openNet_exStatus is null)
+			</if>
+			and
+			<if test="type==1 ">
+				is_dd_Status
+			</if>
+			<if test="type==2 ">
+				is_boot_Status
+			</if>
+			<if test="type==3 ">
+				is_openNet_Status
+			</if>
+			= 1
+		</where>
+		GROUP BY iccid
+	</select>
+
+
+
+
+
+
+
+</mapper>

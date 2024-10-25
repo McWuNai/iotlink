@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.card.YzCardUsageReminderMapper">
+
+    <sql id="selwhere">
+        <where>
+            <if test="value!=null and value!='' ">
+                <if test="type==0">
+                    and iccid LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type==1">
+                    and offeringId LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type==2">
+                    and offeringName LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type==3">
+                    and apnName LIKE CONCAT(#{value},'%')
+                </if>
+            </if>
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+            AND
+                <if test="timetype == 0">
+                     create_date
+                </if>
+                <if test="timetype == 1">
+                    upd_date
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+            <if test="percentage != null and percentage != '' ">
+                AND percentage >= #{percentage}
+            </if>
+            <if test="dimensionField != null   and dimensionField != ''  and dimensionType != null   and dimensionType != ''  and dimensionValue != null   and dimensionValue != ''  ">
+                and
+                <if test="dimensionField == 1">
+                    totalAmount
+                </if>
+                <if test="dimensionField == 2">
+                    useAmount
+                </if>
+                <if test="dimensionField == 3">
+                    remainAmount
+                </if>
+                <if test="dimensionField == 4">
+                    percentage
+                </if>
+                <if test="dimensionType == 1">
+                    <![CDATA[ >= ]]>
+                </if>
+                <if test="dimensionType == 2">
+                    <![CDATA[ > ]]>
+                </if>
+                <if test="dimensionType == 3">
+                    <![CDATA[ = ]]>
+                </if>
+                <if test="dimensionType == 4">
+                    <![CDATA[ < ]]>
+                </if>
+                <if test="dimensionType == 5">
+                    <![CDATA[ <= ]]>
+                </if>
+                <if test="dimensionType == 6">
+                    <![CDATA[ != ]]>
+                </if>
+                #{dimensionValue}
+            </if>
+        </where>
+    </sql>
+
+    <select id="getList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+            id,
+            iccid,
+            offeringId,
+            offeringName,
+            apnName,
+            totalAmount,
+            useAmount,
+            remainAmount,
+            percentage,
+            DATE_FORMAT(create_date,'%Y-%m-%d ') as create_date,
+            DATE_FORMAT(upd_date,'%Y-%m-%d ') as upd_date
+        from yz_card_usage_reminder
+        <include refid="selwhere"/>
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+    <!--查询 邮件抄送 百分比超过 80-->
+    <select id="mailId" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+            id,
+            iccid,
+            offeringId,
+            offeringName,
+            apnName,
+            totalAmount,
+            useAmount,
+            remainAmount,
+            percentage,
+            DATE_FORMAT(create_date,'%Y-%m-%d %H:%i:%S') as create_date,
+            DATE_FORMAT(upd_date,'%Y-%m-%d ') as upd_date
+        from yz_card_usage_reminder
+        <include refid="selwhere"/>
+    </select>
+
+    <select id="MapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        select
+            count(1)
+        from
+            yz_card_usage_reminder
+        <include refid="selwhere"/>
+    </select>
+
+    <insert id="save" parameterType="java.util.HashMap" >
+        insert into
+            yz_card_usage_reminder
+        (
+            iccid,
+            offeringId,
+            offeringName,
+            apnName,
+            totalAmount,
+            useAmount,
+            remainAmount,
+            percentage,
+            create_date,
+            upd_date
+        )values
+        <foreach item="card_arrs" collection="card_arrs" index="index"  separator="," >
+            (
+                #{iccid},
+                #{card_arrs.offeringId},
+                #{card_arrs.offeringName},
+                #{card_arrs.apnName},
+                #{card_arrs.totalAmount},
+                #{card_arrs.useAmount},
+                #{card_arrs.remainAmount},
+                #{card_arrs.percentage},
+                now(),now()
+            )
+        </foreach>
+    </insert>
+
+    <update id="upd" parameterType="java.util.HashMap" >
+        update
+            yz_card_usage_reminder
+        <set>
+            <if test="offeringName!=null">
+                offeringName = #{offeringName},
+            </if>
+            <if test="apnName!=null">
+                apnName = #{apnName},
+            </if>
+            <if test="totalAmount!=null">
+                totalAmount = #{totalAmount},
+            </if>
+            <if test="useAmount!=null">
+                useAmount = #{useAmount},
+            </if>
+            <if test="remainAmount!=null">
+                remainAmount = #{remainAmount},
+            </if>
+            <if test="percentage!=null">
+                percentage = #{percentage},
+            </if>
+            upd_date = now()
+        </set>
+        <where>
+            iccid = #{iccid}
+            and offeringId =#{offeringId}
+        </where>
+    </update>
+
+
+
+    <select id="is_ex" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+            id,
+            iccid,
+            offeringId
+        from
+            yz_card_usage_reminder
+        <where>
+                iccid = #{iccid}
+                and offeringId = #{offeringId}
+        </where>
+    </select>
+
+    <select id="reminderId" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            id,
+            iccid,
+            offeringId,
+            offeringName,
+            apnName,
+            totalAmount,
+            useAmount,
+            remainAmount,
+            percentage,
+            DATE_FORMAT(create_date,'%Y-%m-%d ') as create_date,
+            DATE_FORMAT(upd_date,'%Y-%m-%d ') as upd_date
+        FROM
+            yz_card_usage_reminder
+        <where>
+            iccid =#{iccid}
+        </where>
+        order by offeringId asc
+    </select>
+
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

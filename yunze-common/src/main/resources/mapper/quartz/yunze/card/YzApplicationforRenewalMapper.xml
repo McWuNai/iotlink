@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.card.YzApplicationforRenewalMapper">
+
+
+    <select id="find" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+            id,
+            p_id,
+            dept_id,
+            DATE_FORMAT(create_time,'%Y-%m-%d ') as create_time,
+            DATE_FORMAT(update_time,'%Y-%m-%d ') as update_time,
+            packet_info,
+            card_count,
+            packet_wx_name,
+            packet_price,
+            packet_flow,
+            packet_cost,
+            packet_valid_time,
+            packet_valid_name,
+            generate_tariff_orders,
+            packet_id
+        from
+            yz_applicationfor_renewal
+        <where>
+            p_id = #{p_id}
+            <if test="generate_tariff_orders!=null">
+                and generate_tariff_orders = #{generate_tariff_orders}
+            </if>
+        </where>
+    </select>
+
+
+
+    <insert id="save" parameterType="java.util.HashMap" keyProperty="id" useGeneratedKeys="true">
+        insert into
+            yz_applicationfor_renewal
+        (
+            p_id,
+            dept_id,
+            create_time,
+            update_time,
+            packet_info,
+            card_count,
+            packet_wx_name,
+            packet_price,
+            packet_flow,
+            packet_cost,
+            packet_valid_time,
+            packet_valid_name,
+            generate_tariff_orders,
+            packet_id
+        )
+            values
+        (
+            #{p_id},
+            #{dept_id},
+            now(),
+            now(),
+            #{packet_info},
+            #{card_count},
+            #{packet_wx_name},
+            #{packet_price},
+            #{packet_flow},
+            #{packet_cost},
+            #{packet_valid_time},
+            #{packet_valid_name},
+            0,
+            #{packet_id}
+        )
+    </insert>
+
+    <update id="upd" parameterType="java.util.HashMap" >
+        update
+            yz_applicationfor_renewal
+        <set>
+            <if test="generate_tariff_orders!=null">
+                generate_tariff_orders = #{generate_tariff_orders},
+            </if>
+            update_time = now()
+        </set>
+        <where>
+            p_id = #{p_id}
+            and packet_id = #{packet_id}
+        </where>
+    </update>
+
+
+    <delete id="del" parameterType="java.util.HashMap" >
+        delete  from yz_applicationfor_renewal
+        <where>
+            p_id = #{p_id}
+        </where>
+    </delete>
+
+
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

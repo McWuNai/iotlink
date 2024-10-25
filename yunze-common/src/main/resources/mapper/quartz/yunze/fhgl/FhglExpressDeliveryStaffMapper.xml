@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.fhgl.FhglExpressDeliveryStaffMapper">
+
+    <!-- 添加快递公司详情数据 -->
+    <insert id="add_EDSF" parameterType="java.util.HashMap">
+        INSERT INTO FHGL_Express_Delivery_Staff(
+        EDSF_Is_id,
+        EDSF_Name,
+        EDSF_Tel,
+        EDSF_Remarks,
+        EDSF_EDYID
+        )
+        VALUE
+        <foreach item="EDSF_arr" collection="EDSF_arr"  separator="," >
+            (
+            #{EDSF_arr.EDSF_Is_id},
+            #{EDSF_arr.EDSF_Name},
+            #{EDSF_arr.EDSF_Tel},
+            #{EDSF_arr.EDSF_Remarks},
+            #{EDY_ID}
+            )
+        </foreach>
+    </insert>
+
+    <!-- 删除快递公司详情信息 -->
+    <delete id="del_EDSF" parameterType="java.util.HashMap">
+        DELETE FROM FHGL_Express_Delivery_Staff <where>EDSF_EDYID = #{EDY_ID}</where>
+    </delete>
+
+    <!-- 查询快递公司业务员详情数据 -->
+    <select id="find_data" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            A.EDSF_ID,
+            A.EDSF_Is_id,
+            A.EDSF_Name,
+            A.EDSF_Tel,
+            A.EDSF_EDYID,
+            A.EDSF_Remarks
+        FROM
+            FHGL_Express_Delivery_Staff A,
+            FHGL_Express_Delivery B
+        <where>
+            A.EDSF_EDYID = B.EDY_ID
+            AND A.EDSF_EDYID = #{EDY_ID}
+        </where>
+    </select>
+
+
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

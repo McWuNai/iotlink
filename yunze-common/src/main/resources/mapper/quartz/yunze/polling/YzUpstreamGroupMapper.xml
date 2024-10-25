@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.polling.YzUpstreamGroupMapper">
+
+    <select id="is_exist" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        select
+            count(1)
+        from
+        yz_upstream_group
+        <where>
+            groupId = #{groupId}
+            and offeringId = #{offeringId}
+            and  channel_id = #{channel_id}
+        </where>
+    </select>
+
+
+
+    <insert id="save" parameterType="java.util.HashMap" >
+        insert into yz_upstream_group
+        (
+            groupId,
+            groupName,
+            offeringId,
+            offeringName,
+            channel_id,
+            create_date,
+            upd_date
+        )values
+        <foreach item="arrs" collection="arrs" index="index" separator=",">
+            (
+            #{arrs.groupId},
+            #{arrs.groupName},
+            #{arrs.offeringId},
+            #{arrs.offeringName},
+            #{arrs.channel_id},
+            now(),
+            now()
+            )
+        </foreach>
+    </insert>
+
+    <update id="update" parameterType="java.util.HashMap" >
+        update yz_upstream_group
+        <set>
+            groupName = #{groupName},
+            offeringName = #{offeringName},
+            upd_date = now()
+        </set>
+        <where>
+            groupId = #{groupId}
+            and  channel_id = #{channel_id}
+            and  offeringId = #{offeringId}
+        </where>
+    </update>
+
+
+    <select id="findGroupId" parameterType="java.util.HashMap" resultType="java.lang.String">
+        select
+        groupId
+        from
+        yz_upstream_group
+        <where>
+            channel_id = #{channel_id}
+        </where>
+    </select>
+
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.cn.mapper.commodity.YzWxByProductPicInfoMapper">
+
+
+
+	<!-- 查询有效图片  -->
+	<select id="findConcise" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+		SELECT
+			pic_url,
+			is_master
+		FROM
+			yz_wx_by_product_pic_info
+		<where>
+			product_id = #{product_id}
+			AND pic_status = '1'
+		</where>
+		ORDER BY is_master DESC,pic_order ASC
+	</select>
+
+
+
+
+
+
+
+
+</mapper> 

@@ -1,0 +1,544 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.cwgl.CwglDepositInfoMapper">
+
+
+    <sql id="details">
+        <where>
+            <if test="Dio_DsID != null and Dio_DsID != '' ">
+                A.Dio_DsID =#{Dio_DsID}
+            </if>
+            <if test="c_userId != null and c_userId != ''">
+                B.c_userId =#{c_userId}
+            </if>
+            <if test="c_userIdArr != null  and c_userIdArr != '' and c_userIdArr.size>0">
+                and  B.c_userId in
+                <foreach item="c_userIdArr" collection="c_userIdArr" index="c_userIdArr" open="(" separator="," close=")">
+                    #{c_userIdArr}
+                </foreach>
+            </if>
+            <if test="value != null and value != '' ">
+                <if test="type == 2">
+                    and c_name LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 3">
+                    and c_fatName LIKE CONCAT(#{value},'%')
+                </if>
+            </if>
+            <if test="Dids_FatName != null and Dids_FatName != ''">
+                C.Dids_FatName =#{Dids_FatName}
+            </if>
+            <if test="Dids_Time != null and Dids_Time != '' and staTime!=null and endTime!=null">
+                AND
+                <if test="Dids_Time == 1">
+                     Dids_Time
+                </if>
+                <if test="Dids_Time == 2">
+                    c_time
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+            <if test="cId != null  and cId != '' ">
+                and  B.c_fatId = #{cId}
+            </if>
+            AND B.code = A.Dio_Contract_ID
+            AND C.Dids_DioID = A.Dio_ID
+        </where>
+    </sql>
+
+
+    <!-- 新增 入款信息(默认：未到款，入款合计为 ：0) -->
+    <insert id="add_CDIO" parameterType="java.util.HashMap">
+        INSERT INTO CWGL_Deposit_Info(
+            Dio_ID,
+            Dio_DsID,
+            Dio_Deposit_Total,
+            Dio_Unpaid,
+            Dio_Contract_ID,
+            Dio_Source_Type
+        )
+        VALUES
+        (
+            #{Dio_ID},
+            1,
+            0,
+            #{Dio_Unpaid},
+            #{Contract_ID},
+            #{Dio_Source_Type}
+        )
+    </insert>
+
+    <!-- 修改入款合计 -->
+    <update id="upd_Total" parameterType="java.util.HashMap">
+        UPDATE CWGL_Deposit_Info
+        <set>
+            Dio_Deposit_Total=#{Dio_Deposit_Total}
+        </set>
+        <where>
+            Dio_Contract_ID=#{Contract_ID}
+        </where>
+    </update>
+
+    <select id="sleDetails" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        A.Dio_ID,
+        A.Dio_DsID,
+        A.Dio_Deposit_Total,
+        A.Dio_Unpaid,
+        DATE_FORMAT(B.c_time, '%Y-%m-%d') AS c_time,
+        B.c_name,
+        B.c_fatName,
+        B.c_userName,
+        B.c_userId,
+        B.c_other_amount,
+        B.c_contract_amount,
+        B.c_the_actual_amount,
+        DATE_FORMAT(C.Dids_Time, '%Y-%m-%d') AS Dids_Time,
+        C.Dids_Amount,
+        C.Dids_FatName,
+        C.Dids_Remarks
+        FROM
+        cwgl_deposit_info A,
+        yz_xsgl_contract B,
+        cwgl_deposit_info_details C
+        <include refid="details"/>
+        ORDER BY C.Dids_Time DESC,B.c_time DESC
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+    <!-- 查询详情总数 -->
+    <select id="countSel" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        SELECT
+        COUNT(1)
+        FROMs
+        cwgl_deposit_info A,
+        yz_xsgl_contract B,
+        cwgl_deposit_info_details C
+        <include refid="details"/>
+    </select>
+
+    <!--入款详情导出-->
+    <select id="ExportRemittance" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        A.Dio_ID,
+        A.Dio_DsID,
+        A.Dio_Deposit_Total,
+        A.Dio_Unpaid,
+        DATE_FORMAT(B.c_time, '%Y-%m-%d') AS c_time,
+        B.c_name,
+        B.c_fatName,
+        B.c_userName,
+        B.c_userId,
+        B.c_other_amount,
+        B.c_contract_amount,
+        B.c_the_actual_amount,
+        DATE_FORMAT(C.Dids_Time, '%Y-%m-%d') AS Dids_Time,
+        C.Dids_Amount,
+        C.Dids_FatName,
+        C.Dids_Remarks
+        FROM
+        cwgl_deposit_info A,
+        yz_xsgl_contract B,
+        cwgl_deposit_info_details C
+        <include refid="details"/>
+        ORDER BY C.Dids_Time DESC,B.c_time DESC
+    </select>
+
+    <!-- 查询单条正式合同入款记录信息 -->
+    <select id="find_Ct" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        A.Dio_ID,
+        A.Dio_Contract_ID,
+        DATE_FORMAT(B.c_time,'%Y-%m-%d') AS Time,
+        B.Ct_Contract_Amount AS Prepaid_Amount,
+        B.Ct_The_Actual_Amount AS The_Actual_Amount,
+        B.c_name AS CoName,
+        B.c_name AS FatName,
+        A.Dio_DsID,
+        A.Dio_Deposit_Total,
+        A.Dio_Unpaid,
+        Ct_USERID AS USERID,
+        c_userName AS NAME,
+        Ct_discount AS discount,
+        c_id AS CoID
+        FROM
+        CWGL_Deposit_Info A,
+        yz_xsgl_contract B
+        <where>
+            A.Dio_Contract_ID=B.code
+            AND Dio_ID=#{Dio_ID}
+        </where>
+    </select>
+
+    <!-- 修改未到款 ，与入款状态 -->
+    <update id="upd_Unpaid" parameterType="java.util.HashMap">
+        UPDATE
+        cwgl_deposit_info
+        <set>
+            Dio_Unpaid=(#{Dio_Unpaid} - Dio_Deposit_Total ),
+            Dio_DsID=#{Dio_DsID}
+        </set>
+        <where>
+            Dio_Contract_ID=#{Contract_ID}
+        </where>
+    </update>
+    <!--入款记录修改状态-->
+    <update id="updateID" parameterType="java.util.HashMap">
+        UPDATE
+        cwgl_deposit_info
+        <set>
+            Dio_DsID =#{Dio_DsID}
+        </set>
+        <where>
+            Dio_ID=#{Dio_ID}
+        </where>
+    </update>
+
+    <!-- 修改入款信息 -->
+    <update id="upd_CDIO" parameterType="java.util.HashMap">
+        UPDATE
+        cwgl_deposit_info
+        <set>
+            <if test="Dio_DsID!=null">
+                Dio_DsID=#{Dio_DsID},
+            </if>
+            <if test="Dio_Deposit_Total!=null">
+                Dio_Deposit_Total=#{Dio_Deposit_Total},
+            </if>
+            <if test="Dio_Unpaid!=null">
+                Dio_Unpaid=#{Dio_Unpaid}
+            </if>
+        </set>
+        <where>
+            Dio_ID=#{Dio_ID}
+        </where>
+    </update>
+
+    <sql id="selwhere">
+        <where>
+            <if test="Dio_DsID != null and Dio_DsID != '' ">
+                A.Dio_DsID =#{Dio_DsID}
+            </if>
+            <if test="c_userId != null and c_userId != '' ">
+                and B.c_userId =#{c_userId}
+            </if>
+            <if test="c_userIdArr != null  and c_userIdArr != '' and c_userIdArr.size>0">
+                and  B.c_userId in
+                <foreach item="c_userIdArr" collection="c_userIdArr" index="c_userIdArr" open="(" separator="," close=")">
+                    #{c_userIdArr}
+                </foreach>
+            </if>
+            <if test="value != null and value != ''">
+                <if test="type == 1">
+                    and Dio_ID LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 2">
+                    and c_name LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 3">
+                    and c_fatName LIKE CONCAT(#{value},'%')
+                </if>
+            </if>
+            <if test="c_time != null and c_time != '' and staTime!=null and endTime!=null">
+                AND
+                <if test="c_time == 1">
+                   c_time
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+            AND  B.code = A.Dio_Contract_ID
+        </where>
+    </sql>
+    <!-- 查询主界面信息 -->
+    <select id="sel_CT_data_DS" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        A.Dio_ID,
+        A.Dio_DsID,
+        A.Dio_Deposit_Total,
+        A.Dio_Unpaid,
+        DATE_FORMAT(B.c_time, '%Y-%m-%d') AS c_time,
+        B.c_userId,
+        B.c_name,
+        B.c_fatName,
+        B.c_userName,
+        B.c_other_amount,
+        B.c_contract_amount,
+        B.c_the_actual_amount
+        FROM
+        cwgl_deposit_info A,
+        yz_xsgl_contract B
+        <include refid="selwhere"/>
+        ORDER BY c_time DESC
+    </select>
+    <!-- 查询主界面信息 总数查询 -->
+    <select id="sel_CT_data_Count_DS" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        SELECT
+        COUNT(1)
+        FROM
+        cwgl_deposit_info A,
+        yz_xsgl_contract B
+        <include refid="selwhere"/>
+    </select>
+
+    <!--入款信息导出-->
+    <select id="ExportIncome" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        A.Dio_ID,
+        A.Dio_DsID,
+        A.Dio_Deposit_Total,
+        A.Dio_Unpaid,
+        DATE_FORMAT(B.c_time, '%Y-%m-%d') AS c_time,
+        B.c_userId,
+        B.c_name,
+        B.c_fatName,
+        B.c_userName,
+        B.c_other_amount,
+        B.c_contract_amount,
+        B.c_the_actual_amount
+        FROM
+        cwgl_deposit_info A,
+        yz_xsgl_contract B
+        <include refid="selwhere"/>
+    </select>
+
+
+
+
+    <sql id="slequery">
+        <where>
+            B.code = A.Dio_Contract_ID
+            <if test="Dio_DsID != null and Dio_DsID != ''">
+                and A.Dio_DsID =#{Dio_DsID}
+            </if>
+            <if test="c_userIdArr != null  and c_userIdArr != '' and c_userIdArr.size>0">
+                and  B.c_userId in
+                <foreach item="c_userIdArr" collection="c_userIdArr" index="c_userIdArr" open="(" separator="," close=")">
+                    #{c_userIdArr}
+                </foreach>
+            </if>
+            <if test="c_userId != null and c_userId != ''">
+                and B.c_userId =#{c_userId}
+            </if>
+            <if test="value != null and value != ''">
+                <if test="type == 1">
+                    and Dio_ID LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 2">
+                    and c_name LIKE CONCAT(#{value},'%')
+                </if>
+                <if test="type == 3">
+                    and c_fatName LIKE CONCAT(#{value},'%')
+                </if>
+            </if>
+            <if test="c_time != null and c_time != '' and staTime!=null and endTime!=null">
+                AND
+                <if test="c_time == 1">
+                   c_time
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+        </where>
+    </sql>
+    <!-- 入款金额年份数据查询[销售合同] -->
+    <!--查询年的入款合计 &&  未入款 -->
+    <select id="sel_Year_data_CT" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        YEAR (c_time) AS y_Time,
+        SUM(Dio_Deposit_Total) AS Dio_Deposit_Total,
+        SUM(Dio_Unpaid) AS Dio_Unpaid,
+        A.Dio_DsID,
+        B.c_userId,
+        B.c_name,
+        B.c_fatName,
+        DATE_FORMAT(B.c_time, '%Y-%m-%d') AS c_time
+        FROM
+        CWGL_Deposit_Info A,
+        yz_xsgl_contract B
+        <include refid="slequery"/>
+        GROUP BY y_Time
+    </select>
+
+    <!--AND YEAR(c_time) =#{YEAR}-->
+    <sql id="slesql">
+        <where>
+            B.code = A.Dio_Contract_ID
+            AND YEAR(c_time) =#{YEAR}
+        </where>
+    </sql>
+    <!-- 入款金额年份中月份数据查询[销售合同]  -->
+    <select id="sel_Month_data_CT" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        YEAR (c_time) AS y_Time,
+        DATE_FORMAT(c_time, '%Y-%m') AS M_Time,
+        DATE_FORMAT(c_time, '%m') AS M,
+        SUM(Dio_Deposit_Total) AS M_Dio_Deposit_Total,
+        SUM(Dio_Unpaid) AS M_Dio_Unpaid
+        FROM
+        CWGL_Deposit_Info A,
+        yz_xsgl_contract B
+        <include refid="slesql"/>
+        GROUP BY M_Time
+    </select>
+
+
+    <!-- 查询今日注册数量 -->
+    <select id="sel_data_count" resultType="java.lang.Integer">
+        SELECT MAX(substring(Dio_ID, 13, 4))
+        from CWGL_Deposit_Info
+        where substring(Dio_ID, 5, 8) = NOW()
+    </select>
+
+
+    <!-- 通过合同编号 →删除入款信息 -->
+    <delete id="del_CDIO_Contract" parameterType="java.util.HashMap">
+        DELETE FROM CWGL_Deposit_Info
+        <where>Dio_Contract_ID=#{code}</where>
+    </delete>
+
+    <!-- 通过合同ID查询 c_nameID -->
+    <select id="fnid_Dio_ID" parameterType="java.util.HashMap" resultType="java.lang.String">
+        SELECT Dio_ID FROM CWGL_Deposit_Info
+        <where>Dio_Contract_ID=#{code}</where>
+    </select>
+
+    <!-- 查询销售合同入款记录基本信息 -->
+    <select id="sel_CT_data" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        A.Dio_ID,
+        A.Dio_DsID,
+        A.Dio_Deposit_Total,
+        A.Dio_Unpaid,
+        A.Dio_Source_Type,
+        DATE_FORMAT(B.c_time, '%Y-%m-%d') AS c_time,
+        B.c_name,
+        B.c_name,
+        B.c_userName,
+        B.Ct_Contract_Amount,
+        B.Ct_The_Actual_Amount
+        FROM
+        CWGL_Deposit_Info A,
+        yz_xsgl_contract B
+        <where>
+            <if test="Pid_arr!=null">
+                OR c_id IN (
+                SELECT id from yz_xsgl_customer WHERE Co_Pid IN
+                <foreach collection="Pid_arr" item="Pid_arr" open="(" separator="," close=")">
+                    #{Pid_arr}
+                </foreach>
+                )
+            </if>
+            <if test="c_userIdArr != null  and c_userIdArr != '' and c_userIdArr.size>0">
+                and  B.c_userId in
+                <foreach item="c_userIdArr" collection="c_userIdArr" index="c_userIdArr" open="(" separator="," close=")">
+                    #{c_userIdArr}
+                </foreach>
+            </if>
+            AND B.code = A.Dio_Contract_ID
+            <if test="value!=null and value!=''">
+                <if test="type==1">
+                    AND c_name LIKE CONCAT('%',#{value},'%')
+                </if>
+                <if test="type==2">
+                    AND c_name LIKE CONCAT('%',#{value},'%')
+                </if>
+                <if test="type==3">
+                    AND c_userName LIKE CONCAT('%',#{value},'%')
+                </if>
+            </if>
+            <if test="DsID_Arr!=null">
+                AND Dio_DsID IN
+                <foreach item="DsID_Arr" collection="DsID_Arr" open="(" separator="," close=")">
+                    #{DsID_Arr}
+                </foreach>
+            </if>
+            <if test="Source_Type_Arr!=null">
+                AND Dio_Source_Type = #{Source_Type_Arr}
+            </if>
+            <if test="USERID!=null">
+                AND Ct_USERID =#{USERID}
+            </if>
+        </where>
+        ORDER BY c_time DESC
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+    <!-- 查询销售合同入款记录基本信息总数 -->
+    <select id="sel_CT_data_Count" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        SELECT
+        COUNT(*)
+        FROM
+        CWGL_Deposit_Info A,
+        yz_xsgl_contract B
+        <where>
+            <if test="Pid_arr!=null">
+                OR c_id IN (
+                SELECT id from yz_xsgl_customer WHERE Co_Pid IN
+                <foreach collection="Pid_arr" item="Pid_arr" open="(" separator="," close=")">
+                    #{Pid_arr}
+                </foreach>
+                )
+            </if>
+            <if test="c_userIdArr != null  and c_userIdArr != '' and c_userIdArr.size>0">
+                and  B.c_userId in
+                <foreach item="c_userIdArr" collection="c_userIdArr" index="c_userIdArr" open="(" separator="," close=")">
+                    #{c_userIdArr}
+                </foreach>
+            </if>
+            AND B.code = A.Dio_Contract_ID
+            <if test="value!=null and value!=''">
+                <if test="type==1">
+                    AND c_name LIKE CONCAT('%',#{value},'%')
+                </if>
+                <if test="type==2">
+                    AND c_name LIKE CONCAT('%',#{value},'%')
+                </if>
+                <if test="type==3">
+                    AND c_userName LIKE CONCAT('%',#{value},'%')
+                </if>
+            </if>
+            <if test="DsID_Arr!=null">
+                AND Dio_DsID IN
+                <foreach item="DsID_Arr" collection="DsID_Arr" open="(" separator="," close=")">
+                    #{DsID_Arr}
+                </foreach>
+            </if>
+            <if test="Source_Type_Arr!=null">
+                AND Dio_Source_Type = #{Source_Type_Arr}
+            </if>
+            <if test="USERID!=null">
+                AND Ct_USERID =#{USERID}
+            </if>
+        </where>
+    </select>
+
+    <!-- 传入 未到款 ，所属合同ID 查询 当前的入款与未到款比较【用于未到款更新查询】-->
+    <select id="sel_Dio_DsID" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            Dio_Deposit_Total > 0 AS da_yu_0,
+            Dio_Deposit_Total = 0 AS deng_yu_0,
+            Dio_Deposit_Total  <![CDATA[ >= ]]> #{Dio_Unpaid}  AS da_yu_Unpaid
+        FROM
+            CWGL_Deposit_Info
+        <where>
+            Dio_Contract_ID=#{Contract_ID}
+        </where>
+    </select>
+
+
+
+    <!-- 按条件查询 未到款 sum -->
+    <select id="getSumDio_Unpaid" parameterType="java.util.HashMap" resultType="java.lang.String">
+        SELECT
+            SUM(A.Dio_Unpaid) as 'sumDio_Unpaid'
+        FROM
+        cwgl_deposit_info A,
+        yz_xsgl_contract B,
+        cwgl_deposit_info_details C
+        <include refid="details"/>
+    </select>
+
+
+
+
+</mapper>

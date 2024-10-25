@@ -1,0 +1,557 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.cn.mapper.YzAgentPacketMapper">
+
+
+    <sql id="selwhere" >
+        <where>
+            1=1
+            <if test="packetValue!=null and packetValue!=''">
+                <if test="packetType==1 ">
+                    and a.packet_wx_name LIKE CONCAT(#{packetValue},'%')
+                </if>
+                <if test="packetType==2 ">
+                    and a.packet_name LIKE CONCAT(#{packetValue},'%')
+                </if>
+            </if>
+            <if test="wechat_pay != null  and wechat_pay != '' and wechat_pay.size>0">
+                and  a.wechat_pay in
+                <foreach item="wechat_pay" collection="wechat_pay" index="wechat_pay" open="(" separator="," close=")">
+                    #{wechat_pay}
+                </foreach>
+            </if>
+            <if test="balance_pay != null  and balance_pay != '' and balance_pay.size>0">
+                and  a.balance_pay in
+                <foreach item="balance_pay" collection="balance_pay" index="balance_pay" open="(" separator="," close=")">
+                    #{balance_pay}
+                </foreach>
+            </if>
+            <if test="is_month != null  and is_month != '' and is_month.size>0">
+                and  a.is_month in
+                <foreach item="is_month" collection="is_month" index="is_month" open="(" separator="," close=")">
+                    #{is_month}
+                </foreach>
+            </if>
+            <if test="in_stock != null  and in_stock != '' and in_stock.size>0">
+                and  a.in_stock in
+                <foreach item="in_stock" collection="in_stock" index="in_stock" open="(" separator="," close=")">
+                    #{in_stock}
+                </foreach>
+            </if>
+            <if test="packet_valid_type != null  and packet_valid_type != '' and packet_valid_type.size>0">
+                and  a.packet_valid_type in
+                <foreach item="packet_valid_type" collection="packet_valid_type" index="packet_valid_type" open="(" separator="," close=")">
+                    #{packet_valid_type}
+                </foreach>
+            </if>
+            <if test="dept_id != null  and dept_id != '' and dept_id.size>0">
+                and  a.dept_id in
+                <foreach item="dept_id" collection="dept_id" index="dept_id" open="(" separator="," close=")">
+                    #{dept_id}
+                </foreach>
+            </if>
+            <if test="package_id != null  and package_id != '' and package_id.size>0">
+                and  a.package_id in
+                <foreach item="package_id" collection="package_id" index="package_id" open="(" separator="," close=")">
+                    #{package_id}
+                </foreach>
+            </if>
+            <if test="agent_id != null  and agent_id != '' and agent_id.size>0">
+                and  a.dept_id in
+                <foreach item="agent_id" collection="agent_id" index="agent_id" open="(" separator="," close=")">
+                    #{agent_id}
+                </foreach>
+            </if>
+            <if test="id!=null  and id != '' ">
+                and  a.id = #{id}
+            </if>
+        </where>
+        ${dataScope}
+    </sql>
+
+    <select id="selMap"  parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            a.id,
+            a.package_id,
+            a.packet_id,
+            a.packet_wx_name,
+            a.packet_price,
+            a.packet_flow,
+            a.base_packet_type,
+            a.packet_type,
+            a.is_profit,
+            a.show_profit,
+            a.wechat_pay,
+            a.balance_pay,
+            DATE_FORMAT( a.create_time, "%Y-%m-%d  %H:%i:%S" ) AS create_time,
+            a.packet_valid_time,
+            a.packet_cost,
+            a.is_month,
+            a.date_limit,
+            a.deduction,
+            a.in_stock,
+            a.packet_valid_type,
+            a.dept_id,
+            a.user_id,
+            a.packet_valid_name
+        FROM
+            yz_agent_packet a
+            LEFT JOIN sys_dept d ON a.dept_id = d.dept_id
+            LEFT JOIN sys_user_role ur ON a.user_id = ur.user_id
+            LEFT JOIN sys_role r ON r.role_id = ur.role_id
+        <include refid="selwhere"/>
+        GROUP BY a.id
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+
+
+    <select id="FindList"  parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        a.id,
+        a.package_id,
+        a.packet_id,
+        a.packet_wx_name,
+        a.packet_price,
+        a.packet_flow,
+        a.base_packet_type,
+        a.packet_type,
+        a.is_profit,
+        a.show_profit,
+        a.wechat_pay,
+        a.balance_pay,
+        DATE_FORMAT( a.create_time, "%Y-%m-%d  %H:%i:%S" ) AS create_time,
+        a.packet_valid_time,
+        a.packet_cost,
+        a.is_month,
+        a.date_limit,
+        a.deduction,
+        a.in_stock,
+        a.packet_valid_type,
+        a.dept_id,
+        a.user_id,
+        a.packet_valid_name
+        FROM
+        yz_agent_packet a
+        LEFT JOIN sys_dept d ON a.dept_id = d.dept_id
+        LEFT JOIN sys_user_role ur ON a.user_id = ur.user_id
+        LEFT JOIN sys_role r ON r.role_id = ur.role_id
+        <include refid="selwhere"/>
+        GROUP BY a.id
+    </select>
+
+
+    <select id="selMapCount" parameterType="java.util.HashMap"  resultType="java.lang.String">
+        SELECT
+            a.id
+        FROM
+            yz_agent_packet a
+            LEFT JOIN sys_dept d ON a.dept_id = d.dept_id
+            LEFT JOIN sys_user_role ur ON a.user_id = ur.user_id
+            LEFT JOIN sys_role r ON r.role_id = ur.role_id
+        <include refid="selwhere"/>
+        GROUP BY a.id
+    </select>
+
+
+    <!--获取资费组id-->
+    <select id="getPackage_id"  parameterType="java.util.HashMap" resultType="java.lang.String">
+        SELECT
+            a.package_id
+        FROM
+            yz_agent_packet a
+            LEFT JOIN sys_dept d ON a.dept_id = d.dept_id
+            LEFT JOIN sys_user_role ur ON a.user_id = ur.user_id
+            LEFT JOIN sys_role r ON r.role_id = ur.role_id
+        <include refid="selwhere"/>
+    </select>
+
+
+    <!--查询 packet_id 是否存在-->
+    <select id="isExist" parameterType="java.util.HashMap"  resultType="java.lang.Integer">
+        SELECT
+            COUNT(*)
+        FROM
+            yz_agent_packet
+        <where>
+            package_id = #{package_id}
+            AND packet_id = #{packet_id}
+            <if test="dept_id!=null">
+              and  dept_id = #{dept_id}
+            </if>
+        </where>
+    </select>
+
+
+    <!--从平台复制资费计划到 代理-->
+    <insert id="add" parameterType="java.util.HashMap">
+       INSERT INTO yz_agent_packet (
+            package_id,
+            packet_id,
+            packet_name,
+            packet_wx_name,
+            packet_price,
+            packet_flow,
+            base_packet_type,
+            packet_type,
+            is_profit,
+            show_profit,
+            wechat_pay,
+            balance_pay,
+            create_time,
+            error_flow,
+            error_so,
+            packet_valid_time,
+            packet_cost,
+            is_month,
+            date_limit,
+            deduction,
+            in_stock,
+            packet_valid_type,
+            dept_id,
+            user_id,
+            packet_valid_name
+        ) SELECT
+            package_id,
+            packet_id,
+            packet_name,
+            packet_wx_name,
+            #{set_packet_price},
+            packet_flow,
+            base_packet_type,
+            packet_type,
+            is_profit,
+            show_profit,
+            wechat_pay,
+            balance_pay,
+            now(),
+            packet_flow/#{set_error_so},
+            #{set_error_so},
+            packet_valid_time,
+            #{set_packet_cost},
+            is_month,
+            date_limit,
+            deduction,
+            in_stock,
+            packet_valid_type,
+            #{dept_id},
+            #{user_id},
+            packet_valid_name
+        FROM
+            yz_card_packet a
+            <where>
+                a.id = #{id}
+            </where>
+    </insert>
+
+
+
+    <!--查询 package_id 是否存在-->
+    <select id="find" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+        SELECT
+            a.id,
+            a.package_id,
+            a.packet_id,
+            a.packet_name,
+            a.packet_wx_name,
+            a.packet_price,
+            a.packet_flow,
+            a.base_packet_type,
+            a.packet_type,
+            a.is_profit,
+            a.show_profit,
+            a.wechat_pay,
+            a.balance_pay,
+            a.create_time,
+            a.error_flow,
+            a.error_so,
+            a.packet_valid_time,
+            a.packet_cost,
+            a.is_month,
+            a.date_limit,
+            a.deduction,
+            a.in_stock,
+            a.packet_valid_type,
+            a.packet_valid_name
+        FROM
+            yz_agent_packet a
+            LEFT JOIN sys_dept d ON a.dept_id = d.dept_id
+            LEFT JOIN sys_user_role ur ON a.user_id = ur.user_id
+            LEFT JOIN sys_role r ON r.role_id = ur.role_id
+            LEFT JOIN sys_user u ON a.user_id = u.user_id
+        <include refid="selwhere"/>
+    </select>
+
+
+    <!--修改 资费计划信息-->
+    <update id="update" parameterType="java.util.HashMap">
+        UPDATE
+            yz_agent_packet
+        <set>
+            package_id = #{package_id},
+            packet_id = #{packet_id},
+            packet_name = #{packet_name},
+            packet_wx_name = #{packet_wx_name},
+            packet_price = #{packet_price},
+            packet_flow = #{packet_flow},
+            base_packet_type = #{base_packet_type},
+            packet_type = #{packet_type},
+            is_profit = #{is_profit},
+            show_profit = #{show_profit},
+            wechat_pay = #{wechat_pay},
+            balance_pay = #{balance_pay},
+            error_flow = #{error_flow},
+            error_so = #{error_so},
+            packet_valid_time = #{packet_valid_time},
+            packet_cost = #{packet_cost},
+            is_month = #{is_month},
+            date_limit = #{date_limit},
+            deduction = #{deduction},
+            in_stock = #{in_stock},
+            packet_valid_type = #{packet_valid_type},
+            packet_valid_name = #{packet_valid_name}
+        </set>
+        <where>
+            id = #{id}
+        </where>
+    </update>
+
+
+
+    <!--查询 资费组简要信息 -->
+    <select id="find_simple" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+        SELECT
+            a.id,
+            a.packet_id,
+            a.packet_wx_name,
+            a.packet_price,
+            a.packet_flow,
+            a.error_so,
+            a.packet_cost
+        FROM
+            yz_agent_packet a
+        <where>
+            and  a.package_id  = #{package_id}
+        </where>
+    </select>
+
+
+    <!--查询 资费计划简要信息 -->
+    <select id="findPacket" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+        SELECT
+            a.id,
+            a.package_id,
+            a.packet_id,
+            a.packet_wx_name,
+            a.packet_price,
+            a.packet_flow,
+            a.packet_cost,
+            a.error_so as set_error_so,
+            a.packet_price as set_packet_price,
+            a.packet_price as set_packet_cost
+        FROM
+            yz_agent_packet a
+            LEFT JOIN sys_dept d ON a.dept_id = d.dept_id
+            LEFT JOIN sys_user_role ur ON a.user_id = ur.user_id
+            LEFT JOIN sys_role r ON r.role_id = ur.role_id
+            LEFT JOIN sys_user u ON a.user_id = u.user_id
+        <include refid="selwhere"/>
+        GROUP BY a.id
+    </select>
+
+
+
+    <!--划卡 资费计划信息 修改-->
+    <update id="updatePacket" parameterType="java.util.HashMap">
+        UPDATE
+            yz_agent_packet
+        <set>
+            packet_name = #{packet_name},
+            packet_wx_name = #{packet_wx_name},
+            packet_price = #{set_packet_price},
+            packet_flow = #{packet_flow},
+            base_packet_type = #{base_packet_type},
+            packet_type = #{packet_type},
+            is_profit = #{is_profit},
+            show_profit = #{show_profit},
+            wechat_pay = #{wechat_pay},
+            balance_pay = #{balance_pay},
+            error_flow = packet_flow/#{set_error_so},
+            error_so = #{set_error_so},
+            packet_valid_time = #{packet_valid_time},
+            packet_cost = #{set_packet_cost},
+            is_month = #{is_month},
+            date_limit = #{date_limit},
+            deduction = #{deduction},
+            in_stock = #{in_stock},
+            packet_valid_type = #{packet_valid_type},
+            packet_valid_name = #{packet_valid_name}
+        </set>
+        <where>
+            package_id = #{package_id}
+            AND packet_id = #{packet_id}
+            AND dept_id = #{dept_id}
+            AND user_id = #{user_id}
+        </where>
+    </update>
+
+    <!--查询 资费计划 设置时 已经设置好的 成本 售价 系数  -->
+    <select id="findExistence" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+        SELECT
+            packet_id,
+            packet_cost AS set_packet_cost,
+            error_so AS set_error_so,
+            packet_price AS set_packet_price,
+            error_flow
+         FROM yz_agent_packet
+        <where>
+             package_id in
+            <foreach item="package_id" collection="package_id" index="package_id" open="(" separator="," close=")">
+                #{package_id}
+            </foreach>
+            and  dept_id = #{findDept_id}
+        </where>
+    </select>
+
+
+
+
+
+
+
+
+    <!--从 企业客户 复制资费计划到 用户-->
+    <insert id="addAgent" parameterType="java.util.HashMap">
+        INSERT INTO yz_agent_packet (
+        package_id,
+        packet_id,
+        packet_name,
+        packet_wx_name,
+        packet_price,
+        packet_flow,
+        base_packet_type,
+        packet_type,
+        is_profit,
+        show_profit,
+        wechat_pay,
+        balance_pay,
+        create_time,
+        error_flow,
+        error_so,
+        packet_valid_time,
+        packet_cost,
+        is_month,
+        date_limit,
+        deduction,
+        in_stock,
+        packet_valid_type,
+        dept_id,
+        user_id,
+        packet_valid_name
+        ) SELECT
+        package_id,
+        packet_id,
+        packet_name,
+        packet_wx_name,
+        #{set_packet_price},
+        packet_flow,
+        base_packet_type,
+        packet_type,
+        is_profit,
+        show_profit,
+        wechat_pay,
+        balance_pay,
+        now(),
+        packet_flow/#{set_error_so},
+        #{set_error_so},
+        packet_valid_time,
+        #{set_packet_cost},
+        is_month,
+        date_limit,
+        deduction,
+        in_stock,
+        packet_valid_type,
+        #{dept_id},
+        #{user_id},
+        packet_valid_name
+        FROM
+            yz_agent_packet a
+        <where>
+            a.id = #{id}
+        </where>
+    </insert>
+
+
+    <!-- 微信充值 获取资费计划列表-->
+    <select id="findWebRecharge" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+        SELECT
+            packet_id,
+            package_id,
+            packet_wx_name,
+            packet_price,
+            packet_flow,
+            base_packet_type,
+            packet_type,
+            wechat_pay,
+            balance_pay,
+            packet_valid_name,
+            packet_valid_time,
+            date_limit,
+            packet_valid_type
+        FROM
+            yz_agent_packet
+        <where>
+            in_stock = 1
+            AND packet_valid_type != '4'
+            AND package_id = #{package_id}
+            AND dept_id = #{dept_id}
+            <if test="notInArr!=null and notInArr!='' and notInArr.size>0">
+                and packet_id not in
+                <foreach item="notInArr" collection="notInArr" index="notInArr" open="(" separator="," close=")">
+                    #{notInArr}
+                </foreach>
+            </if>
+        </where>
+        ORDER BY packet_flow ASC,packet_price ASC
+    </select>
+
+
+    <!--查询 是否已充值过 仅一次充值自资费计划类型 -->
+    <select id="findWebOnlyOnce"  parameterType="java.util.HashMap"  resultType="java.lang.String">
+        SELECT
+            a.packet_id
+        FROM
+            yz_agent_packet a,
+            yz_order b
+        <where>
+            a.packet_id = b.packet_id
+            and a.packet_type = '2'
+            and b.status = '1'
+            and b.del_flag = '0'
+            and b.iccid = #{iccid}
+            AND a.dept_id = #{dept_id}
+            <if test="packet_id!=null">
+                and a.packet_id = #{packet_id}
+            </if>
+        </where>
+    </select>
+
+
+    <!-- 微信充值 获取资费计划 支付类型-->
+    <select id="findPayType" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+        SELECT
+            wechat_pay,
+            balance_pay
+        FROM
+            yz_agent_packet
+        <where>
+            in_stock = 1
+            AND packet_id = #{packet_id}
+            AND dept_id = #{dept_id}
+        </where>
+    </select>
+
+
+
+
+</mapper>

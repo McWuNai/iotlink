@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.bulk.YzBusiCardSmsMapper">
+
+
+
+
+
+	<insert id="add" parameterType="java.util.HashMap"  >
+		INSERT INTO yz_busi_card_sms
+		(
+			msgid,
+			msisdn,
+			content,
+			state_id,
+			type,
+			create_date,
+			del_flag,
+			sms_src_TerminalId
+		 )
+		value (
+			#{msgid},
+			#{msisdn},
+			<![CDATA[ #{content} ]]>,
+			#{state_id},
+			#{type},
+			now(),
+			0,
+			#{sms_src_TerminalId}
+		)
+	</insert>
+
+
+
+
+
+
+	<sql id="selwhere">
+		<where>
+			<if test="value != null and value != ''">
+				<if test="type == 1">
+					and sms_src_TerminalId = #{value}
+				</if>
+				<if test="type == 2">
+					and msgid LIKE CONCAT(#{value},'%')
+				</if>
+				<if test="type == 3">
+					and msisdn LIKE CONCAT(#{value},'%')
+				</if>
+				<if test="type == 4">
+					and content LIKE CONCAT('%',#{value},'%')
+				</if>
+			</if>
+			<if test="type != null and type != ''">
+				and type =#{type}
+			</if>
+			<if test="state_id != null and state_id != ''">
+				and state_id =#{state_id}
+			</if>
+			<if test="del_flag != null and del_flag != ''">
+				and del_flag =#{del_flag}
+			</if>
+			<if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+				AND
+				<if test="timetype == 1">
+					 create_date
+				</if>
+				BETWEEN #{staTime} AND #{endTime}
+			</if>
+		</where>
+	</sql>
+
+	<select id="selMap" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			id,
+			msgid,
+			msisdn,
+			content,
+			state_id,
+			type,
+			DATE_FORMAT( create_date, "%Y-%m-%d %H:%i:%S" ) AS 'create_date',
+			del_flag,
+			sms_src_TerminalId
+		FROM
+		yz_busi_card_sms
+		<include refid="selwhere"/>
+		ORDER BY create_time DESC
+		LIMIT #{StarRow},#{PageSize}
+	</select>
+
+	<select id="selMapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		SELECT
+		COUNT(1)
+		FROM
+		yz_busi_card_sms
+		<include refid="selwhere"/>
+	</select>
+
+
+
+
+
+</mapper>

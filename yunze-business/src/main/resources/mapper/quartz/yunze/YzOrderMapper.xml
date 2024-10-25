@@ -1,0 +1,455 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.cn.mapper.YzOrderMapper">
+
+
+
+
+	<sql id="selwhere" >
+		<where>
+			<if test="value!=null and value!=''">
+				<if test="type==1">
+					and iccid = #{value}
+				</if>
+				<if test="type==2 ">
+					and ord_no = #{value}
+				</if>
+				<if test="type==3">
+					and ord_name LIKE CONCAT(#{value},'%')
+				</if>
+				<if test="type==4">
+					and wx_ord_no = #{value}
+				</if>
+				<if test="type==5 ">
+					and info LIKE CONCAT(#{value},'%')
+				</if>
+			</if>
+			<if test="status!=null  and status != ''">
+				and status = #{status}
+			</if>
+			<if test="ord_type!=null  and ord_type != ''">
+				and ord_type = #{ord_type}
+			</if>
+			<if test="packet_id!=null and packet_id != ''">
+				and packet_id = #{packet_id}
+			</if>
+			<if test="pay_type!=null and pay_type != ''">
+				and pay_type = #{pay_type}
+			</if>
+			<if test="cre_type!=null and cre_type != ''">
+				and cre_type = #{cre_type}
+			</if>
+			<if test="is_profit!=null and is_profit != ''">
+				and is_profit = #{is_profit}
+			</if>
+			<if test="add_package!=null and add_package != ''">
+				and add_package = #{add_package}
+			</if>
+			<if test="show_status!=null and show_status != ''">
+				and show_status = #{show_status}
+			</if>
+			<if test="open_id!=null and open_id != ''">
+				and open_id = #{open_id}
+			</if>
+			<if test="agent_id != null  and agent_id != '' and agent_id.size>0">
+				and  agent_id in
+				<foreach item="agent_id" collection="agent_id" index="agent_id" open="(" separator="," close=")">
+					#{agent_id}
+				</foreach>
+			</if>
+			<if test="StartAndEndtype != null  and StartAndEndtype != '' and StartValue!=null and EndValue!=null">
+				and
+				<if test="StartAndEndtype == 1">
+					ICCID
+				</if>
+				BETWEEN #{StartValue} AND #{EndValue}
+			</if>
+			<if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+				and
+				<if test="timetype == 1">
+					 create_time
+				</if>
+				<if test="timetype == 2">
+					 add_package_time
+				</if>
+				BETWEEN #{staTime} AND #{endTime}
+			</if>
+			<if test="del_flag != null   and del_flag != ''">
+				and  del_flag = #{del_flag}
+			</if>
+		</where>
+	</sql>
+
+
+
+	<select id="selMap"  parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			ord_no,
+			ord_type,
+			ord_name,
+			iccid,
+			wx_ord_no,
+			status,
+			price,
+			account,
+			pay_type,
+			cre_type,
+			<if test="selType!=null and selType!='' and selType=='Tariff'">
+				packet_id,
+				is_profit,
+				add_package,
+				show_status,
+				open_id,
+				profit_type,
+				add_parameter,
+				DATE_FORMAT( add_package_time, "%Y-%m-%d %H:%i:%S" ) AS add_package_time,
+				is_profit_sharing,
+				DATE_FORMAT( profit_sharing_time, "%Y-%m-%d %H:%i:%S" ) AS profit_sharing_time,
+			</if>
+			agent_id,
+			DATE_FORMAT( create_time, "%Y-%m-%d %H:%i:%S" ) AS create_time,
+			validate_type,
+			info
+		FROM
+			yz_order
+		<include refid="selwhere"/>
+		LIMIT #{StarRow},#{PageSize}
+	</select>
+
+	<select id="selMapCount" parameterType="java.util.HashMap"  resultType="java.lang.Integer">
+		SELECT
+			COUNT(ord_no)
+		FROM
+			yz_order
+		<include refid="selwhere"/>
+	</select>
+
+
+
+
+	<!-- 获取执行的加包订单 去生产任务 -->
+	<select id="findAddPackage" resultType="java.util.HashMap"  parameterType="java.util.HashMap">
+		SELECT
+			a.id,
+			a.ord_no,
+			a.iccid,
+			a.add_parameter,
+			a.validate_type,
+			DATE_FORMAT( a.create_time, "%Y-%m-%d %H:%i:%S"  ) AS create_time,
+			b.id as Bid,
+			b.activate_date
+		FROM
+			yz_order a,
+			yz_card_info b
+		<where>
+			a.ord_type = 2
+			and a.status = 1
+			and a.add_package = 0
+			and a.iccid = b.iccid
+			<if test="validate_type!=null and validate_type!=''" >
+				AND a.validate_type
+				<if test="type!=null and type!='' and type=='in' " >
+					=
+				</if>
+				<if test="type!=null and type!='' and type=='notin' " >
+					!=
+				</if>
+				#{validate_type}
+			</if>
+			<if test="activate_date=='notnull' " >
+				and b.activate_date <![CDATA[ <= ]]>  now()
+			</if>
+			<if test="activate_date=='null' " >
+				and ISNULL( b.activate_date)=0
+			</if>
+			<if test="channel_id=='notnull' " >
+				and b.channel_id !=''
+			</if>
+			<if test="iccid!=null and iccid!=''" >
+				AND a.iccid = #{iccid}
+			</if>
+			<if test="ordFId!=null and ordFId!=''" >
+				AND a.id = #{ordFId}
+			</if>
+		</where>
+	</select>
+
+
+
+	<!--  修改已经加包的订单 加包状态 -->
+	<update id="updAddPackage"  parameterType="java.util.HashMap">
+		update
+		yz_order
+		<set>
+			add_package = 1
+		</set>
+		<where>
+			id = #{id}
+		</where>
+	</update>
+
+
+	<!--自动 修改已经加包的订单加包状态-->
+	<update id="updAutomatic"  >
+		update yz_order
+		<set>
+			add_package = 1
+		</set>
+
+		<where>
+			id in (
+			SELECT
+			b.id
+			FROM
+			yz_card_flow a,
+			yz_order b
+			where
+			a.ord_no = b.ord_no
+			and a.iccid = b.iccid
+			and b.add_package = 0
+			)
+		</where>
+	</update>
+
+
+
+	<!-- 修改 卡激活时间 开卡日期-->
+	<update id="updActivate" parameterType="java.util.HashMap" >
+		update yz_card_info
+		<set>
+			<if test="activate_date!=null">
+				activate_date =  #{activate_date},
+			</if>
+			<if test="open_date!=null">
+				open_date =  #{open_date},
+			</if>
+			syn_Time =now()
+		</set>
+		<where>
+			iccid =#{iccid}
+		</where>
+	</update>
+
+
+	<!-- 修改 加包执行状态-->
+	<update id="updAddPackageInfo" parameterType="java.util.HashMap" >
+		update yz_order
+		<set>
+			add_package = '1',
+			add_package_time = now()
+			<if test="info!=null">
+				,info =  #{info}
+			</if>
+		</set>
+		<where>
+			iccid =#{iccid}
+			and ord_no = #{ord_no}
+		</where>
+	</update>
+
+
+	<!--查询订单加包参数-->
+	<select id="findOrder" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+		SELECT
+			add_parameter
+		FROM
+			yz_order
+		<where>
+			iccid = #{iccid}
+			and ord_no =#{ord_no}
+		</where>
+	</select>
+
+
+
+
+	<!--批量插入订单-->
+	<insert id="importOrder" parameterType="java.util.HashMap"  >
+		insert into
+			yz_order
+		(
+			ord_no,ord_type,ord_name,iccid,wx_ord_no,
+			status,price,account,packet_id,pay_type,
+			cre_type,is_profit,add_package,show_status,open_id,agent_id,
+			profit_type,create_time,validate_type,info,add_parameter,del_flag,is_profit_sharing
+		)
+		value
+		<foreach item="order_arrs" collection="order_arrs" index="index"  separator="," >
+			(#{order_arrs.ord_no},#{order_arrs.ord_type},#{order_arrs.ord_name},#{order_arrs.iccid},#{order_arrs.wx_ord_no},
+			#{order_arrs.status},#{order_arrs.price},#{order_arrs.account},#{order_arrs.packet_id},#{order_arrs.pay_type},
+			#{order_arrs.cre_type},#{order_arrs.is_profit},#{order_arrs.add_package},#{order_arrs.show_status},#{order_arrs.open_id},#{order_arrs.agent_id},
+			#{order_arrs.profit_type},now(),#{order_arrs.validate_type},#{order_arrs.info}, #{order_arrs.add_parameter} ,0,0
+			)
+		</foreach>
+	</insert>
+
+
+
+	<!--获取 订单简要 信息 -->
+	<select id="getOrderBriefly" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+		SELECT
+			id,
+			ord_type,
+			status,
+			iccid,
+			agent_id,
+			price
+		FROM
+			yz_order
+		<where>
+			 ord_no =#{ord_no}
+		</where>
+	</select>
+
+	<!-- 修改 微信订单号订单支付状态-->
+	<update id="updStatus" parameterType="java.util.HashMap" >
+		update yz_order
+		<set>
+			status = #{status}
+			<if test="wx_ord_no!=null">
+				,wx_ord_no =  #{wx_ord_no}
+			</if>
+		</set>
+		<where>
+			id =#{id}
+		</where>
+	</update>
+
+
+
+
+
+	<!--C 端 查询订单 简要信息-->
+	<select id="WxfindOrder" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+		SELECT
+			id,
+			price,
+			ord_name,
+			ord_type,
+			add_parameter,
+			packet_id,
+			iccid,
+			ord_no,
+			validate_type,
+			pay_type,
+			add_package,
+			DATE_FORMAT( create_time, "%Y-%m-%d %H:%i:%S" ) as 'create_time'
+		FROM
+			yz_order
+		<where>
+			iccid =  #{iccid}
+			AND STATUS = '1'
+			AND show_status = '1'
+			AND add_package = #{add_package}
+		</where>
+		ORDER BY create_time DESC
+		LIMIT 10
+	</select>
+
+	<!--C 端 查询订单 详情-->
+	<select id="WxfindOrderDs" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+		SELECT
+			iccid,
+			ord_no,
+			validate_type,
+			pay_type,
+			add_package,
+			DATE_FORMAT( create_time, "%Y-%m-%d %H:%i:%S" ) as 'create_time'
+		FROM
+			yz_order
+		<where>
+			id =  #{id}
+		</where>
+	</select>
+
+	<!--  修改已经加包的订单 加包状态 -->
+	<update id="resetAddPackage"  parameterType="java.util.HashMap">
+		update
+		yz_order
+		<set>
+			add_package = 0
+		</set>
+		<where>
+			info LIKE '未找到加%' and add_package = '1'
+		</where>
+	</update>
+
+
+	<!--查询 已支付 未删除 指定时间段内 需要 执行 API请求但未执行成功 卡号且 在执行次数最大值以下卡号  [GROUP BY iccid 放置卡号同批次 多次操作]-->
+	<select id="findRetryOrderApi" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+		cre_type,
+		pay_type,
+		add_parameter,
+		ord_no,
+		iccid,
+		is_dd_exStatus,
+		is_boot_exStatus,
+		is_openNet_exStatus,
+		add_package
+		FROM
+		yz_order
+		<where>
+			status = 1
+			and del_flag = 0
+			and  create_time BETWEEN #{staTime} AND #{endTime}
+			and
+			<if test="type==1 ">
+				is_dd_exCount
+			</if>
+			<if test="type==2 ">
+				is_boot_exCount
+			</if>
+			<if test="type==3 ">
+				is_openNet_exCount
+			</if>
+			<![CDATA[ < ]]> #{MaxCount}
+			and
+			<if test="type==1 ">
+				(is_dd_exStatus = 0 or is_dd_exStatus is null)
+			</if>
+			<if test="type==2 ">
+				(is_boot_exStatus = 0 or is_boot_exStatus is null)
+			</if>
+			<if test="type==3 ">
+				(is_openNet_exStatus = 0 or is_openNet_exStatus is null)
+			</if>
+			and
+			<if test="type==1 ">
+				is_dd_Status
+			</if>
+			<if test="type==2 ">
+				is_boot_Status
+			</if>
+			<if test="type==3 ">
+				is_openNet_Status
+			</if>
+			= 1
+		</where>
+		GROUP BY iccid
+	</select>
+
+
+	<!--获取需要请求执行 api的 iccid卡号订单情况-->
+	<select id="findIccidOrderApi" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+		cre_type,
+		pay_type,
+		add_parameter,
+		ord_no,
+		iccid,
+		is_dd_exStatus,
+		add_package,
+		validate_type
+		FROM
+		yz_order
+		<where>
+			status = 1
+			and del_flag = 0
+			and is_dd_Status = 1
+			and iccid = #{iccid}
+		</where>
+	</select>
+
+
+</mapper>

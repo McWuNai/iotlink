@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.card.YzCardApiOfferinginfolistMapper">
+
+    <sql id="selwhere">
+        <where>
+            <if test="value!=null and value!='' ">
+                <if test="type==0">
+                    and iccid LIKE CONCAT('%',#{value},'%')
+                </if>
+                <if test="type==1">
+                    and offeringName LIKE CONCAT('%',#{value},'%')
+                </if>
+                <if test="type==2">
+                    and offeringId LIKE CONCAT('%',#{value},'%')
+                </if>
+                <if test="type==3">
+                    and apnName LIKE CONCAT('%',#{value},'%')
+                </if>
+            </if>
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+            AND
+                <if test="timetype == 0">
+                     create_date
+                </if>
+                <if test="timetype == 1">
+                     effectiveDate
+                </if>
+                <if test="timetype == 2">
+                     expiriedDate
+                </if>
+                <if test="timetype == 3">
+                     upd_date
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+            <if test="cd_code != null and cd_code != '' ">
+                cd_code =#{cd_code}
+            </if>
+        </where>
+    </sql>
+
+    <select id="getList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+            id,
+            iccid,
+            offeringId,
+            offeringName,
+            effectiveDate,
+            expiriedDate,
+            apnName,
+            cd_code,
+            DATE_FORMAT(upd_date,'%Y-%m-%d') as upd_date,
+            DATE_FORMAT(create_date,'%Y-%m-%d') as create_date
+        from yz_card_api_offeringinfolist
+        <include refid="selwhere"/>
+        ORDER BY
+        <if test="ORDER_BY_type==null or ORDER_BY_type==1">
+            create_date
+        </if>
+        <if test="ORDER_BY_type==2">
+            offeringId
+        </if>
+        <if test="ORDER_BY_rule==null or ORDER_BY_rule==1">
+            ASC
+        </if>
+        <if test="ORDER_BY_rule==2">
+            DESC
+        </if>
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+    <select id="MapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        select
+            count(1)
+        from
+            yz_card_api_offeringinfolist
+        <include refid="selwhere"/>
+    </select>
+
+    <insert id="save" parameterType="java.util.HashMap" >
+        insert into
+            yz_card_api_offeringinfolist
+        (
+            iccid,
+            offeringId,
+            offeringName,
+            effectiveDate,
+            expiriedDate,
+            apnName,
+            cd_code,
+            create_date,
+            upd_date
+
+        )values
+        <foreach item="card_arrs" collection="card_arrs" index="index"  separator="," >
+            (
+                #{iccid},
+                #{card_arrs.offeringId},
+                #{card_arrs.offeringName},
+                #{card_arrs.effectiveDate},
+                #{card_arrs.expiriedDate},
+                #{card_arrs.apnName},
+                #{cd_code},
+                now(),now()
+            )
+        </foreach>
+    </insert>
+
+    <update id="upd" parameterType="java.util.HashMap" >
+        update
+            yz_card_api_offeringinfolist
+        <set>
+            <if test="offeringName!=null">
+                offeringName = #{offeringName},
+            </if>
+            <if test="apnName!=null">
+                apnName = #{apnName},
+            </if>
+            <if test="effectiveDate!=null">
+                effectiveDate = #{effectiveDate},
+            </if>
+            <if test="expiriedDate!=null">
+                expiriedDate = #{expiriedDate},
+            </if>
+            <if test="cd_code!=null">
+                cd_code = #{cd_code},
+            </if>
+            upd_date = now()
+        </set>
+        <where>
+            iccid = #{iccid}
+            and offeringId =#{offeringId}
+        </where>
+    </update>
+
+
+
+    <select id="is_ex" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+            id,
+            iccid,
+            offeringId
+        from
+            yz_card_api_offeringinfolist
+        <where>
+                iccid = #{iccid}
+                and offeringId = #{offeringId}
+        </where>
+    </select>
+
+
+    <!--互联网卡详情查询-->
+    <select id="apiIdList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+         SELECT
+             id,
+             iccid,
+             offeringId,
+             offeringName,
+             effectiveDate,
+             expiriedDate,
+             apnName,
+             cd_code,
+            DATE_FORMAT(upd_date,'%Y-%m-%d') as upd_date,
+            DATE_FORMAT(create_date,'%Y-%m-%d') as create_date
+         FROM
+             yz_card_api_offeringinfolist
+         <where>
+             iccid =#{iccid}
+         </where>
+         order by offeringId asc
+    </select>
+
+
+
+    <select id="groupOfferingId" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+       SELECT
+            cd_code,
+            offeringId,
+            offeringName,
+            apnName
+        FROM
+            yz_card_api_offeringinfolist
+        GROUP BY
+            offeringId
+    </select>
+
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

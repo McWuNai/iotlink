@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.YrootlowHisMapper">
+
+    <sql id="selwhere">
+        <where>
+            <if test="value!=null and value!='' ">
+                <if test="type==1">
+                    and iccid  LIKE CONCAT(#{value},'%')
+                </if>
+            </if>
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+                AND
+                <if test="timetype == 1">
+                     create_time
+                </if>
+                <if test="timetype == 2">
+                     update_time
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+            <if test="IccidArr != null  and IccidArr != '' and IccidArr.size>0">
+                and  iccid in
+                <foreach item="IccidArr" collection="IccidArr" index="IccidArr" open="(" separator="," close=")">
+                    #{IccidArr}
+                </foreach>
+            </if>
+            <if test="GreaterThanZero!=null and GreaterThanZero!='' and GreaterThanZero==1 ">
+                and total_show_flow_now <![CDATA[ > ]]> 0
+            </if>
+        </where>
+    </sql>
+
+
+    <!-- 查询 求和显示总量 -->
+    <select id="getTotal_show_flow" parameterType="java.util.HashMap" resultType="java.lang.String">
+        SELECT SUM(total_show_flow)
+        FROM (
+            SELECT
+                MAX(total_show_flow) as 'total_show_flow'
+            FROM yz_card_flow_his
+            <include refid="selwhere"/>
+            GROUP BY iccid
+        ) a
+    </select>
+
+
+
+
+    <select id="ListHis" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            id,
+            total_flow,
+            total_flow_now,
+            month,
+            year,
+            day,
+            iccid,
+            DATE_FORMAT(create_time,'%Y-%m-%d') as create_time,
+            DATE_FORMAT(update_time,'%Y-%m-%d') as update_time,
+            total_show_flow,
+            total_show_flow_now
+        FROM yz_card_flow_his
+        <include refid="selwhere"/>
+            ORDER BY create_time DESC
+            LIMIT #{StarRow},#{PageSize}
+    </select>
+
+    <select id="selMapHis" parameterType="java.util.HashMap"  resultType="java.lang.Integer">
+        SELECT
+            COUNT(1)
+        FROM
+            yz_card_flow_his
+        <include refid="selwhere"/>
+    </select>
+
+    <select id="getById" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT id,total_flow_now,total_flow
+        FROM yz_card_flow_his WHERE id = #{id}
+    </select>
+
+    <!--用量详情导出查询-->
+    <select id="exportFlowHis" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            total_flow,
+            total_flow_now,
+            iccid,
+            year,
+            month,
+            day,
+            DATE_FORMAT(create_time, "%Y-%m-%d %H:%i:%S" ) AS create_time,
+            DATE_FORMAT(update_time, "%Y-%m-%d %H:%i:%S" ) AS update_time,
+            total_show_flow_now,
+            total_show_flow
+        FROM
+            yz_card_flow_his
+        <include refid="selwhere"/>
+    </select>
+
+
+    <!--用量详情导出 （同步导出 分组 、备注、发货时间）iccid -->
+    <select id="exportFlowHisIccid" parameterType="java.util.HashMap" resultType="java.lang.String">
+        SELECT
+            iccid
+        FROM
+            yz_card_flow_his
+        <include refid="selwhere"/>
+        group by iccid
+    </select>
+
+
+    <!-- 数据用量按 日/月 查询SUM -->
+    <select id="getDayMonthSum" parameterType="java.util.HashMap" resultType="java.util.HashMap" >
+        SELECT
+            <if test="FindType == 'day'">
+                CONCAT(month,'-',day) as 'monthDay',
+            </if>
+            <if test="FindType == 'month'">
+                CONCAT(year,'-',month) as 'yearMonth',
+            </if>
+            <![CDATA[  convert(sum(total_show_flow_now)/1024,decimal(10,2))  ]]>   as 'total_show_flow_now'
+        FROM
+            yz_card_flow_his
+        <include refid="selwhere"/>
+        <if test="FindType == 'day'">
+            GROUP BY monthDay
+            ORDER BY create_time asc
+        </if>
+        <if test="FindType == 'month'">
+            GROUP BY yearMonth
+            ORDER BY create_time asc
+        </if>
+    </select>
+
+
+
+    <!-- 获取前 5 用量排名 -->
+    <select id="getTop5" parameterType="java.util.HashMap" resultType="java.util.HashMap" >
+        SELECT
+            iccid,
+            total_show_flow_now as 'used'
+        FROM
+            yz_card_flow_his
+        <include refid="selwhere"/>
+        ORDER BY used desc LIMIT 5
+    </select>
+
+
+    <!-- 获取前 5 用量排名 月用量 -->
+    <select id="monthGetTop5" parameterType="java.util.HashMap" resultType="java.util.HashMap" >
+        SELECT
+            *
+        FROM
+            ( SELECT iccid,total_show_flow as 'used'
+        FROM yz_card_flow_his
+            <include refid="selwhere"/>
+        ORDER BY used DESC LIMIT 200) a
+        GROUP BY
+            a.iccid  LIMIT 5
+    </select>
+
+
+
+    <delete id="delFlow" parameterType="java.util.HashMap" >
+        DELETE  from yz_card_flow_his
+        <where>
+            id in
+            <foreach item="idArr" collection="idArr" index="idArr" open="(" separator="," close=")">
+                #{idArr}
+            </foreach>
+        </where>
+    </delete>
+
+    <select id="getOneThousand" parameterType="java.util.HashMap" resultType="java.lang.String" >
+        SELECT
+           id
+        FROM
+            yz_card_flow_his
+        <where>
+            create_time  	<![CDATA[ < ]]>  #{create_time}
+        </where>
+        LIMIT 1000
+    </select>
+
+
+    <select id="lessThanZeroChannelId" parameterType="java.util.HashMap" resultType="java.lang.String" >
+        SELECT
+            b.channel_id
+        FROM
+            yz_card_flow_his a,
+            yz_card_info b
+        <where>
+            a.iccid=b.iccid
+            and total_show_flow_now <![CDATA[ < ]]> 0.0
+        </where>
+        GROUP BY b.channel_id
+    </select>
+
+    <select id="findChannelIdLessThanZero" parameterType="java.util.HashMap" resultType="java.util.HashMap" >
+        SELECT
+            b.iccid,
+            b.msisdn AS card_no,
+            b.syn_Time,
+            b.network_type
+        FROM
+            yz_card_flow_his a,
+            yz_card_info b
+        <where>
+            a.iccid=b.iccid
+            and total_show_flow_now <![CDATA[ < ]]> 0.0
+            and b.channel_id = #{channel_id}
+            and b.is_polling = 1
+        </where>
+    </select>
+
+</mapper>

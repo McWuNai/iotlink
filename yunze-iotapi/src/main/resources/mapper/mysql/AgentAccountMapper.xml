@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.iotapi.mapper.mysql.AgentAccountMapper">
+
+
+
+    <select id="getOne"  parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            id,
+            app_id,
+            access_key,
+            password,
+            create_time,
+            update_time,
+            agent_name,
+            agent_id,
+            times,
+            openurl,
+            typesys
+        FROM
+            yz_agent_account
+        <where>
+            <if test="app_id!=null">
+                and app_id = #{app_id}
+            </if>
+            <if test="agent_id!=null">
+                and agent_id = #{agent_id}
+            </if>
+            <if test="password!=null">
+                and password = #{password}
+            </if>
+            <if test="access_key!=null">
+                and access_key = #{access_key}
+            </if>
+        </where>
+    </select>
+
+
+
+</mapper>

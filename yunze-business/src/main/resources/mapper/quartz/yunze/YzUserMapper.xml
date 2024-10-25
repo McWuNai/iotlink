@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.cn.mapper.YzUserMapper">
+
+
+
+
+
+	<sql id="selectUserVo">
+        select u.user_id, u.dept_id, u.user_name, u.nick_name, u.email, u.avatar, u.phonenumber, u.password, u.sex, u.status, u.del_flag, u.login_ip, u.login_date, u.create_by, u.create_time, u.remark,
+        d.dept_id, d.parent_id, d.dept_name, d.order_num, d.leader, d.status as dept_status,
+        r.role_id, r.role_name, r.role_key, r.role_sort, r.data_scope, r.status as role_status
+        from sys_user u
+		    left join sys_dept d on u.dept_id = d.dept_id
+		    left join sys_user_role ur on u.user_id = ur.user_id
+		    left join sys_role r on r.role_id = ur.role_id
+    </sql>
+
+
+	<sql id="selwhere" >
+		<where>
+			u.del_flag = '0'
+			<if test="user_name != null and user_name != ''">
+				AND u.user_name like CONCAT( #{user_name}, '%')
+			</if>
+			<if test="status != null and status != ''">
+				AND u.status = #{status}
+			</if>
+			<if test="phonenumber != null and phonenumber != ''">
+				AND u.phonenumber like CONCAT( #{phonenumber}, '%')
+			</if>
+			<if test="staTime != '' and endTime != '' and staTime!=null and endTime!=null">
+				AND u.create_time BETWEEN #{staTime} AND #{endTime}
+			</if>
+			AND (u.dept_id = #{deptId} OR u.dept_id IN ( SELECT t.dept_id FROM sys_dept t WHERE find_in_set(#{deptId}, ancestors) ))
+			<!-- 数据范围过滤 -->
+			${dataScope}
+		</where>
+	</sql>
+
+	<select id="selMap" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		select u.user_id, u.dept_id, u.nick_name, u.user_name, u.email, u.avatar, u.phonenumber, u.password, u.sex, u.status, u.del_flag, u.login_ip, u.login_date, u.create_by, u.create_time, u.remark, d.dept_name, d.leader from sys_user u
+			left join sys_dept d on u.dept_id = d.dept_id
+		<include refid="selwhere"/>
+		LIMIT #{StarRow},#{PageSize}
+	</select>
+
+	<select id="selMapCount" parameterType="java.util.HashMap"  resultType="java.lang.Integer">
+		SELECT
+			COUNT(*)
+		from sys_user u
+			left join sys_dept d on u.dept_id = d.dept_id
+		<include refid="selwhere"/>
+	</select>
+
+
+	<!--获取用户 权限过滤-->
+	<select id="getUserID" parameterType="java.util.HashMap"  resultType="java.lang.String">
+		SELECT
+			u.user_id
+		FROM
+			 sys_dept d
+			LEFT JOIN sys_user u  ON u.dept_id = d.dept_id
+			LEFT JOIN sys_user_role ur ON u.user_id = ur.user_id
+			LEFT JOIN sys_role r ON r.role_id = ur.role_id
+		<where>
+			1=1
+			<if test="agent_id != null  and agent_id != '' and agent_id.size>0">
+				and  d.dept_id in
+				<foreach item="agent_id" collection="agent_id" index="agent_id" open="(" separator="," close=")">
+					#{agent_id}
+				</foreach>
+			</if>
+		</where>
+		<!-- 数据范围过滤 -->
+		${dataScope}
+		group by user_id
+	</select>
+
+
+	<!--获取用户 权限过滤-->
+	<select id="getDeptID" parameterType="java.util.HashMap"  resultType="java.lang.String">
+		SELECT
+			u.dept_id
+		FROM
+			sys_dept d
+		LEFT JOIN sys_user u  ON u.dept_id = d.dept_id
+		LEFT JOIN sys_user_role ur ON u.user_id = ur.user_id
+		LEFT JOIN sys_role r ON r.role_id = ur.role_id
+		<where>
+			1=1
+			<if test="agent_id != null  and agent_id != '' and agent_id.size>0">
+				and  d.dept_id in
+				<foreach item="agent_id" collection="agent_id" index="agent_id" open="(" separator="," close=")">
+					#{agent_id}
+				</foreach>
+			</if>
+		</where>
+		<!-- 数据范围过滤 -->
+		${dataScope}
+		group by dept_id
+	</select>
+
+
+
+
+</mapper>

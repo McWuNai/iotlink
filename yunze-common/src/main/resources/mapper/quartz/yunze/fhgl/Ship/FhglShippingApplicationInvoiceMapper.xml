@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.fhgl.Ship.FhglShippingApplicationInvoiceMapper">
+
+    <!-- 新增 发货申请发票发货信息 -->
+    <insert id="add_SAIE"  parameterType="java.util.Map">
+        INSERT INTO FHGL_Shipping_Application_Invoice
+        (
+        SAIE_Billing_Company,
+        SAIE_Quantity,
+        SAIE_SANID,
+        SAIE_Sent_Quantity,
+        SAIE_Owe_Quantity
+        )
+        VALUE
+        <foreach item="SAIE_arr" collection="SAIE_arr"  separator="," >
+            (
+            #{SAIE_arr.SAIE_Billing_Company},
+            #{SAIE_arr.SAIE_Quantity},
+            #{SAN_ID},
+            <if test="SAIE_arr.SAIE_Sent_Quantity!=null">
+                #{SAIE_arr.SAIE_Sent_Quantity},
+            </if>
+            <if test="SAIE_arr.SAIE_Sent_Quantity==null">
+                0,
+            </if>
+            <if test="SAIE_arr.SAIE_Owe_Quantity!=null">
+                #{SAIE_arr.SAIE_Owe_Quantity}
+            </if>
+            <if test="SAIE_arr.SAIE_Owe_Quantity==null">
+                #{SAIE_arr.SAIE_Quantity}
+            </if>
+            )
+        </foreach>
+    </insert>
+
+
+    <!-- 发货申请发票发货信息 -->
+    <select id="find_data" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        SAIE_ID,
+        SAIE_Billing_Company,
+        SAIE_Quantity,
+        SAIE_Sent_Quantity,
+        SAIE_Owe_Quantity
+        FROM
+        FHGL_Shipping_Application_Invoice
+        <where>
+            SAIE_SANID = #{SAN_ID}
+        </where>
+
+    </select>
+
+    <!-- 删除 发票发货信息-->
+    <delete id="del_date" parameterType="java.util.HashMap">
+        DELETE FROM FHGL_Shipping_Application_Invoice <where>SAIE_SANID = #{SAN_ID}  </where>
+    </delete>
+
+
+
+    <!-- 修改 发票发货信息-->
+    <update id="upd_date"  parameterType="java.util.HashMap">
+        UPDATE FHGL_Shipping_Application_Invoice
+        <set>
+            SAIE_Sent_Quantity  = #{SAIE_Sent_Quantity},
+            SAIE_Owe_Quantity = #{SAIE_Owe_Quantity}
+        </set>
+        <where>
+            SAIE_ID = #{SAIE_ID}
+        </where>
+    </update>
+
+
+    <!-- 修改所属发货申请ID -->
+    <update id="upd_SANID" parameterType="java.util.HashMap">
+        UPDATE FHGL_Shipping_Application_Invoice
+        <set>
+            SAIE_SANID = #{SAN_ID}
+        </set>
+        <where>
+            SAIE_SANID IN
+            <foreach item="SANID_arr" collection="SANID_arr"  open="("  close=")"   separator="," >
+                #{SANID_arr}
+            </foreach>
+        </where>
+    </update>
+
+
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

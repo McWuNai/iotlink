@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.memberGroup.memberGroupMapper">
+
+
+    <sql id="selwhere">
+        <where>
+            <if test="type!=null and type!=''
+                and value!=null and value !=''">
+                <if test="type== 0 ">
+                    and  msisdn = #{value}
+                </if>
+                <if test="type== 1 ">
+                    and iccid=#{value}
+                </if>
+                <if test="type== 2 ">
+                    and imsi=#{value}
+                </if>
+                <if test="type== 3 ">
+                    and groupId=#{value}
+                </if>
+            </if>
+            <if test="inconsistent_iccid != null  and inconsistent_iccid != ''">
+                and inconsistent_iccid=#{inconsistent_iccid}
+            </if>
+            <if test="is_new != null  and is_new != ''">
+                and is_new=#{is_new}
+            </if>
+            <!--<if test="timetype != null  and timetype != '' and timetype!= '999'
+                and staTime != null  and staTime != ''
+                and endTime != null  and endTime != ''">
+                and #{timetype} between #{staTime} and #{endTime}
+            </if>-->
+
+
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+                AND
+                <if test="timetype == 0">
+                     activate_date
+                </if>
+                <if test="timetype == 1">
+                     open_date
+                </if>
+                <if test="timetype == 2">
+                     create_date
+                </if>
+                <if test="timetype == 3">
+                     update_date
+                </if>
+                <if test="timetype == 4">
+                     syn_Time
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+
+        </where>
+
+    </sql>
+
+    <select id="MapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        select
+        count(1)
+        from
+        yz_syn_card_info
+        <include refid="selwhere"/>
+    </select>
+    <select id="getList" resultType="java.util.HashMap" parameterType="java.util.HashMap">
+        select
+        id,msisdn,iccid,imsi,
+        activate_date,
+        DATE_FORMAT( open_date, "%Y-%m-%d" ) AS open_date,
+        DATE_FORMAT( create_date, "%Y-%m-%d" ) AS create_date,
+        DATE_FORMAT( update_date, "%Y-%m-%d" ) AS update_date,
+        DATE_FORMAT( syn_Time, "%Y-%m-%d" ) AS syn_Time,
+        channel_id,
+        remark,inconsistent_iccid,is_new,groupId,custId,status_id
+        from yz_syn_card_info
+        <include refid="selwhere"/>
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+    <!--导出成员组信息-->
+    <select id="outChannel" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+        id,msisdn,iccid,imsi,
+        activate_date,
+        DATE_FORMAT( open_date, "%Y-%m-%d %H:%i:%S" ) AS open_date,
+        DATE_FORMAT( create_date, "%Y-%m-%d %H:%i:%S" ) AS create_date,
+        DATE_FORMAT( update_date, "%Y-%m-%d %H:%i:%S" ) AS update_date,
+        DATE_FORMAT( syn_Time, "%Y-%m-%d %H:%i:%S" ) AS syn_Time,
+        channel_id,
+        remark,inconsistent_iccid,is_new
+        from yz_syn_card_info
+        <include refid="selwhere"/>
+    </select>
+
+
+</mapper>

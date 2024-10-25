@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.xsgl.Contract.YzXsglContractStandardMapper">
+
+    <insert id="save" parameterType="java.util.HashMap"  >
+            insert into
+                 yz_xsgl_contract_standard
+            (
+                Csd_CyID,
+                Csd_CyName,
+                Csd_CyUnit,
+                Csd_Original_Price,
+                Csd_Univalent,
+                Csd_Quantity,
+                Csd_Amount,
+                Csd_Discount,
+                Csd_Remarks,
+                Csd_CtID,
+                Csd_Sort,
+                Csd_Category,
+                Csd_ModelAndNumber,
+                state,
+                create_time
+            )
+            values
+        <foreach item="standardList" collection="standardList" index="standardList"  separator="," >
+            (
+                #{standardList.Cy_ID},
+                #{standardList.Cy_Name},
+                #{standardList.Cy_Unit},
+                #{standardList.Cy_SuggestedPrice},
+                #{standardList.Csd_Univalent},
+                #{standardList.Csd_Quantity},
+                #{standardList.Csd_Amount},
+                #{standardList.Csd_Discount},
+                <if test="standardList.Csd_Remarks!=null">
+                    #{standardList.Csd_Remarks},
+                </if>
+                <if test="standardList.Csd_Remarks==null">
+                    '',
+                </if>
+                #{code},
+                #{standardList.Cy_Sort},
+                #{standardList.Cy_Category},
+                #{standardList.Cy_ModelAndNumber},
+                1,now()
+            )
+        </foreach>
+    </insert>
+
+
+
+
+
+    <update id="delId" parameterType="java.util.HashMap"  >
+        update  yz_xsgl_contract_standard
+        <set>
+            state = 0
+        </set>
+        <where>
+            Csd_CtID = #{Csd_CtID}
+            and Csd_ID in
+            <foreach item="CommodityList_delArr" collection="CommodityList_delArr" index="CommodityList_delArr" open="("  separator=","  close=")">
+                #{CommodityList_delArr}
+            </foreach>
+
+        </where>
+    </update>
+
+    <update id="delCsd_CtID" parameterType="java.util.HashMap"  >
+        update  yz_xsgl_contract_standard
+        <set>
+            state = 0
+        </set>
+        <where>
+            Csd_CtID = #{id}
+        </where>
+    </update>
+
+
+    <!--修改-->
+    <update id="upd" parameterType="java.util.HashMap" >
+        update  yz_xsgl_contract_standard
+        <set>
+            Csd_CyID = #{Cy_ID},
+            Csd_CyName = #{Cy_Name},
+            Csd_CyUnit = #{Cy_Unit},
+            Csd_Original_Price = #{Cy_SuggestedPrice},
+            Csd_Univalent = #{Csd_Univalent},
+            Csd_Quantity = #{Csd_Quantity},
+            Csd_Amount = #{Csd_Amount},
+            Csd_Discount = #{Csd_Discount},
+            Csd_Remarks = #{Csd_Remarks},
+            Csd_CtID = #{Csd_CtID},
+            Csd_Sort = #{Cy_Sort},
+            Csd_Category = #{Cy_Category},
+            Csd_ModelAndNumber = #{Cy_ModelAndNumber}
+        </set>
+        <where>
+            Csd_ID =#{Csd_ID}
+        </where>
+    </update>
+
+
+    <select id="find" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        select
+            a.Csd_ID,
+            a.Csd_CyID,
+            a.Csd_CyName as 'Cy_Name',
+            a.Csd_CyUnit  as 'Cy_Unit',
+            a.Csd_Original_Price as 'Cy_SuggestedPrice',
+            a.Csd_Univalent,
+            a.Csd_Quantity,
+            a.Csd_Amount,
+            a.Csd_Discount,
+            a.Csd_Remarks,
+            a.Csd_CtID,
+            a.Csd_Sort as 'Cy_Sort',
+            a.Csd_Category as 'Cy_Category',
+            a.Csd_ModelAndNumber as 'Cy_ModelAndNumber',
+            b.Cy_ID,
+            b.Cy_LowestPrice
+        from
+            yz_xsgl_contract_standard a,
+            yz_ckgl_commodity b
+       <where>
+
+           a.Csd_CtID = #{Csd_CtID}
+           and a.Csd_CyID = b.Cy_ID
+           <if test="state == null or state == ''">
+              and a.state = 1
+           </if>
+           <if test="state != null and state != ''">
+               and a.state = #{state}
+           </if>
+       </where>
+    </select>
+
+
+    <!-- 发货申请查询 合同 数据 -->
+    <select id="find_FH_data" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+            Csd_Sort,
+            Csd_CyName,
+            Csd_Quantity
+        FROM
+            yz_xsgl_contract_standard
+        <where>
+            Csd_CtID = #{CtID}
+        </where>
+    </select>
+
+
+
+
+</mapper>

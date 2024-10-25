@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.cn.mapper.YzCardMapper">
+
+
+
+	<!--获取 卡信息 -->
+	<select id="findIccid"  parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			id,
+			channel_id,
+			vid,
+			msisdn,
+			iccid,
+			imsi,
+			agent_id,
+			status_ShowId as 'status_id',
+			used,
+			remaining,
+			package_id
+		FROM
+			yz_card_info
+		<where>
+			del_flag = 0 and (iccid=#{iccid} or vid=#{iccid} or msisdn=#{iccid} or imsi=#{iccid} )
+		</where>
+	</select>
+
+
+	<!--获取通道运营商类型-->
+	<select id="findOperatorType" parameterType="java.util.HashMap" resultType="java.lang.String" >
+		SELECT
+			c.dict_label
+		FROM
+			yz_card_info a,
+			yz_card_route b,
+			sys_dict_data c
+		WHERE
+			a.channel_id = b.cd_id
+			and c.dict_value = b.cd_operator_type
+			and c.dict_type ='yunze_card_operators_type'
+			AND a.iccid = #{iccid};
+	</select>
+
+
+	<!--查询字典信息-->
+	<select id="findDict"  parameterType="java.util.HashMap" resultType="java.util.HashMap" >
+		SELECT
+			dict_label,
+			dict_value
+		FROM
+			sys_dict_data
+		WHERE
+			dict_type = #{dict_type}
+	</select>
+
+
+
+	<!-- 修改 卡用量-->
+	<update id="updUsed" parameterType="java.util.HashMap" >
+		update yz_card_info
+		<set>
+			used = #{used},
+			remaining = #{remaining},
+			syn_Time =now()
+		</set>
+		<where>
+			iccid =#{iccid}
+		</where>
+	</update>
+
+
+	<!-- 修改 卡状态-->
+	<update id="updStatusId" parameterType="java.util.HashMap" >
+		update yz_card_info
+		<set>
+			status_id = #{status_id},
+			status_ShowId = #{status_ShowId},
+			syn_Time =now()
+		</set>
+		<where>
+			iccid =#{iccid}
+		</where>
+	</update>
+
+</mapper>

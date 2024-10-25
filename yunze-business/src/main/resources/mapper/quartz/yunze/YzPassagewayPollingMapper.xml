@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.cn.mapper.YzPassagewayPollingMapper">
+
+    <sql id="selwhere">
+        <where>
+
+
+        </where>
+
+    </sql>
+
+
+    <insert id="add" parameterType="java.util.HashMap">
+        INSERT INTO yz_passageway_polling
+        (cd_id,
+         create_date,
+         cd_count,
+         cd_current,
+         polling_id,
+         upd_date,
+         polling_type) value ( #{cd_id},
+            now(),
+            #{cd_count},
+            #{cd_current},
+            #{polling_id},
+            now(),
+            #{polling_type}
+            )
+
+    </insert>
+
+    <!-- 查询 轮询数据 -->
+    <select id="find_route" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        id,
+        cd_id,
+        create_date,
+        upd_date,
+        cd_count,
+        cd_current,
+        polling_id,
+        syn_date,
+        polling_type
+        FROM
+        yz_passageway_polling
+        <where>
+            cd_id = #{cd_id}
+        </where>
+    </select>
+
+
+    <!-- 查询 -->
+    <select id="sel_Map" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        id,
+        cd_id,
+        reateTime,
+            DATE_FORMAT(
+            create_date,
+            '%Y-%m-%d %H:%i:%S'
+            ) AS create_date,
+            DATE_FORMAT(
+            upd_date,
+            '%Y-%m-%d %H:%i:%S'
+            ) AS upd_date,
+        cd_count,
+        cd_current,
+        polling_id,
+            DATE_FORMAT(
+            syn_date,
+            '%Y-%m-%d %H:%i:%S'
+            ) AS syn_date,
+        polling_type
+        FROM
+        yz_passageway_polling
+        <include refid="selwhere"/>
+
+        ORDER BY
+        <if test="ORDER_BY_type==null or ORDER_BY_type==1">
+            create_date
+        </if>
+        <if test="ORDER_BY_type==2">
+            polling_id
+        </if>
+        <if test="ORDER_BY_rule==null or ORDER_BY_rule==1">
+            ASC
+        </if>
+        <if test="ORDER_BY_rule==2">
+            DESC
+        </if>
+        LIMIT #{StarRow},#{PageSize}
+    </select>
+
+    <!-- 查询 总数-->
+    <select id="sel_Map_Count" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+        SELECT
+        COUNT(*)
+        FROM
+        yz_passageway_polling
+        <include refid="selwhere"/>
+    </select>
+
+    <!--    修改 轮询数量 -->
+    <update id="update_cd_current" parameterType="java.util.HashMap">
+        UPDATE
+        yz_passageway_polling
+        <set>
+            syn_date = now(),
+            upd_date = now(),
+            cd_current = #{cd_current}
+        </set>
+        <where>
+            polling_id = #{polling_id}
+        </where>
+    </update>
+
+
+    <!-- 查询  一天内 正在执行的轮询任务 -->
+    <select id="find_execute" resultType="java.util.HashMap">
+        SELECT
+        polling_id,
+        cd_current
+        FROM
+        yz_passageway_polling
+        <where>
+            cd_count > cd_current
+            AND datediff( NOW(), create_date ) <![CDATA[ <= ]]>   2
+        </where>
+    </select>
+
+
+</mapper>

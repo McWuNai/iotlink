@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.card.YzCardDueSoonMapper">
+
+    <select id="SelectCardDueSoon" resultType="java.util.Map">
+        SELECT
+            b.dept_name ,
+            b.email  ,
+            a.dept_id ,
+            count( 1 ) as 'count'
+        FROM
+            sys_dept b
+                LEFT JOIN yz_card_info a ON b.dept_id = a.dept_id
+        WHERE
+            a.due_expire_time BETWEEN #{staTime}
+                AND #{endTime}
+          AND a.dept_id != '100'
+        GROUP BY
+            a.dept_id
+    </select>
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

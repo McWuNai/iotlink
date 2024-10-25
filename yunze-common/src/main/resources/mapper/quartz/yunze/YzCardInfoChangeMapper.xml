@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.YzCardInfoChangeMapper">
+
+
+	<select id="selMap" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+
+	</select>
+
+	<select id="selMapCount" parameterType="java.util.HashMap"  resultType="java.lang.Integer">
+
+	</select>
+
+
+
+	<insert id="save" parameterType="java.util.HashMap"  >
+			INSERT INTO yz_card_info_change
+			(
+				iccid,
+				ctype,
+				cbefore,
+				cafterward,
+				createTime,
+				remark,
+				source_type,
+				execution_status
+			)
+			value (
+				#{iccid},
+				#{ctype},
+				#{cbefore},
+				#{cafterward},
+				now(),
+				#{remark},
+				#{source_type},
+				#{execution_status}
+			)
+	</insert>
+
+	<!--卡状态变更记录表-->
+	<insert id="addinfo" parameterType="java.util.HashMap">
+		INSERT INTO yz_card_info_change
+		(
+			iccid,
+			ctype,
+			cbefore,
+			cafterward,
+			createTime,
+			remark,
+			source_type,
+			execution_status
+		)
+		value
+		<foreach item="CardInfoMapList" collection="CardInfoMapList" index="CardInfoMapList"  separator="," >
+			(
+			#{CardInfoMapList.iccid},
+			#{CardInfoMapList.ctype},
+			#{CardInfoMapList.cbefore},
+			#{CardInfoMapList.cafterward},
+			now(),
+			#{CardInfoMapList.remark},
+			#{CardInfoMapList.source_type},
+			#{CardInfoMapList.execution_status}
+			)
+		</foreach>
+	</insert>
+
+
+	<delete id="del" parameterType="java.util.HashMap">
+		DELETE  FROM yz_card_info_change
+		<where>
+			createTime <![CDATA[ < ]]> #{delTime}
+		</where>
+	</delete>
+
+
+
+</mapper> 

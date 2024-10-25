@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.cwgl.CwglDepositInfoDetailsMapper">
+
+    <!-- 删除 入款信息ID 所属入款信息详情 -->
+    <delete id="del_DIDS_all" parameterType="java.util.HashMap">
+        DELETE FROM
+        cwgl_deposit_info_details
+        <where>
+            Dids_DioID =#{Dio_ID}
+        </where>
+    </delete>
+
+    <!-- 查询单条入款记录详情信息 -->
+    <select id="find_CDIDS" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        Dids_ID,
+        Dids_Time AS Dids_Time,
+        Dids_FatName,
+        Dids_Amount,
+        Dids_Remarks
+        FROM
+        cwgl_deposit_info_details
+        <where>
+            Dids_DioID = #{Dio_ID}
+        </where>
+        GROUP BY DIDS_ID
+    </select>
+
+    <insert id="add_DIDS" parameterType="java.util.HashMap">
+        INSERT INTO
+        CWGL_Deposit_Info_Details
+        (
+        Dids_Time,
+        Dids_FatName,
+        Dids_Amount,
+        Dids_Remarks,
+        Dids_DioID
+        )VALUE
+        <foreach item="Ds_arr" collection="Ds_arr" index="Ds_arr"  separator="," >
+            (
+            #{Ds_arr.Dids_Time},
+            #{Ds_arr.Dids_FatName},
+            #{Ds_arr.Dids_Amount},
+            #{Ds_arr.Dids_Remarks},
+            #{Dio_ID}
+            )
+        </foreach>
+    </insert>
+    <!-- 修改入款记录信息 -->
+    <update id="upd_DIDS" parameterType="java.util.HashMap">
+        UPDATE
+        CWGL_DEPOSIT_INFO_DETAILS
+        <set>
+            Dids_Time = #{Dids_Time},
+            Dids_FatName = #{Dids_FatName},
+            Dids_Amount = #{Dids_Amount},
+            Dids_Remarks = #{Dids_Remarks}
+        </set>
+        <where>
+            Dids_ID =#{Dio_ID}
+        </where>
+    </update>
+
+
+
+
+
+
+</mapper>

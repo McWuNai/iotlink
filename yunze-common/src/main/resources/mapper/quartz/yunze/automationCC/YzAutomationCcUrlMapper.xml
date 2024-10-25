@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.automationCC.YzAutomationCcUrlMapper">
+
+
+    <!-- 查询 触发任务推送地址邮箱配置  -->
+    <select id="findConcise" parameterType="java.util.HashMap"  resultType="java.util.HashMap">
+        SELECT
+            email,
+            url
+        FROM
+            yz_automation_cc_url
+        <where>
+            cc_id = #{id}
+        </where>
+    </select>
+
+
+
+
+
+
+</mapper>

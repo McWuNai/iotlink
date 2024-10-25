@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.bulk.YzSmSBulkBusinessMapper">
+
+
+
+
+
+	<insert id="add" parameterType="java.util.HashMap"  keyProperty="id" useGeneratedKeys="true">
+		INSERT INTO yz_sms_bulk_business
+		(
+			code,
+			create_time,
+			update_time,
+			task_name,
+			auth,
+			agent_id,
+			type,
+			state_id,
+			message
+		 )
+		value (
+			#{code},
+			now(),
+			now(),
+			#{task_name},
+			#{auth},
+			#{agent_id},
+			#{type},
+			'2',
+			<![CDATA[ #{message} ]]>
+
+		)
+	</insert>
+
+
+	<update id="update" parameterType="java.util.HashMap">
+		UPDATE
+			yz_sms_bulk_business
+		<set>
+			update_time = now(),
+			<if test="start_time!=null">
+				start_time = #{start_time},
+			</if>
+			<if test="end_time!=null">
+				end_time = #{end_time},
+			</if>
+			<if test="url!=null">
+				url = #{url},
+			</if>
+			<if test="state_id!=null">
+				state_id = #{state_id},
+			</if>
+		</set>
+		<where>
+			id = #{id}
+		</where>
+	</update>
+
+
+
+
+
+
+
+	<sql id="selwhere">
+		<where>
+			<if test="value != null and value != ''">
+				<if test="type == 1">
+					and task_name LIKE CONCAT('%',#{value},'%')
+				</if>
+				<if test="type == 2">
+					and code LIKE CONCAT('%',#{value},'%')
+				</if>
+				<if test="type == 3">
+					and auth LIKE CONCAT('%',#{value},'%')
+				</if>
+				<if test="type == 4">
+					and message LIKE CONCAT('%',#{value},'%')
+				</if>
+			</if>
+			<if test="type != null and type != ''">
+				and type =#{type}
+			</if>
+			<if test="state_id != null and state_id != ''">
+				and state_id =#{state_id}
+			</if>
+			<if test="agent_id != null and agent_id != ''">
+				and agent_id =#{agent_id}
+			</if>
+			<if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+				AND
+				<if test="timetype == 1">
+					create_time
+				</if>
+				BETWEEN #{staTime} AND #{endTime}
+			</if>
+		</where>
+	</sql>
+
+	<select id="selMap" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+		id,
+		code,
+		DATE_FORMAT( create_time, "%Y-%m-%d %H:%i:%S" ) AS 'create_time',
+		DATE_FORMAT( update_time, "%Y-%m-%d %H:%i:%S" ) AS 'update_time',
+		DATE_FORMAT( start_time, "%Y-%m-%d %H:%i:%S" ) AS 'start_time',
+		DATE_FORMAT( end_time, "%Y-%m-%d %H:%i:%S" ) AS 'end_time',
+		task_name,
+		url,
+		auth,
+		agent_id,
+		type,
+		state_id,
+		message
+
+		FROM
+		yz_sms_bulk_business
+		<include refid="selwhere"/>
+		ORDER BY create_time DESC
+		LIMIT #{StarRow},#{PageSize}
+	</select>
+
+	<select id="selMapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		SELECT
+		COUNT(1)
+		FROM
+		yz_sms_bulk_business
+		<include refid="selwhere"/>
+	</select>
+
+	<!--查询所属编号-->
+	<select id="findIdArr" parameterType="java.util.HashMap" resultType="java.lang.String">
+		SELECT
+			id
+		FROM
+			yz_sms_bulk_business
+		<where>
+			and  agent_id in
+			<foreach item="agent_id" collection="agent_id" index="agent_id" open="(" separator="," close=")">
+				#{agent_id}
+			</foreach>
+		</where>
+	</select>
+
+
+
+	<!--查询 单条 状态为 执行中 的 短信任务进行下发执行-->
+	<select id="findOneExecution" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			id,
+			message,
+			create_time,
+			type
+		FROM
+			yz_sms_bulk_business
+		<where>
+			state_id = 3
+			and type = #{type}
+			<if test="exIdArr!=null and exIdArr != '' and exIdArr.size>0">
+				and id not in
+				<foreach item="exIdArr" collection="exIdArr" index="exIdArr" open="(" separator="," close=")">
+					#{exIdArr}
+				</foreach>
+			</if>
+		</where>
+		ORDER BY
+			create_time ASC
+			LIMIT 1
+	</select>
+
+
+
+</mapper>

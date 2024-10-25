@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.cwgl.CwglBillingApplicationStandardMapper">
+
+
+    <!-- 新增开票申请_标配 -->
+    <insert id="add_CBASD" parameterType="java.util.HashMap">
+        INSERT INTO CWGL_Billing_Application_Standard(
+        CBASD_Classification,
+        CBASD_Category,
+        CBASD_CyName,
+        CBASD_CyUnit,
+        CBASD_UnitPrice,
+        CBASD_Quantity,
+        CBASD_Amount,
+        CBASD_Remarks,
+        CBASD_BANID
+        )VALUE
+        <foreach item="CBASD_arr" collection="CBASD_arr"  separator="," >
+            (
+            #{CBASD_arr.CBASD_Classification},
+            #{CBASD_arr.CBASD_Category},
+            #{CBASD_arr.CBASD_CyName},
+            #{CBASD_arr.CBASD_CyUnit},
+            #{CBASD_arr.CBASD_UnitPrice},
+            #{CBASD_arr.CBASD_Quantity},
+            #{CBASD_arr.CBASD_Amount},
+            #{CBASD_arr.CBASD_Remarks},
+            #{BAN_ID}
+            )
+        </foreach>
+    </insert>
+
+    <!-- 查询所属开票申请_标配 -->
+    <select id="find_data" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+        CBASD_Classification,
+        CBASD_Category,
+        CBASD_CyName,
+        CBASD_CyUnit,
+        CBASD_UnitPrice,
+        CBASD_Quantity,
+        CBASD_Amount,
+        CBASD_Remarks
+        FROM
+        CWGL_Billing_Application_Standard
+        <where>
+            CBASD_BANID = #{BAN_ID}
+        </where>
+    </select>
+
+    <!-- 删除开票申请_标配 -->
+    <delete id="del_all" parameterType="java.util.HashMap">
+        DELETE FROM CWGL_Billing_Application_Standard <where> CBASD_BANID = #{BAN_ID} </where>
+    </delete>
+
+
+
+
+
+
+
+
+</mapper>
