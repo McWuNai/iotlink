@@ -1,19 +1,19 @@
 spring:
   rabbitmq:
     ####连接地址
-    host: 127.0.0.1
+    host: ${RABBITMQ_HOST}
     ####端口号
     port: 5672
     ####账号
-    username: IoTLinkRabbitMq
+    username: ${RABBITMQ_USER}
     ####密码
-    password: 20220107@yzIot
+    password: ${RABBITMQ_PASSWORD}
     ## 心跳  请求的心跳超时，以秒为单位； 零表示没有
     requested-heartbeat: 40
     ####心跳开启
     keepalive: true
     ### 地址
-    virtual-host: /VirtualHosts
+    virtual-host: /${RABBITMQ_VHOST}
     listener:
       simple:
         retry:
@@ -29,19 +29,21 @@ spring:
   application:
     name: cardDisconnected
   datasource:
-    url: jdbc:mysql://127.0.0.1/iotdb?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
-    username: iotdb
-    password: www.5iot.cn
+    url: jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/iotdb?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
+    username: ${MYSQL_USER}
+    password: ${MYSQL_PASSWORD}
+
   # redis 配置
   redis:
     # 地址
-    host: r-uf6r62dtsyztnh3312pd.redis.rds.aliyuncs.com
+    host: ${REDIS_HOST}
     # 端口，默认为6379
     port: 6379
     # 数据库索引
     database: 0
     # 密码
-    password: Rdis20220107
+    password: ${REDIS_PASSWORD}
+
     # 连接超时时间
     timeout: 10s
     lettuce:

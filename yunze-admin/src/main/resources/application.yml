@@ -94,7 +94,7 @@ spring:
     password: 20220107@yzIot
     #    password: yz@zf20200808
     ### 地址
-    virtual-host: /VirtualHosts
+    virtual-host: /${RABBITMQ_VHOST}
     listener:
       simple:
         retry:

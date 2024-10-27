@@ -29,9 +29,9 @@ spring:
       datasource:
         master:
           driver-class-name: com.mysql.cj.jdbc.Driver
-          url: jdbc:mysql://127.0.0.1/iotdb?useSSL=false&serverTimezone=GMT%2B8&characterEncoding=utf-8
-          username: iotdb
-          password: www.5iot.cn
+          url: jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/iotdb?useSSL=false&serverTimezone=GMT%2B8&characterEncoding=utf-8
+          username: ${MYSQL_USER}
+          password: ${MYSQL_PASSWORD}
 
     hikari:
       connection-timeout: 60000
@@ -40,14 +40,14 @@ spring:
     restart:
       enabled: true
   redis:
-    host: localhost
-    jedis:
-      pool:
-        max-active: 10
-        max-wait: -1
-        min-idle: 10
-    password: Rdis20220107
+    # 地址
+    host: ${REDIS_HOST}
+    # 端口，默认为6379
     port: 6379
+    # 数据库索引
+    database: 0
+    # 密码
+    password: ${REDIS_PASSWORD}
     timeout: 10000
   resources:
     static-locations: classpath:/static/
