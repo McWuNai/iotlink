@@ -52,15 +52,15 @@ public class RabbitMQConnection {
             //1.创建connectionFactory
             ConnectionFactory connectionFactory = new ConnectionFactory();
             //2.配置Host
-            connectionFactory.setHost("127.0.0.1");
+            connectionFactory.setHost(System.getenv("RABBITMQ_HOST"));
             //3.设置Port
             connectionFactory.setPort(5672);
             connectionFactory.setRequestedHeartbeat( 40 );
             //4.设置账户和密码
-            connectionFactory.setUsername("IoTLinkRabbitMq");
-            connectionFactory.setPassword("20220107@yzIot");
+            connectionFactory.setUsername(System.getenv("RABBITMQ_USER"));
+            connectionFactory.setPassword(System.getenv("RABBITMQ_PASSWORD"));
             //5.设置VirtualHost
-            connectionFactory.setVirtualHost("/VirtualHosts");
+            connectionFactory.setVirtualHost(System.getenv("RABBITMQ_VHOST"));
             return connectionFactory.newConnection();
         }catch (Exception e){
             System.out.println("=[Connection CreateConnection() Exception 【Start】 ]");
