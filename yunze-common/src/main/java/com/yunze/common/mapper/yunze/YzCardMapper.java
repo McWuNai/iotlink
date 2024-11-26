@@ -3,6 +3,7 @@ package com.yunze.common.mapper.yunze;
 
 import com.yunze.common.core.domain.entity.YzCard;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 import java.util.Map;
@@ -28,7 +29,6 @@ public interface YzCardMapper
      * @return
      */
     public Integer selMapCount(Map<String, Object> map);
-
 
     /**
      *查询 [切割iccid 19 位]
@@ -596,9 +596,11 @@ public interface YzCardMapper
 
     void updateEndTime(Map<String, Object> cardMap);
 
-    void importCardInfoList(List<YzCard> cachedDataList);
+    void importCardInfoList(@Param("yzCardList") List<YzCard> yzCardList);
 
     List<YzCard> getCardInfoList(Map<String, Object> map);
+
+    public int updBalance(Map<String, Object> map);
 }
 
 

@@ -6,6 +6,7 @@ import com.yunze.common.core.domain.entity.SysUser;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -286,7 +287,8 @@ public interface IYzCardService
     /** 单卡 灵活变更状态*/
     public Map<String, Object> singleState(Map<String, Object> map);
 
-
+    /** 余额 修改 **/
+    public int updBalance(HashMap<String, Object> paramMap);
 
     /**
      * 卡详情界面 获取 订单信息

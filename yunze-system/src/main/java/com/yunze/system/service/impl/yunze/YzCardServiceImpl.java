@@ -16,7 +16,6 @@ import com.yunze.apiCommon.upstreamAPI.DianXinCMP5G.Inquire.Query_DX5G;
 import com.yunze.apiCommon.upstreamAPI.YiDongEC.Inquire.Query_YD;
 import com.yunze.apiCommon.utils.Arith;
 import com.yunze.apiCommon.utils.InternalApiRequest;
-import com.yunze.common.config.RabbitMQConfig;
 import com.yunze.common.core.domain.AjaxResult;
 import com.yunze.common.core.domain.entity.SysDept;
 import com.yunze.common.core.domain.entity.SysDictData;
@@ -1469,11 +1468,6 @@ public class YzCardServiceImpl implements IYzCardService {
         return yzOrderMapper.getOrderCard(map);
     }
 
-
-
-
-
-
     @Override
     public String smsCC(MultipartFile file, Map<String, Object> map) {
 
@@ -2033,6 +2027,11 @@ public class YzCardServiceImpl implements IYzCardService {
             }
         }
         return cardInfoList;
+    }
+
+    @Override
+    public int updBalance(HashMap<String, Object> paramMap) {
+        return yzCardMapper.updBalance(paramMap);
     }
 }
 

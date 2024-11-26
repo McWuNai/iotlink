@@ -117,12 +117,21 @@ public class YzCardRouteService_Impl implements IYzCardRouteService {
     @Override
     @Transactional
     public boolean add(Map<String, Object> map) {
+        //默认值失败
         boolean add = false;
-        add = yzCardRouteMapper.add(map) > 0;
 
+        String syncFieldJsonArrayToString = map.get("sync_field").toString();
+        map.put("sync_field", syncFieldJsonArrayToString);
+
+        //当不为空再进入下一步
+        add = yzCardRouteMapper.add(map) > 0;
+        //新建数组
         List<Map<String, String>> ruepkeArr = new ArrayList<>();
+        //填入包ID
         List<String> list = (List<String>) map.get("package_id");
+        //cd_id转为string
         String cd_id = map.get("cd_id").toString();
+        //循环填入频道ID与包ID
         if (list != null && list.size() > 0) {
             for (int i = 0; i < list.size(); i++) {
                 HashMap<String, String> Hap = new HashMap<>();

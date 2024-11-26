@@ -10,6 +10,7 @@ import com.yunze.common.core.domain.entity.YzCard;
 import com.yunze.common.core.domain.model.LoginUser;
 import com.yunze.common.enums.BusinessType;
 import com.yunze.common.utils.ServletUtils;
+import com.yunze.common.utils.StringUtils;
 import com.yunze.common.utils.ip.IpUtils;
 import com.yunze.common.utils.poi.ExcelUtil;
 import com.yunze.common.utils.spring.SpringUtils;
@@ -965,6 +966,35 @@ public class YzCardController extends MyBaseController {
         return Myerr("批量 【同步状态和用量】 操作失败！");
     }
 
+    /**
+     * 修改余额
+     *
+     */
+    @Log(title = "修改余额操作", businessType = BusinessType.UPDATE)
+    @PreAuthorize("@ss.hasPermi('yunze:card:updateBalance')")
+    @PostMapping(value = "/updBalance", produces = {"application/json;charset=utf-8"})
+    public String updateBalance(@RequestBody String Pstr) {
+        logger.info("Received Str: {}", Pstr); // 添加日志记录
+        if (Pstr != null) {
+            Pstr = Pstr.replace("%2F", "/"); // 转义 /
+        }
+        int updCount = 0;
+        try {
+            Pstr = AesEncryptUtil.desEncrypt(Pstr);
+            HashMap<String, Object> paramMap = new HashMap<>(JSON.parseObject(Pstr));
+            logger.info("Parsed paramMap: {}", paramMap); // 添加日志记录
+
+            LoginUser loginUser = SpringUtils.getBean(TokenService.class).getLoginUser(ServletUtils.getRequest());
+            if (StringUtils.isNotEmpty(loginUser.getUser().getUserName())) {
+                updCount = yzCardServiceImpl.updBalance(paramMap);
+                return MyRetunSuccess(updCount, null);
+            }
+        } catch (Exception e) {
+            String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
+            logger.error("<br/> yunze/card/cardMatch  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e);
+        }
+        return Myerr("修改余额 操作失败！");
+    }
 
     /**
      * 获取iccid

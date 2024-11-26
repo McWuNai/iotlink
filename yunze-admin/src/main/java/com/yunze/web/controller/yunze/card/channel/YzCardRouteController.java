@@ -137,11 +137,17 @@ public class YzCardRouteController extends MyBaseController
             Pstr = Pstr.replace("%2F", "/");//转义 /
         }
         try {
+            //解密
             Pstr =  AesEncryptUtil.desEncrypt(Pstr);
+            //拆分赋值到Map内
             Parammap.putAll(JSON.parseObject((String) Pstr));
+            //验证Token
             LoginUser loginUser = SpringUtils.getBean(TokenService.class).getLoginUser(ServletUtils.getRequest());
+            //校验用户信息
             SysUser User = loginUser.getUser();
+            //填入部门ID
             Parammap.put("cd_agent_id",User.getDeptId());
+            //是否成功传入新增
             boolean bool = iYzCardRouteService.add(Parammap);
         //    log.info("add方法参数>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"+Parammap);
 
