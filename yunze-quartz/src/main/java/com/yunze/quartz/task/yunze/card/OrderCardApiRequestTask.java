@@ -30,6 +30,7 @@ public class OrderCardApiRequestTask {
                 return message;
             });
         } catch (Exception e) {
+            e.printStackTrace();
             System.out.println("定时删除 orderCardApiRequestTask 指令发送失败 " + e.getMessage());
         }
     }
