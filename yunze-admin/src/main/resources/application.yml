@@ -9,7 +9,7 @@ yunze:
   # 实例演示开关
   demoEnabled: true
   # 文件路径 示例（ Windows配置D:/yunze/uploadPath，Linux配置 /home/yunze/uploadPath）
-  profile: /mnt/yunze/uploadPath
+  profile: D:/yunze/uploadPath
   # 获取ip地址开关
   addressEnabled: true
   # 验证码类型 math 数组计算 char 字符验证
@@ -60,7 +60,7 @@ spring:
   redis:
     # 地址
     #    host: 117.78.11.108
-    host: 127.0.0.1
+    host: ${REDIS_HOST}
     # 端口，默认为6379
     port: 6379
     # 数据库索引
@@ -81,7 +81,7 @@ spring:
         max-wait: -1ms
   rabbitmq:
     ####连接地址
-    host: 127.0.0.1
+    host: ${RABBITMQ_HOST}
     #    host: 117.78.11.108
     ####端口号
     port: 5672
@@ -94,7 +94,7 @@ spring:
     password: 20220107@yzIot
     #    password: yz@zf20200808
     ### 地址
-    virtual-host: /${RABBITMQ_VHOST}
+    virtual-host: ${RABBITMQ_VHOST}
     listener:
       simple:
         retry:

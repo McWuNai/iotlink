@@ -13,7 +13,7 @@ spring:
     ####心跳开启
     keepalive: true
     ### 地址
-    virtual-host: /${RABBITMQ_VHOST}
+    virtual-host: ${RABBITMQ_VHOST}
     listener:
       simple:
         retry:
