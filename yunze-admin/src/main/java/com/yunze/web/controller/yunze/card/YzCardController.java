@@ -462,7 +462,6 @@ public class YzCardController extends MyBaseController {
      * @param Pstr
      * @return
      */
-    //TODO 未知错误，待修改
     @PreAuthorize("@ss.hasPermi('yunze:card:SynActivateDate')")
     @PostMapping(value = "/SynActivateDate", produces = {"application/json;charset=utf-8"})
     public String SynActivateDate(@RequestBody String Pstr) {

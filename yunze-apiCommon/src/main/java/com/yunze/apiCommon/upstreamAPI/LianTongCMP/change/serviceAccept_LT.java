@@ -62,10 +62,8 @@ public class serviceAccept_LT extends LT_CMP_Api {
             result = response.getData();
 
         }catch(Exception e){
-            //System.out.println(e);
             e.printStackTrace();
         }
-        ////System.out.println(result);
         return result;
     }
 

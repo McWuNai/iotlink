@@ -33,8 +33,10 @@ import com.yunze.apiCommon.utils.VeDate;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -591,6 +593,38 @@ public class PublicApiService  {
                         stop = "3";//停机
                     }
                     rmap.put("Data", Ser.changeCardStatus(iccid,stop));
+                } else if (function_name.equals("changeCardStatusFlexible")) {
+                    //实例化 联通 CMP 业务变更 类
+                    serviceAccept_LT Ser = new serviceAccept_LT(find_card_route_map);
+                    String type = null;
+
+                    Query_LT Qy = new Query_LT(find_card_route_map);
+                    Map<String, Object> Obj = ((List<Map<String, Object>>) Qy.queryFlow(iccid).get("terminals")).get(0);
+                    int StatusCd = Integer.parseInt(Obj.get("simStatus").toString()); //当前卡状态码
+
+                    switch (operType) { //改变状态的码
+                        case "0":
+                            if (StatusCd == 2) type = "3";
+                            break;
+                        case "1":
+                            if (StatusCd == 3) type = "2";
+                            break;
+                        case "2":
+                            if (StatusCd == 7) type = "3";
+                            break;
+                        case "3":
+                            if (StatusCd == 0) type = "7";
+                            break;
+                        case "4":
+                            if (StatusCd == 0) type = "1";
+                            break;
+                        case "5":
+                            if (StatusCd == 0) type = "2";
+                            break;
+                        case "6":
+                            if (StatusCd == 1) type = "3";
+                    }
+                    if (type != null) rmap.put("Data", Ser.changeCardStatus(iccid,type));
                 }else if (function_name.equals("queryRealNameStatus")) {
                     //实例化 联通 CMP 查询 类
                     Query_LT Qy = new Query_LT(find_card_route_map);

@@ -315,7 +315,36 @@ public class CardStatusReplacementUtil {
 
 
 
-
+    /**
+     * 接口返回状态装换成系统状态
+     * 获取 联通_CMP 卡状态
+     * @param StatusCd
+     * @return
+     */
+    public  Integer getLianTong_CMP_CardReturnStatus(Integer StatusCd){
+        int statusCode = 7;
+        // "0": 可测试,"1": 可激活, "2": 已激活, "3": 已停用, "4": 已失效, "5"": 已清除, "6": 已更换, "7": 库存, "8": 开始
+        if (StatusCd == 7 ) {
+            statusCode = 0;
+        } else if (StatusCd == 9) {
+            statusCode = 1;
+        } else if (StatusCd == 19) {
+            statusCode = 7;
+        } else if (StatusCd == 22) {
+            statusCode = 8;
+        }else if (StatusCd == 1) {
+            statusCode = 2;
+        } else if (StatusCd == 2 ) {
+            statusCode = 3;
+        }else if (StatusCd == 23) {
+            statusCode = 4;
+        }else if (StatusCd == 24) {
+            statusCode = 5;
+        }else if (StatusCd == 25) {
+            statusCode = 6;
+        }
+        return statusCode;
+    }
 
 
 

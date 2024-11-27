@@ -1569,16 +1569,10 @@ public class ApiUtil_NoStatic {
                 } else if (cd_code.equals("LianTong_CMP")) {
                     //联通 CMP 解析
                     Map<String, Object> dataMap = (Map<String, Object>) data.get("Data");
-                    List<Object> terminals = (ArrayList<Object>) dataMap.get("terminals");
+                    Map<String, Object> terminals = ((List<Map<String, Object>>) dataMap.get("terminals")).get(0);
                     if(!StringUtils.isEmpty(terminals)) {
-                        // 使用 Stream API 提取出列表中的 Map
-                        Map<String, Object> extractedMap = terminals.stream()
-                                .filter(terminal -> terminal instanceof Map) // 确保元素是 Map
-                                .map(terminal -> (Map<String, Object>) terminal) // 转换为 Map
-                                .findFirst() // 获取第一个元素
-                                .orElse(new HashMap<>()); // 如果没有找到，返回一个空的 Map
-                        activateDate = extractedMap.get("dateActivated") != null ? extractedMap.get("dateActivated").toString() : activateDate;
-                        openDate = extractedMap.get("dateShipped") != null ? extractedMap.get("dateShipped").toString() : openDate;
+                        activateDate = terminals.get("dateActivated") != null ? terminals.get("dateActivated").toString() : activateDate;
+                        openDate = terminals.get("dateShipped") != null ? terminals.get("dateShipped").toString() : openDate;
                         statusCode = activateDate != null || openDate != null ? 200 : statusCode;
                     }
                 }
