@@ -462,19 +462,21 @@ public class YzCardController extends MyBaseController {
      * @param Pstr
      * @return
      */
+    //TODO 未知错误，待修改
     @PreAuthorize("@ss.hasPermi('yunze:card:SynActivateDate')")
     @PostMapping(value = "/SynActivateDate", produces = {"application/json;charset=utf-8"})
     public String SynActivateDate(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
+        String opTypeName = "";
         if (Pstr != null) {
             Pstr = Pstr.replace("%2F", "/");//转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
-            //  System.out.println(map);
             Parammap.putAll(JSON.parseObject((String) Pstr));
             Map<String, Object> Route = yzCardServiceImpl.findRoute(Parammap);
             String opType = Parammap.get("opType").toString();// 更新激活时间 还是 开卡时间
+            opTypeName = opType.equals("activate") ? "激活" : "开卡";
             if (Route != null) {
                 String cd_status = Route.get("cd_status").toString();
                 if (cd_status != null && cd_status != "" && cd_status.equals("1")) {
@@ -501,9 +503,9 @@ public class YzCardController extends MyBaseController {
                             try {
                                 boolean bool = yzCardServiceImpl.updActivate(Upd_Map);//变更 激活时间 和 开卡日期
                                 if (bool) {
-                                    return MyRetunSuccess("", "已成功同步激活时间！");
+                                    return MyRetunSuccess("", "已成功同步"+ opTypeName +"时间！");
                                 } else {
-                                    return Myerr("保存激活时间操作失败:False！");
+                                    return Myerr("保存"+ opTypeName +"时间操作失败:False！");
                                 }
                             } catch (Exception e) {
                                 return Myerr("DB保存状态操作失败！" + e.getMessage().toString());
@@ -517,7 +519,7 @@ public class YzCardController extends MyBaseController {
                     }
                 } else {
                     String statusVal = cd_status.equals("2") ? "已停用" : cd_status.equals("3") ? "已删除" : "状态未知";
-                    return Myerr("同步激活时间 操作失败！" + " 通道 [" + statusVal + "]");
+                    return Myerr("同步"+ opTypeName +"时间 操作失败！" + " 通道 [" + statusVal + "]");
                 }
             } else {
                 return Myerr(" iccid [" + Parammap.get("iccid") + "] 未划分 API通道 ！请划分通道后重试！");
@@ -526,7 +528,7 @@ public class YzCardController extends MyBaseController {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
             logger.error("<br/> SynActivateDate  " + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
         }
-        return Myerr("同步激活时间 操作失败！");
+        return Myerr("同步"+ opTypeName +"时间 操作失败！");
     }
 
 

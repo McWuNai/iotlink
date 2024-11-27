@@ -569,7 +569,7 @@ public class PublicApiService  {
                 rmap.put("Message", "操作成功");
                 rmap.put("cd_code", cd_code);
             } else if (cd_code.equals("LianTong_CMP")) {
-                if (function_name.equals("queryFlow")) {
+                if (function_name.equals("queryFlow") || function_name.equals("queryCardActiveTime")) {
                     //实例化 联通 CMP 查询 类
                     Query_LT Qy = new Query_LT(find_card_route_map);
                     rmap.put("Data", Qy.queryFlow(iccid));
@@ -1021,10 +1021,6 @@ public class PublicApiService  {
                 rmap.put("Message", "操作成功");
                 rmap.put("cd_code", cd_code);
             }
-
-
-
-
             else {
                 rmap.put("cd_code", 500);
                 rmap.put("Message", "划分的通道 通道编号配置错误请检查通道编号！");
