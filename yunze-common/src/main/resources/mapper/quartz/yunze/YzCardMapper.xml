@@ -2143,6 +2143,28 @@
 		</where>
 	</update>
 
+	<!--单卡 补全部分信息-->
+	<update id="updSingleCardData" parameterType="java.util.HashMap">
+		update yz_card_info
+		<set>
+			<if test="msisdn != null">
+				msisdn =#{msisdn},
+			</if>
+			<if test="imsi != null">
+				imsi =#{imsi},
+			</if>
+			<if test="imei != null">
+				imei =#{imei},
+			</if>
+			<if test="used != null">
+				used =#{used}
+			</if>
+		</set>
+		<where>
+			iccid =#{iccid}
+		</where>
+	</update>
+
 
 	<select id="selectDictDataByType" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		select dict_code, dict_sort, dict_label, dict_value, dict_type, css_class, list_class, is_default, status,

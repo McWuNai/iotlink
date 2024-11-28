@@ -1415,7 +1415,33 @@ public class YzCardServiceImpl implements IYzCardService {
 
     @Override
     public boolean UpdateSingle(Map<String, Object> map) {
-        return yzCardMapper.UpdateSingle(map) > 0;
+        boolean flag = false;
+        try {
+            if (map.get("Button").toString().equals("1")) {
+                Map<String, Object> Route = yzCardMapper.findRoute(map);
+                Map<String, Object> queryFlow = internalApiRequest.queryFlow(map, Route);
+                if (!queryFlow.get("code").equals("500")) {
+                    map.put("opType", "activate");
+                    internalApiRequest.queryCardActiveTime(map, Route);
+                    map.put("opType", "open");
+                    internalApiRequest.queryCardActiveTime(map, Route);
+
+                    Map<String, Object> autocomplete = internalApiRequest.autocompleteCard(map, Route);
+
+                    //TODO 传参为空，无法进行下一步，需要解决
+                    if (autocomplete.get("iccid") != null) {
+                        flag = yzCardMapper.updSingleCardData(autocomplete) > 0;
+                    }
+                    return yzCardMapper.UpdateSingle(map) > 0 && flag;
+                }
+            } else {
+                return yzCardMapper.UpdateSingle(map) > 0;
+            }
+        } catch (Exception e) {
+            String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
+            System.out.println("<br/> yunze:card:singleUpd  " + " <br/> ip =  " + ip + " <br/> " + e.getCause().toString());
+        }
+        return false;
     }
 
 

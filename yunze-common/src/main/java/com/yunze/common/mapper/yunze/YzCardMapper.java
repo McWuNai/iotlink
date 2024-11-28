@@ -601,6 +601,11 @@ public interface YzCardMapper
     List<YzCard> getCardInfoList(Map<String, Object> map);
 
     public int updBalance(Map<String, Object> map);
+
+    /**
+     *  单卡 补全部分信息
+     */
+    public int updSingleCardData(Map<String, Object> map);
 }
 
 

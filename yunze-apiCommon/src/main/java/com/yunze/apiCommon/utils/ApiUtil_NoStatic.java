@@ -243,8 +243,11 @@ public class ApiUtil_NoStatic {
                         rtMessage = JsonData.get("resultDesc").toString();
                     } catch (Exception e) {
                     }
-                    Map<String, Object> Data = ((List<Map<String, Object>>) JsonData.get("terminals")).get(0);
-                    Use = Double.parseDouble(Data.get("monthToDateUsage").toString());
+                    if (codeOn.equals("0000")) {
+                        Map<String, Object> Data = ((List<Map<String, Object>>) JsonData.get("terminals")).get(0);
+                        Use = Double.parseDouble(Data.get("monthToDateUsage").toString());
+                    }
+                    Use = 0.00;
                     //根据联通接口26账单日数据封装自然月
                     //Use = Use - queryHisFlowSys(iccid);
                 } else if (cd_code.equals("YiDong_EC") || cd_code.equals("YiDong_EC_TOKE_ShuoLang") || cd_code.equals("YiDong_EC_TengYu") || cd_code.equals("YiDong_EC_Combo") || cd_code.equals("ECV5_token_MW")) {
@@ -1569,8 +1572,8 @@ public class ApiUtil_NoStatic {
                 } else if (cd_code.equals("LianTong_CMP")) {
                     //联通 CMP 解析
                     Map<String, Object> dataMap = (Map<String, Object>) data.get("Data");
-                    Map<String, Object> terminals = ((List<Map<String, Object>>) dataMap.get("terminals")).get(0);
-                    if(!StringUtils.isEmpty(terminals)) {
+                    if(dataMap.get("resultCode").equals("0000")) {
+                        Map<String, Object> terminals = ((List<Map<String, Object>>) dataMap.get("terminals")).get(0);
                         activateDate = terminals.get("dateActivated") != null ? terminals.get("dateActivated").toString() : activateDate;
                         openDate = terminals.get("dateShipped") != null ? terminals.get("dateShipped").toString() : openDate;
                         statusCode = activateDate != null || openDate != null ? 200 : statusCode;
@@ -2774,5 +2777,38 @@ public class ApiUtil_NoStatic {
         }
     }
 
+    /**
+     * 补充完整信息
+     *
+     */
+    public Map<String, Object> autocompleteCard(Map<String, Object> map, Map<String, Object> find_card_route_map) {
+        JSONObject Outdata = new JSONObject();
+        try {
 
+            //返回数据解析
+            Map<String, Object> queryFlow = publicApiService.insideApi(map, "queryFlow", find_card_route_map);
+            Map<String, Object> data = (Map<String, Object>) queryFlow.get("Data");
+            Map<String, Object> Data = (Map<String, Object>) data.get("Data");
+
+            if (Data.get("resultCode").equals("0000")) {
+                Map<String, Object> terminals = ((List<Map<String, Object>>) Data.get("terminals")).get(0);
+                Outdata.put("msisdn", terminals.get("msisdn").toString());
+                Outdata.put("iccid", terminals.get("iccid").toString());
+                Outdata.put("imsi", terminals.get("imsi").toString());
+                Outdata.put("imei", terminals.get("imei").toString());
+                Outdata.put("used", terminals.get("monthToDateUsage").toString());
+                Outdata.put("cd_code", data.get("cd_code").toString());
+                Outdata.put("code", "200");
+                Outdata.put("Message", data.get("Message").toString());
+            } else {
+                Outdata.put("code", "500");
+                Outdata.put("Message", Data.get("resultDesc").toString());
+            }
+        } catch (Exception e) {
+            Outdata.put("code", "500");
+            Outdata.put("Message", "内部接收消息，解析数据异常！");
+            System.out.println(e);
+        }
+        return Outdata;
+    }
 }
