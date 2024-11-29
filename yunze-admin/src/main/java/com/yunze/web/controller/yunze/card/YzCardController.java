@@ -1641,7 +1641,7 @@ public class YzCardController extends MyBaseController {
             if ((boolean) rMap.get("bool")) {
                 return MyRetunSuccess(rMap.get("message"), null);
             } else {
-                return MyRetunSuccess(rMap.get("message"), rMap.get("message").toString());
+                return Myerr(rMap.get("message").toString());
             }
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
