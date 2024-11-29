@@ -2280,13 +2280,18 @@ public class ApiUtil_NoStatic {
 
                 } else if (cd_code.equals("LianTong_CMP")) {
                     //联通 CMP 解析
-                    Map<String, Object> Data = (Map<String, Object>) data.get("Data");
-                    String Rcode = Data.get("resultCode").toString();
-                    if (Rcode.equals("0000") || Rcode.equals("1193")) {
-                        statusCode = 200;
-                        statusMessage = "操作成功！";
+                    if (data.get("code") != null) {
+                        statusCode = Integer.parseInt(data.get("code").toString());
+                        statusMessage = data.get("Message").toString();
                     } else {
-                        statusMessage = Data.get("resultDesc").toString();
+                        Map<String, Object> Data = (Map<String, Object>) data.get("Data");
+                        String Rcode = Data.get("resultCode").toString();
+                        if (Rcode.equals("0000") || Rcode.equals("1193")) {
+                            statusCode = 200;
+                            statusMessage = "操作成功！";
+                        } else {
+                            statusMessage = Data.get("resultDesc").toString();
+                        }
                     }
                 } else if (cd_code.equals("YiDong_EC") || cd_code.equals("YiDong_EC_TOKE_ShuoLang") || cd_code.equals("YiDong_EC_TengYu") || cd_code.equals("YiDong_EC_Combo") || cd_code.equals("ECV5_token_MW")) {
                     //移动 EC 解析

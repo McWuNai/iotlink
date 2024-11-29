@@ -1477,7 +1477,11 @@ public class YzCardServiceImpl implements IYzCardService {
                         message = "DB保存状态操作失败！" + e.getMessage().toString();
                     }
                 } else {
-                    message = "网络繁忙稍后重试！" ;
+                    if (CsFble.get("Message") == null) {
+                        message = "网络繁忙稍后重试！";
+                    } else {
+                        message = CsFble.get("Message").toString();
+                    }
                 }
             } else {
                 message = "未知状态！";

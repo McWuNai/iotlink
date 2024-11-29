@@ -630,6 +630,7 @@ public class PublicApiService {
                                 break;
                             case "6":
                                 if (StatusCd == 1) type = "3";
+                                break;
                         }
 
                         if (type != null) {
@@ -639,6 +640,9 @@ public class PublicApiService {
                                 rmap.put("Data", Ser.changeCardStatus(iccid, type));
                                 rmap.put("Data", Ser.changeCardStatus(iccid, "2"));
                             }
+                        } else {
+                            rmap.put("Message", "操作失败，当前类型有误，请核对后重新选择！");
+                            rmap.put("code", "500");
                         }
                     }
                 } else if (function_name.equals("queryRealNameStatus")) {
@@ -667,8 +671,9 @@ public class PublicApiService {
                 } else if (function_name.equals("MachineCardBinding")) {
                     rmap.put("Data", "未开放接口！");
                 }
-                rmap.put("Message", "操作成功");
-                rmap.put("cd_code", cd_code);
+
+                if (rmap.get("Message") == null) rmap.put("Message", "操作成功");
+                if (rmap.get("cd_code") == null) rmap.put("cd_code", cd_code);
             } else if (cd_code.equals("YiDong_EC") || cd_code.equals("YiDong_EC_TOKE_ShuoLang") || cd_code.equals("YiDong_EC_TengYu") || cd_code.equals("YiDong_EC_Combo") || cd_code.equals("ECV5_token_MW")) {
                 if (function_name.equals("queryFlow")) {
                     //实例化 移动 EC    查询 类
@@ -773,8 +778,6 @@ public class PublicApiService {
                     Query_YD Qy = new Query_YD(find_card_route_map, cd_code);
                     rmap.put("Data", Qy.queryCardActiveTime(card_no));
                 }
-
-
                 rmap.put("Message", "操作成功");
                 rmap.put("cd_code", cd_code);
             }

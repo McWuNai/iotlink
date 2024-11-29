@@ -1663,7 +1663,8 @@ public class YzCardController extends MyBaseController {
             Parammap.putAll(JSON.parseObject(Pstr));
             Map<String, Object> singleState = yzCardServiceImpl.singleState(Parammap);
             yzCardServiceImpl.CardInfoFlow(Parammap);
-            return MyRetunSuccess(singleState, null);
+            if ((boolean)singleState.get("bool")) return MyRetunSuccess(singleState, null);
+            return Myerr(singleState.get("message").toString());
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
             logger.error("<br/> yunze:card:singleState  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
