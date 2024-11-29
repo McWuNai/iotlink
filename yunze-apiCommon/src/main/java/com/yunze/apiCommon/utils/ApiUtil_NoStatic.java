@@ -1669,6 +1669,11 @@ public class ApiUtil_NoStatic {
 
                 Outdata.put("code", statusCode);
                 Outdata.put("Message", statusMessage);
+            } else if(Q_cd_code.equals("LianTong_CMP")) {
+                map.put("unbind", "true");
+                Map<String, Object> Rdata = publicApiService.insideApi(map, "changeCardStatusFlexible", find_card_route_map);
+                Outdata.put("code", Rdata.get("code"));
+                Outdata.put("Message", Rdata.get("msg"));
             } else {
                 Outdata.put("code", "400");
                 Outdata.put("Message", "暂不支持该 资源 API 机卡绑定操作！");

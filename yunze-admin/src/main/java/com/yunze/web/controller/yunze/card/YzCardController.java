@@ -599,6 +599,7 @@ public class YzCardController extends MyBaseController {
                     Map<String, Object> Rmap = internalApiRequest.unbundling(Parammap, Route);
                     String code = Rmap.get("code").toString();
                     if (code.equals("200")) {
+                        yzCardServiceImpl.CardInfoFlow(Parammap);
                         return MyRetunSuccess(Rmap.get("Message"), "操作完成！");
                     } else {
                         return Myerr(Rmap.get("Message").toString());
@@ -1633,17 +1634,18 @@ public class YzCardController extends MyBaseController {
             if (Parammap.get("Button").toString().isEmpty()) {
                 rMap = yzCardServiceImpl.singleState(Parammap);
             } else {
-                boolean b = yzCardServiceImpl.UpdateSingle(Parammap);
-                rMap.put("bool", b);
+                Map<String, Object> UpdateSingle = yzCardServiceImpl.UpdateSingle(Parammap);
+                rMap.put("bool", UpdateSingle.get("flag"));
+                rMap.put("message", UpdateSingle.get("message"));
             }
             if ((boolean) rMap.get("bool")) {
                 return MyRetunSuccess(rMap.get("message"), null);
             } else {
-                return Myerr("操作失败");
+                return MyRetunSuccess(rMap.get("message"), rMap.get("message").toString());
             }
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> yunze:card:singleUpd  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ");
+            logger.error("<br/> yunze:card:singleUpd  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
         }
         return Myerr("单卡 修改 备注 分组 操作失败！");
     }
@@ -1659,7 +1661,9 @@ public class YzCardController extends MyBaseController {
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
             Parammap.putAll(JSON.parseObject(Pstr));
-            return MyRetunSuccess(yzCardServiceImpl.singleState(Parammap), null);
+            Map<String, Object> singleState = yzCardServiceImpl.singleState(Parammap);
+            yzCardServiceImpl.CardInfoFlow(Parammap);
+            return MyRetunSuccess(singleState, null);
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
             logger.error("<br/> yunze:card:singleState  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());

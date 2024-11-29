@@ -281,8 +281,10 @@ public interface IYzCardService
     public String CardInfoFlow (Map map);
 
 
-    /** 单卡 修改 备注 分组*/
-    public boolean UpdateSingle(Map<String, Object> map);
+    /**
+     * 单卡 修改 备注 分组
+     */
+    public Map<String, Object> UpdateSingle(Map<String, Object> map);
 
     /** 单卡 灵活变更状态*/
     public Map<String, Object> singleState(Map<String, Object> map);

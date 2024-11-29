@@ -595,11 +595,19 @@ public class PublicApiService {
                 } else if (function_name.equals("changeCardStatusFlexible")) {
                     //实例化 联通 CMP 业务变更 类
                     serviceAccept_LT Ser = new serviceAccept_LT(find_card_route_map);
-                    if (operType != null) {
+                    if (operType != null || map.get("unbind") != null) {
                         String type = null;
                         Query_LT Qy = new Query_LT(find_card_route_map);
                         Map<String, Object> Obj = ((List<Map<String, Object>>) Qy.queryFlow(iccid).get("terminals")).get(0);
                         int StatusCd = Integer.parseInt(Obj.get("simStatus").toString()); //当前卡状态码
+
+                        if (operType == null) {
+                            if (StatusCd == 3) {
+                                operType = "1";
+                            } else if (StatusCd == 2) {
+                                operType = "0";
+                            }
+                        }
 
                         switch (operType) { //改变状态的码
                             case "0":
@@ -623,7 +631,15 @@ public class PublicApiService {
                             case "6":
                                 if (StatusCd == 1) type = "3";
                         }
-                        if (type != null) rmap.put("Data", Ser.changeCardStatus(iccid, type));
+
+                        if (type != null) {
+                            if (map.get("unbind") == null || StatusCd == 3) {
+                                rmap.put("Data", Ser.changeCardStatus(iccid, type));
+                            } else if (map.get("unbind") != null && StatusCd == 2) {
+                                rmap.put("Data", Ser.changeCardStatus(iccid, type));
+                                rmap.put("Data", Ser.changeCardStatus(iccid, "2"));
+                            }
+                        }
                     }
                 } else if (function_name.equals("queryRealNameStatus")) {
                     //实例化 联通 CMP 查询 类
