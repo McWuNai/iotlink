@@ -59,6 +59,22 @@ public class InternalApiRequest {
         return Rmap;
     }
 
+    /**
+     * 内部请求
+     *
+     * @param map
+     * @param fmap
+     * @return
+     */
+    public Map<String, Object> queryHistoryFlow(Map<String, Object> map, Map<String, Object> fmap) {
+        Map<String, Object> Rmap = new HashMap<>();
+        try {
+            Rmap = apiUtil_NoStatic.queryHistoryFlow(map, fmap);
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+        return Rmap;
+    }
 
     /**
      * 内部请求

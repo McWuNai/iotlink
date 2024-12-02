@@ -1454,6 +1454,9 @@ public class YzCardController extends MyBaseController {
         return Myerr("划分卡信息 操作失败！");
     }
 
+    /**
+     * 获取 添加卡至自动轮询
+     */
     @Log(title = "添加卡至自动轮询", businessType = BusinessType.UPDATE)
     @PreAuthorize("@ss.hasPermi('yunze:card:showhistoryUsed')")
     @PostMapping(value = "/addAutoPolling", produces = {"application/json;charset=utf-8"})
@@ -1473,6 +1476,35 @@ public class YzCardController extends MyBaseController {
             logger.error("<br/> updPwd  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
         }
         return Myerr("添加卡至自动轮询 操作失败！");
+    }
+
+    /**
+     * 获取 查询历史用量
+     */
+    @Log(title = "查询历史用量", businessType = BusinessType.UPDATE)
+    @PreAuthorize("@ss.hasPermi('yunze:card:showhistoryUsed')")
+    @PostMapping(value = "/historyUsed", produces = {"application/json;charset=utf-8"})
+    public String showHistoryUsed(@RequestBody String Pstr) {
+        HashMap<String, Object> Parammap = new HashMap<>();
+        if (Pstr != null) {
+            Pstr = Pstr.replace("%2F", "/");//转义 /
+        }
+        try {
+            Pstr = AesEncryptUtil.desEncrypt(Pstr);
+            Parammap.putAll(JSON.parseObject(Pstr));
+            Map<String, Object> Route = yzCardServiceImpl.findRoute(Parammap);
+
+            if (Route != null) {
+                Map<String, Object> Rmap = internalApiRequest.queryHistoryFlow(Parammap, Route);
+
+                String code = Rmap.get("code") != null ? Rmap.get("code").toString() : "500";
+                if (code.equals("200")) return MyRetunSuccess(Rmap, "操作成功！");
+            }
+        } catch (Exception e) {
+            String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
+            logger.error("<br/> updPwd  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+        }
+        return Myerr("查询历史用量 操作失败！");
     }
 
     /**
@@ -1663,7 +1695,7 @@ public class YzCardController extends MyBaseController {
             Parammap.putAll(JSON.parseObject(Pstr));
             Map<String, Object> singleState = yzCardServiceImpl.singleState(Parammap);
             yzCardServiceImpl.CardInfoFlow(Parammap);
-            if ((boolean)singleState.get("bool")) return MyRetunSuccess(singleState, null);
+            if ((boolean) singleState.get("bool")) return MyRetunSuccess(singleState, null);
             return Myerr(singleState.get("message").toString());
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());

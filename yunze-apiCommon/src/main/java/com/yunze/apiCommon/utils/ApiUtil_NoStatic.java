@@ -2,6 +2,7 @@ package com.yunze.apiCommon.utils;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.yunze.apiCommon.Vo.HistoryUsed;
 import com.yunze.apiCommon.upstreamAPI.PublicApiService;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
@@ -515,6 +516,70 @@ public class ApiUtil_NoStatic {
             }
         } catch (Exception e) {
             System.out.println(" sendQuerFlowError " + e);
+        }
+        return Outdata;
+    }
+
+    /**
+     *
+     * @param map
+     * @return
+     */
+    public Map<String, Object> queryHistoryFlow(Map<String, Object> map, Map<String, Object> find_card_route_map) {
+        JSONObject Outdata = new JSONObject();
+        String cd_code;
+        String codeOn = "500";
+        String rtMessage = "";
+
+        Map<String, Object> Rdata = null;
+        try {
+            //返回数据解析
+            Rdata = publicApiService.insideApi(map, "queryFlow", find_card_route_map);
+
+            Map<String, Object> data = (Map<String, Object>) Rdata.get("Data");
+
+            cd_code = data.get("cd_code").toString();
+            try {
+                if (cd_code.equals("LianTong_CMP")) {
+                    //联通 CMP 解析
+                    Map<String, Object> JsonData = (Map<String, Object>) data.get("Data");
+                    try {
+                        codeOn = JsonData.get("resultCode").toString();
+                        rtMessage = JsonData.get("resultDesc").toString();
+                    } catch (Exception e) {
+                    }
+                    if (codeOn.equals("0000")) {
+                        Map<String, Object> Data = ((List<Map<String, Object>>) JsonData.get("terminals")).get(0);
+
+                        List<HistoryUsed> historyFlow = new ArrayList<>();
+                        String[][] fieldsAndLabels = {
+                                {"monthToDateDataUsage", "数据用量(MB)"},
+                                {"monthToDateSMSUsage", "短信用量(条)"},
+                                {"monthToDateVoiceUsage", "语音用量(分钟)"}
+                        };
+
+                        // 循环处理每个字段
+                        for (String[] fieldAndLabel : fieldsAndLabels) {
+                            HistoryUsed usage = new HistoryUsed();
+                            usage.setObj(fieldAndLabel[1]);
+                            usage.setUsed(Data.get(fieldAndLabel[0]));
+                            historyFlow.add(usage);
+                        }
+
+                        // 将结果放入OutData
+                        Outdata.put("Data", historyFlow);
+                    }
+                }
+                Outdata.put("code", "200");
+                Outdata.put("Message", data.get("Message"));
+            } catch (Exception e) {
+                Outdata.put("code", "500");
+                Outdata.put("Message", "内部接收消息，解析数据异常！");
+                System.out.println(e);
+            }
+
+        } catch (Exception e) {
+            Outdata.put("code", "500");
         }
         return Outdata;
     }
@@ -1572,7 +1637,7 @@ public class ApiUtil_NoStatic {
                 } else if (cd_code.equals("LianTong_CMP")) {
                     //联通 CMP 解析
                     Map<String, Object> dataMap = (Map<String, Object>) data.get("Data");
-                    if(dataMap.get("resultCode").equals("0000")) {
+                    if (dataMap.get("resultCode").equals("0000")) {
                         Map<String, Object> terminals = ((List<Map<String, Object>>) dataMap.get("terminals")).get(0);
                         activateDate = terminals.get("dateActivated") != null ? terminals.get("dateActivated").toString() : activateDate;
                         openDate = terminals.get("dateShipped") != null ? terminals.get("dateShipped").toString() : openDate;
@@ -1669,7 +1734,7 @@ public class ApiUtil_NoStatic {
 
                 Outdata.put("code", statusCode);
                 Outdata.put("Message", statusMessage);
-            } else if(Q_cd_code.equals("LianTong_CMP")) {
+            } else if (Q_cd_code.equals("LianTong_CMP")) {
                 map.put("unbind", "true");
                 Map<String, Object> Rdata = publicApiService.insideApi(map, "changeCardStatusFlexible", find_card_route_map);
                 Outdata.put("code", Rdata.get("code"));
@@ -2789,7 +2854,6 @@ public class ApiUtil_NoStatic {
 
     /**
      * 补充完整信息
-     *
      */
     public Map<String, Object> autocompleteCard(Map<String, Object> map, Map<String, Object> find_card_route_map) {
         JSONObject Outdata = new JSONObject();
