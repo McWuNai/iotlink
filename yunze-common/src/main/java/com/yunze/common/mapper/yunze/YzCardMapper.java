@@ -606,6 +606,8 @@ public interface YzCardMapper
      *  单卡 补全部分信息
      */
     public int updSingleCardData(Map<String, Object> map);
+
+    int updGroupingAndRemarkArrs(List<Map<String, Object>> card_arrs);
 }
 
 

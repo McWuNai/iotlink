@@ -66,7 +66,7 @@ public class CardSetCardInfo {
                 execution(filePath,ReadName,Pmap,User);//执行特殊操作 变更卡分组、备注
             }
         } catch (Exception e) {
-            log.error(">>错误 - 特殊操作 变更卡分组、备注 消费者:{}<<", e.getMessage().toString());
+            log.error(">>错误 - 特殊操作 变更卡分组、备注 消费者:{}<<", e.toString());
         }
     }
 
@@ -90,7 +90,7 @@ public class CardSetCardInfo {
         String SaveUrl = "/getcsv/"+newName+".csv";
         SaveUrl += ",/getcsv/"+UpdBackupName+".csv";
 
-        Map<String, Object> task_map = new HashMap<String, Object>();
+        Map<String, Object> task_map = new HashMap<>();
         task_map.put("auth",create_by);
         task_map.put("task_name",task_name);
         task_map.put("url",SaveUrl);
@@ -176,7 +176,7 @@ public class CardSetCardInfo {
                                }
                                 int updCount = 0;
                                 try {
-                                    updCount =  yzCardMapper.updGroupingAndRemarks(map);//变更 分组、备注 队列
+                                    updCount =  yzCardMapper.updGroupingAndRemarkArrs((List<Map<String, Object>>) map.get("card_arrs"));//变更 分组、备注 队列
                                     Map<String, Object> defOutcolumns = new HashMap<>();
                                     defOutcolumns.put("message","操作成功 修改数量 "+updCount);
                                     defOutcolumns.put("agentName",create_by);

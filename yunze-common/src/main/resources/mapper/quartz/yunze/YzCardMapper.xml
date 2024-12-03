@@ -1476,28 +1476,37 @@
 			iccid = #{iccid}
 		</where>
 		;
-		<!--<foreach item="card_arrs" collection="card_arrs" index="card_arrs"  >
-            UPDATE
-            yz_card_info
-            <set>
-                customize_grouping =
-                <if test="card_arrs.customize_grouping!=null ">#{card_arrs.customize_grouping}</if>
-                <if test="card_arrs.customize_grouping==null ">""</if>,
-                remarks =
-                <if test="card_arrs.remarks!=null ">#{card_arrs.remarks}</if>
-                <if test="card_arrs.remarks==null ">""</if>,
-                deliver_date =
-                <if test="card_arrs.deliver_date!=null ">#{card_arrs.deliver_date}</if>
-                <if test="card_arrs.deliver_date==null ">""</if>
-            </set>
-            <where>
-                iccid = #{card_arrs.iccid}
-            </where>
-            ;
-        </foreach>
-        -->
 	</update>
 
+	<!--批量 修改 分组、备注-->
+	<update id="updGroupingAndRemarkArrs" parameterType="java.util.List">
+		<foreach collection="list" item="item" separator=";">
+			UPDATE yz_card_info
+			SET
+			customize_grouping =
+			<if test="item.customize_grouping != null">
+				#{item.customize_grouping}
+			</if>
+			<if test="item.customize_grouping == null">
+				NULL
+			</if>,
+			remarks =
+			<if test="item.remarks != null">
+				#{item.remarks}
+			</if>
+			<if test="item.remarks == null">
+				NULL
+			</if>,
+			deliver_date =
+			<if test="item.deliver_date != null">
+				#{item.deliver_date}
+			</if>
+			<if test="item.deliver_date == null">
+				NULL
+			</if>
+			WHERE iccid = #{item.iccid}
+		</foreach>
+	</update>
 
 	<!--查询 代理下 卡号-->
 	<select id="findAgentIccid" parameterType="java.util.HashMap" resultType="java.lang.String">
