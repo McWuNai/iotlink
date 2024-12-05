@@ -1203,7 +1203,7 @@ public class YzCardServiceImpl implements IYzCardService {
             bulkMap.put("auth",create_by);
             bulkMap.put("agent_id",agent_id);
             bulkMap.put("type","10");//灵活变更状态 10
-            yzBulkBusinessMapper.add(bulkMap);
+            //yzBulkBusinessMapper.add(bulkMap);
 
 
             //1.创建路由 绑定 生产队列 发送消息
@@ -1212,6 +1212,7 @@ public class YzCardServiceImpl implements IYzCardService {
             try {
                 Map<String, Object> start_type = new HashMap<>();
                 start_type.put("bulkMap", bulkMap);//批量任务主表 信息
+                start_type.put("User", User);
                 start_type.put("map", map);//参数
                 rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type), message -> {
                     // 设置消息过期时间 60 分钟 过期
@@ -1223,7 +1224,7 @@ public class YzCardServiceImpl implements IYzCardService {
                 return ("批量 【灵活变更状态】 生产指令 操作失败！");
             }
 
-            return "批量 【灵活变更状态】 指令 已发送，连接设置详细信息请在 【批量业务受理】查询！";
+            return "批量 【灵活变更状态】 指令 已发送，连接设置详细信息请在 【执行日志管理】查询！";
     }
 
     @Override
