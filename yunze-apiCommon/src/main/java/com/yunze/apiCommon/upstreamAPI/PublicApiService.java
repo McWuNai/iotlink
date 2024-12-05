@@ -654,7 +654,9 @@ public class PublicApiService {
                     //实例化 联通 CMP 查询 类
                     Query_LT Qy = new Query_LT(find_card_route_map);
                     rmap.put("Data", Qy.queryAPNInfo(iccid));
-                } else if (function_name.equals("FunctionApnStatus") || function_name.equals("realNameRemove")) {
+                } else if (function_name.equals("realNameRemove")) {
+                    rmap.put("Data", "联通未开放接口！");
+                } else if (function_name.equals("FunctionApnStatus")) {
                     rmap.put("Data", "联通未开放接口！");
                 } else if (function_name.equals("SpeedLimit")) {
                     //实例化 联通 CMP 业务变更 类
