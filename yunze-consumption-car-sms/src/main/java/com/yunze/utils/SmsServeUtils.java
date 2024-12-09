@@ -2,10 +2,10 @@ package com.yunze.utils;
 
 import com.alibaba.fastjson.JSON;
 import com.huawei.CmppOperate;
-import com.yunze.apiCommon.mapper.mysql.YzCardRouteMapper;
+import com.yunze.apiCommon.mapper.YzCardRouteMapper;
 import com.yunze.apiCommon.upstreamAPI.DianXinCMP5G.change.ServiceAccept_DX5G;
-import com.yunze.common.mapper.mysql.bulk.YzBusiCardSmsMapper;
-import com.yunze.common.mapper.mysql.bulk.YzSmSBulkBusinessDtailsMapper;
+import com.yunze.common.mapper.yunze.bulk.YzBusiCardSmsMapper;
+import com.yunze.common.mapper.yunze.bulk.YzSmSBulkBusinessDtailsMapper;
 import com.yunze.common.utils.yunze.BulkUtil;
 import com.yunze.config.DisposableBean;
 import org.springframework.stereotype.Component;

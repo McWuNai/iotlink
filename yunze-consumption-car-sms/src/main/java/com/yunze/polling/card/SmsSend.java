@@ -4,9 +4,9 @@ import com.alibaba.fastjson.JSON;
 import com.rabbitmq.client.Channel;
 import com.yunze.apiCommon.utils.InternalApiRequest;
 import com.yunze.common.core.redis.RedisCache;
-import com.yunze.common.mapper.mysql.YzCardMapper;
-import com.yunze.common.mapper.mysql.bulk.YzSmSBulkBusinessDtailsMapper;
-import com.yunze.common.mapper.mysql.bulk.YzSmSBulkBusinessMapper;
+import com.yunze.common.mapper.yunze.YzCardMapper;
+import com.yunze.common.mapper.yunze.bulk.YzSmSBulkBusinessDtailsMapper;
+import com.yunze.common.mapper.yunze.bulk.YzSmSBulkBusinessMapper;
 import com.yunze.common.utils.yunze.BulkUtil;
 import com.yunze.common.utils.yunze.Different;
 import com.yunze.common.utils.yunze.VeDate;
@@ -19,10 +19,7 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @Auther: zhang feng
@@ -207,7 +204,7 @@ public class SmsSend {
                             }
 
                         }else{
-                            bulkUtil.smsDupdateArr(b_id,list,VeDate.getStringDate(),"2","通道未配置短信接口信息 取消操作");
+                            bulkUtil.smsDupdateArr(b_id, Collections.emptyList(),VeDate.getStringDate(),"2","通道未配置短信接口信息 取消操作");
                         }
                     }
                     //修改执行状态

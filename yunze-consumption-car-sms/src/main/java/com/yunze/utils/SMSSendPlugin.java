@@ -8,8 +8,8 @@ import com.huawei.insa2.util.Args;
 import com.huawei.insa2.util.TypeConvert;
 import com.huawei.smproxy.SMProxy30;
 import com.yunze.apiCommon.utils.SMSUtil;
-import com.yunze.common.mapper.mysql.bulk.YzBusiCardSmsMapper;
-import com.yunze.common.mapper.mysql.bulk.YzSmSBulkBusinessDtailsMapper;
+import com.yunze.common.mapper.yunze.bulk.YzBusiCardSmsMapper;
+import com.yunze.common.mapper.yunze.bulk.YzSmSBulkBusinessDtailsMapper;
 import com.yunze.common.utils.yunze.BulkUtil;
 import org.springframework.stereotype.Component;
 

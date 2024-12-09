@@ -16,7 +16,7 @@ import javax.sql.DataSource;
 
 
 @Configuration
-@MapperScan(basePackages = {"com.yunze.common.mapper.mysql"}, sqlSessionTemplateRef  = "mysqlSqlSessionTemplate")
+@MapperScan(basePackages = {"com.yunze.common.mapper.yunze"}, sqlSessionTemplateRef  = "mysqlSqlSessionTemplate")
 public class MysqlServerConfig {
     @Bean(name = "mysqlDataSource")
     @ConfigurationProperties(prefix = "spring.datasource.mysql-server")
@@ -30,7 +30,7 @@ public class MysqlServerConfig {
     public SqlSessionFactory mysqlSqlSessionFactory(@Qualifier("mysqlDataSource") DataSource dataSource) throws Exception {
         SqlSessionFactoryBean bean = new SqlSessionFactoryBean();
         bean.setDataSource(dataSource);
-        bean.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath*:mapper/mysql/**/*Mapper.xml"));
+        bean.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath*:mapper/**/*Mapper.xml"));
         return bean.getObject();
     }
 

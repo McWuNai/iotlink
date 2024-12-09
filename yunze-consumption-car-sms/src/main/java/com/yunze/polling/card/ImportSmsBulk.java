@@ -2,9 +2,9 @@ package com.yunze.polling.card;
 
 import com.alibaba.fastjson.JSON;
 import com.rabbitmq.client.Channel;
-import com.yunze.apiCommon.mapper.mysql.YzCardRouteMapper;
+import com.yunze.apiCommon.mapper.YzCardRouteMapper;
 import com.yunze.common.core.redis.RedisCache;
-import com.yunze.common.mapper.mysql.YzCardMapper;
+import com.yunze.common.mapper.yunze.YzCardMapper;
 import com.yunze.common.utils.yunze.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
