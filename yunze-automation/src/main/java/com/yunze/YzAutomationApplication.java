@@ -6,8 +6,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 
 @SpringBootApplication
-@MapperScan("com.yunze.common.mapper.mysql")
-@MapperScan("com.yunze.apiCommon.mapper.mysql")
+@MapperScan("com.yunze.common.mapper")
+@MapperScan("com.yunze.apiCommon.mapper")
 class YzAutomationApplication {
     public static void main(String[] args) {
         SpringApplication.run(YzAutomationApplication.class);

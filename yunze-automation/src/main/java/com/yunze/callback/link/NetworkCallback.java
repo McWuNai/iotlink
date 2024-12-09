@@ -57,7 +57,7 @@ public class NetworkCallback {
 
             if (type.equalsIgnoreCase("get")) {
                 if (returnType.equalsIgnoreCase("String")) {
-                    String Str = HttpUtil.getCommon(address, null, null);
+                    String Str = HttpUtil.get(address);
                     if (Str != null && Str.length() > 0) {
                         if (returnExecute.equalsIgnoreCase("OrderCallback")) {
                             returnExecuteFunction.OrderCallback(Str, returnExecuteParameter);
@@ -66,7 +66,7 @@ public class NetworkCallback {
                 }
             } else if (type.equalsIgnoreCase("post")) {
                 if (returnType.equalsIgnoreCase("String")) {
-                    String Str = HttpUtil.postCommon(address, JSON.toJSONString(parameter), null, head);
+                    String Str = HttpUtil.post(address, JSON.toJSONString(parameter), head);
                     if (Str != null) {
                         if (returnExecute.equalsIgnoreCase("OrderCallback")) {
                             returnExecuteFunction.OrderCallback(Str, returnExecuteParameter);

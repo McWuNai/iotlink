@@ -1,7 +1,7 @@
 package com.yunze.config;
 
 import com.yunze.common.core.redis.RedisCache;
-import com.yunze.apiCommon.mapper.mysql.YzCardRouteMapper;
+import com.yunze.apiCommon.mapper.YzCardRouteMapper;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PreDestroy;
