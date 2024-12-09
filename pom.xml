@@ -250,6 +250,8 @@
         <!--<module>yunze-consumption-car-sms</module>-->
         <module>yunze-iotapi</module>
         <module>yunze-automation</module>
+        <module>yunze-eureka</module>
+        <module>yunze-gateway</module>
     </modules>
     <packaging>pom</packaging>
 
