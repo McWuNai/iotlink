@@ -233,5 +233,7 @@ public interface YzOrderMapper {
     List<Map<String, Object>> activateEffect(Map<String, Object> parammap);
 
     void updateAddPackage(@Param("addPackage") int i, @Param("orderId") String orderId);
+
+    void updOrderCallback(Map<String, Object> returnExecuteParameter);
 }
 

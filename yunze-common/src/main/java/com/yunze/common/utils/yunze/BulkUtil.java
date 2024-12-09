@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -73,9 +74,18 @@ public class BulkUtil {
     }
 
 
+    public void smsDupdate(Map<String, Object> updMap) {
 
+    }
 
+    public void smsUpdate(Map<String, Object> bulkMap) {
 
+    }
 
+    public void smsDadd(Map<String, Object> bulkDtailsMap) {
+    }
 
+    public void smsDupdateArr(String bId, List<Map<String, Object>> outListDifferent, String stringDate, String number, String s) {
+
+    }
 }
