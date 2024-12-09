@@ -2,7 +2,7 @@ package com.yunze.iotapi.controller;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-import com.yunze.apiCommon.mapper.mysql.YzCardRouteMapper;
+import com.yunze.apiCommon.mapper.YzCardRouteMapper;
 import com.yunze.common.utils.ip.IpUtils;
 import com.yunze.iotapi.utils.ResponseJson;
 import org.springframework.stereotype.Controller;

@@ -1,7 +1,7 @@
 package com.yunze.iotapi.controller.MyEC;
 
 import com.alibaba.fastjson.JSONObject;
-import com.yunze.apiCommon.mapper.mysql.YzCardRouteMapper;
+import com.yunze.apiCommon.mapper.YzCardRouteMapper;
 import com.yunze.apiCommon.upstreamAPI.YiDongEC.ResJson;
 import com.yunze.iotapi.service.impl.AgentAccountServiceImpl;
 import org.springframework.stereotype.Controller;

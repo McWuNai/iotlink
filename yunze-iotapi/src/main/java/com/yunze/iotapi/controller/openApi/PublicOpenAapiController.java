@@ -2,12 +2,12 @@ package com.yunze.iotapi.controller.openApi;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-import com.yunze.apiCommon.mapper.mysql.YzCardRouteMapper;
+import com.yunze.apiCommon.mapper.YzCardRouteMapper;
 import com.yunze.apiCommon.upstreamAPI.PublicApiService;
 import com.yunze.apiCommon.utils.ApiUtil_NoStatic;
 import com.yunze.apiCommon.utils.HttpUtil;
 import com.yunze.apiCommon.utils.UrlUtil;
-import com.yunze.common.mapper.mysql.YzUserMapper;
+import com.yunze.common.mapper.yunze.YzUserMapper;
 import com.yunze.iotapi.service.impl.OpenApiServiceImpl;
 import com.yunze.iotapi.utils.AgentCheckShiro;
 import com.yunze.iotapi.utils.LogAnnotation;
