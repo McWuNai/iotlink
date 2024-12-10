@@ -6,7 +6,7 @@ spring:
         druid:
             # 主库数据源
             master:
-                url: jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${MYSQL_DATABASE}?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
+                url: jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${MYSQL_DATABASE}?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=GMT%2B8
                 username: ${MYSQL_USER}
 #                username: demo_user
                 password: ${MYSQL_PASSWORD}
@@ -33,12 +33,14 @@ spring:
             minEvictableIdleTimeMillis: 300000 # 设置为5分钟（300秒）
             # 配置一个连接在池中最大生存的时间，单位是毫秒
             maxEvictableIdleTimeMillis: 1800000 # 设置为30分钟（1800秒）
-
+            remove-abandoned: true
+            remove-abandoned-timeout: 60
+            log-abandoned: true
             # 配置检测连接是否有效
             validationQuery: SELECT 1 FROM DUAL
             testWhileIdle: true
-            testOnBorrow: false
-            testOnReturn: false
+            testOnBorrow: true
+            testOnReturn: true
             webStatFilter:
                 enabled: false
             statViewServlet:

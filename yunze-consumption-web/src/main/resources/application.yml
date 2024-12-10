@@ -29,10 +29,17 @@ spring:
   application:
     name: cWeb
   datasource:
-
-    url: jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/iotdb?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/iotdb?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=Asia/Shanghai&allowMultiQueries=true
     username: ${MYSQL_USER}
     password: ${MYSQL_PASSWORD}
+    hikari:
+      maximum-pool-size: 50
+      minimum-idle: 10
+      idle-timeout: 600000 # 10分钟
+      max-lifetime: 1800000 # 30分钟
+      connection-test-query: SELECT 1 FROM DUAL
+      validation-timeout: 5000 # 5秒
 
   # redis 配置
   redis:
