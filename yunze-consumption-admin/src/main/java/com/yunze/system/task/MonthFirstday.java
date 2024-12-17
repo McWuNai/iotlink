@@ -46,6 +46,8 @@ public class MonthFirstday {
     public void CardMonth(String msg) throws IOException {
         try {
             execution();//月初有订购期内流量卡 进行 复机
+        } catch (NullPointerException e) {
+            log.error(">>错误 - 月初有订购期内流量卡 进行 复机 消费者: 列表未查询到符合数据<<");
         } catch (Exception e) {
             log.error(">>错误 - 月初有订购期内流量卡 进行 复机 消费者:{}<<", e.getMessage());
         }
@@ -80,6 +82,7 @@ public class MonthFirstday {
             List<Map<String, Object>> failArr = new ArrayList<>();
             String cafterward = "正常";//变更后状太
             String OPtionType = "";//操作类型
+            if (list.size() == 0) throw new NullPointerException("列表未查询到符合数据");
             for (int i = 0; i < list.size(); i++) {
 
                 Map<String, Object> Obj = new HashMap<>();
@@ -203,6 +206,14 @@ public class MonthFirstday {
             writeCSV.OutCSVObj(list, newName,Outcolumns, keys,defOutcolumns,OutSize);
             yzExecutionTaskMapper.set_end_time(task_map);//任务结束
             log.error(">> cardSet-消费者- 上传excel异常 [插入数据 DuplicateKeyException ] :{}<<", e.getMessage().toString());
+        } catch (NullPointerException e) {
+            Map<String, Object> defOutcolumns = new HashMap<>();
+            defOutcolumns.put("describe",e.getCause().toString());
+            defOutcolumns.put("agentName",create_by);
+            defOutcolumns.put("result","列表获取失败");
+            writeCSV.OutCSVObj(list, newName,Outcolumns, keys,defOutcolumns,OutSize);
+            yzExecutionTaskMapper.set_end_time(task_map);//任务结束
+            log.error(">>cardSet-消费者- 批量查询消费者:{}<<", e.getMessage());
         } catch (Exception e) {
             Map<String, Object> defOutcolumns = new HashMap<>();
             defOutcolumns.put("describe",e.getCause().toString());
