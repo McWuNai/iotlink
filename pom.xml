@@ -247,7 +247,7 @@
         <module>yunze-timed-task</module>
         <module>yunze-apiCommon</module>
         <module>yunze-consumption-car-api</module>
-        <!--<module>yunze-consumption-car-sms</module>-->
+        <module>yunze-consumption-car-sms</module>
         <module>yunze-iotapi</module>
         <module>yunze-automation</module>
         <module>yunze-eureka</module>
