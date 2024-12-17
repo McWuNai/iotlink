@@ -47,9 +47,8 @@ public class WeixinAuthController {
         if(CheckIsNull.isNull(returnurl)){
             return ResponseJson.error("-2","网页授权失败");
         }
-        //String urlstr=URLDecoder.decode(returnurl,"utf-8");
+        returnurl= URLDecoder.decode(returnurl,"utf-8");
         //String appId=urlstr.substring(urlstr.lastIndexOf("/")+1,urlstr.length());
-        System.out.println(appId);
         WxMpService wx=wxConfigInit.wxMpService().switchoverTo(appId);
         WxOAuth2Service w2=wx.getOAuth2Service();
         String url=w2.buildAuthorizationUrl(returnurl, WxConsts.OAuth2Scope.SNSAPI_USERINFO, null);
