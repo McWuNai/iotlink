@@ -657,7 +657,15 @@ public class PublicApiService {
                 } else if (function_name.equals("realNameRemove")) {
                     rmap.put("Data", "联通未开放接口！");
                 } else if (function_name.equals("FunctionApnStatus")) {
-                    rmap.put("Data", "联通未开放接口！");
+                    //实例化 联通 CMP 业务变更 类
+                    serviceAccept_LT Ser = new serviceAccept_LT(find_card_route_map);
+                    String stop = null;
+                    if (Is_Break.equals("0")) {
+                        stop = "2";//正常
+                    } else if (Is_Break.equals("1")) {
+                        stop = "3";//停机
+                    }
+                    rmap.put("Data", Ser.changeCardStatus(iccid, stop));
                 } else if (function_name.equals("SpeedLimit")) {
                     //实例化 联通 CMP 业务变更 类
                     serviceAccept_LT Ser = new serviceAccept_LT(find_card_route_map);
