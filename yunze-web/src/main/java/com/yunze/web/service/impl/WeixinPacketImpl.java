@@ -105,6 +105,13 @@ public class WeixinPacketImpl implements IWeixinPacket {
                 } else {
                     Rmap.put("total", used + remain);
                 }
+
+                if (IccidMap.get("status_id") != null) {
+                    //获取字典卡状态
+                    String cardStatus = getdictLabel("yunze_card_status_ShowId", IccidMap.get("status_id").toString());
+                    cardStatus = cardStatus != null ? cardStatus : "未知";
+                    Rmap.put("cardStatus", cardStatus);
+                }
                 return Rmap;
             } else {
                 EndTime = yzCardFlowMapper.findEndTime(IccidMap);
@@ -122,7 +129,8 @@ public class WeixinPacketImpl implements IWeixinPacket {
                         Map<String, Object> synMap = synCardFlow(iccid, Route);
                         if (IccidMap.get("status_id") != null) {
                             //获取字典卡状态
-                            String cardStatus = getdictLabel("yunze_card_status_ShowId", synCardStatus(iccid, Route));
+                            String synCardStatus = synCardStatus(iccid, Route);
+                            String cardStatus = getdictLabel("yunze_card_status_ShowId", synCardStatus == null ? IccidMap.get("status_id").toString() : synCardStatus);
                             cardStatus = cardStatus != null ? cardStatus : "未知";
                             Rmap.put("cardStatus", cardStatus);
                         }
@@ -1006,6 +1014,7 @@ public class WeixinPacketImpl implements IWeixinPacket {
                                 }
                             } catch (Exception e) {
                                 log.error("DB保存状态异常！e:{} " + e.getMessage());
+                                return null;
                             }
                         } else {
                             log.error("接口超频返回暂无数据返回，请稍后重试！");
@@ -1015,6 +1024,7 @@ public class WeixinPacketImpl implements IWeixinPacket {
             }
         } catch (Exception e) {
             System.out.println(">>错误 - web 卡状态同步失败<<" + e.getMessage());
+            return null;
         }
         return null;
     }
