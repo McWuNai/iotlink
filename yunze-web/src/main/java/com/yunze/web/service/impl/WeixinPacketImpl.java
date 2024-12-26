@@ -1,6 +1,7 @@
 package com.yunze.web.service.impl;
 
 
+import com.baomidou.mybatisplus.extension.api.R;
 import com.github.binarywang.wxpay.bean.notify.WxPayOrderNotifyResult;
 import com.alibaba.fastjson.JSON;
 import com.github.binarywang.wxpay.bean.request.WxPayUnifiedOrderRequest;
@@ -21,11 +22,11 @@ import com.yunze.cn.config.RabbitMQConfig;
 import com.yunze.cn.config.YzWxConfigInit;
 import com.yunze.cn.service.impl.YzWeChatUserImpl;
 import com.yunze.cn.service.impl.YzCardServiceImpl;
+import lombok.extern.slf4j.Slf4j;
 import me.chanjar.weixin.mp.api.WxMpService;
 import me.chanjar.weixin.mp.bean.result.WxMpUser;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -39,11 +40,13 @@ import java.util.*;
  * @Date: 2021/08/26/8:35
  * @Description:
  */
+@Slf4j
 @Component
 public class WeixinPacketImpl implements IWeixinPacket {
 
     @Resource
     private CardFlowSyn cardFlowSyn;
+
     @Resource
     private YzCardServiceImpl yzCardServiceImpl;
     @Resource
@@ -79,14 +82,6 @@ public class WeixinPacketImpl implements IWeixinPacket {
     @Resource
     private YzWeChatUserMapper yzWeChatUserMapper;
 
-
-
-    //执行 加包 队列信息
-    String addPackage_exchangeName = "polling_addPackage_card", addPackage_queueName = "p_addPackage_card", addPackage_routingKey = "p.addPackage.card",
-            addPackage_del_exchangeName = "dlx_"+addPackage_exchangeName,addPackage_del_queueName = "dlx_"+addPackage_queueName, addPackage_del_routingKey = "dlx_"+addPackage_routingKey;
-
-
-
     @Override
     public Map<String, Object> queryFlowInfo(Map<String, Object> Pmap) {
         Map<String, Object> Rmap = new HashMap<>();
@@ -96,16 +91,10 @@ public class WeixinPacketImpl implements IWeixinPacket {
 
         if (IccidMap.get("iccid") != null && IccidMap.get("iccid").toString().length() > 0) {
             String iccid = IccidMap.get("iccid").toString();
-            if (IccidMap.get("status_id") != null) {
-                //获取字典卡状态
-                String cardStatus = getdictLabel("yunze_card_status_ShowId", IccidMap.get("status_id").toString());
-                cardStatus = cardStatus != null ? cardStatus : "未知";
-                Rmap.put("cardStatus", cardStatus);
-            }
             Rmap.put("iccid", iccid);
             String EndTime = "-";
             Object obj = redisUtilYz.redisTemplate.opsForValue().get(iccid + openid);
-            if (obj!=null) {
+            if (obj != null) {
                 Double used = IccidMap.get("used") == null ? 0.00 : Double.parseDouble(IccidMap.get("used").toString());
                 Double remain = IccidMap.get("remaining") == null ? 0.00 : Double.parseDouble(IccidMap.get("remaining").toString());
                 Rmap.put("used", used);
@@ -131,6 +120,12 @@ public class WeixinPacketImpl implements IWeixinPacket {
                     String cd_status = Route.get("cd_status").toString();
                     if (cd_status != null && cd_status != "" && cd_status.equals("1")) {
                         Map<String, Object> synMap = synCardFlow(iccid, Route);
+                        if (IccidMap.get("status_id") != null) {
+                            //获取字典卡状态
+                            String cardStatus = getdictLabel("yunze_card_status_ShowId", synCardStatus(iccid, Route));
+                            cardStatus = cardStatus != null ? cardStatus : "未知";
+                            Rmap.put("cardStatus", cardStatus);
+                        }
                         if (synMap != null) {
                             if (synMap.get("used") != null) {
                                 R_used = Double.parseDouble(synMap.get("used").toString());
@@ -154,7 +149,6 @@ public class WeixinPacketImpl implements IWeixinPacket {
             }
 
 
-
             Rmap.put("EndTime", EndTime);
             Rmap.put("used", R_used);
             Rmap.put("remain", R_remain);
@@ -165,7 +159,9 @@ public class WeixinPacketImpl implements IWeixinPacket {
             Rmap.put("Message", "未找到号码！信息同步取消！");
         }
         return Rmap;
-    }
+    }    //执行 加包 队列信息
+    String addPackage_exchangeName = "polling_addPackage_card", addPackage_queueName = "p_addPackage_card", addPackage_routingKey = "p.addPackage.card",
+            addPackage_del_exchangeName = "dlx_" + addPackage_exchangeName, addPackage_del_queueName = "dlx_" + addPackage_queueName, addPackage_del_routingKey = "dlx_" + addPackage_routingKey;
 
     @Override
     public Map<String, Object> getWxPackets(Map<String, Object> Pmap) {
@@ -187,14 +183,14 @@ public class WeixinPacketImpl implements IWeixinPacket {
 
                 //仅充值一次 包 过滤 是否 已经 充值过
                 if (agent_id.equals("100")) {
-                    List<String> notInArr =  yzCardPacketMapper.findWebOnlyOnce(findMap);
-                    if(notInArr!=null && notInArr.size()>0){
+                    List<String> notInArr = yzCardPacketMapper.findWebOnlyOnce(findMap);
+                    if (notInArr != null && notInArr.size() > 0) {
                         findMap.put("notInArr", notInArr);
                     }
                     cardPackets = yzCardPacketMapper.findWebRecharge(findMap);
                 } else {
-                    List<String> notInArr =  yzAgentPacketMapper.findWebOnlyOnce(findMap);
-                    if(notInArr!=null && notInArr.size()>0){
+                    List<String> notInArr = yzAgentPacketMapper.findWebOnlyOnce(findMap);
+                    if (notInArr != null && notInArr.size() > 0) {
                         findMap.put("notInArr", notInArr);
                     }
                     cardPackets = yzAgentPacketMapper.findWebRecharge(findMap);
@@ -223,7 +219,7 @@ public class WeixinPacketImpl implements IWeixinPacket {
                                     new_cardPackets.add(cp);
                                 }
                             } else {
-                                if(!day.equals(DateLimit)){
+                                if (!day.equals(DateLimit)) {
                                     new_cardPackets.add(cp);
                                 }
                             }
@@ -332,7 +328,7 @@ public class WeixinPacketImpl implements IWeixinPacket {
                             return Rmap;
                         }
                         packet_type = cardPacket.get("packet_type").toString();//资费计划类型：0 基础资费 -1 叠加资费
-                         base_packet_type = cardPacket.get("base_packet_type").toString();//资费计划 类型 0:仅一次，1可叠加
+                        base_packet_type = cardPacket.get("base_packet_type").toString();//资费计划 类型 0:仅一次，1可叠加
 
                         Map<String, Object> findFMap = new HashMap<>();
                         String Time = VeDate.getStringDate();
@@ -340,19 +336,19 @@ public class WeixinPacketImpl implements IWeixinPacket {
                         findFMap.put("Time", Time);
 
                         //仅一次【赠送】 充值 判断之前是否充值过
-                        if(packet_type.equals("2")){
-                            List<String> notInArr =  null;
+                        if (packet_type.equals("2")) {
+                            List<String> notInArr = null;
                             if (agent_id.equals("100")) {
-                                 notInArr =  yzCardPacketMapper.findWebOnlyOnce(findMap);
+                                notInArr = yzCardPacketMapper.findWebOnlyOnce(findMap);
                             } else {
-                                notInArr =  yzAgentPacketMapper.findWebOnlyOnce(findMap);
+                                notInArr = yzAgentPacketMapper.findWebOnlyOnce(findMap);
                             }
-                            if(notInArr!=null && notInArr.size()>0){
+                            if (notInArr != null && notInArr.size() > 0) {
                                 Rmap.put("Message", "该资费类型仅为订购一次");
                                 return Rmap;
                             }
                         }
-                        if(monthType.equals("month")) {
+                        if (monthType.equals("month")) {
                             Integer flag = yzCardFlowMapper.findBaseFlow(findFMap);//查询本月是否有未到期的基础包
                             //查询是否已经添加过本账单的基础包，无则提示先增加基础包
                             if (flag != null) {
@@ -378,28 +374,26 @@ public class WeixinPacketImpl implements IWeixinPacket {
                                     return Rmap;
                                 }
                             }
-                        }else if(monthType.equals("next")){
+                        } else if (monthType.equals("next")) {
                             //资费预购 判断 ( month 当月续费  next 资费预购)
-                            if(packet_type.equals("0")){
-                                if(packet_type.equals("0") && base_packet_type.equals("0")){//基础包 仅一次 判断 下月 里是否已经订购过
-                                    String now = Time.substring(0,10);;//当前时间
-                                    String NextMonth = VeDate.getFirstDayOfNextMonth(now,"yyyy-MM-dd")+" 00:00:01";
+                            if (packet_type.equals("0")) {
+                                if (packet_type.equals("0") && base_packet_type.equals("0")) {//基础包 仅一次 判断 下月 里是否已经订购过
+                                    String now = Time.substring(0, 10);
+                                    ;//当前时间
+                                    String NextMonth = VeDate.getFirstDayOfNextMonth(now, "yyyy-MM-dd") + " 00:00:01";
                                     findFMap.put("Time", NextMonth);
                                     Integer NextFlag = yzCardFlowMapper.findBaseFlow(findFMap);//查询 下月 是否有未到期的基础包
-                                    if(NextFlag!=null && NextFlag>0){
+                                    if (NextFlag != null && NextFlag > 0) {
                                         Rmap.put("Message", "重复预购！");
                                         return Rmap;
                                     }
                                 }
-                            }else if(packet_type.equals("0")){//叠加包 不允许 预购
+                            } else if (packet_type.equals("0")) {//叠加包 不允许 预购
                                 Rmap.put("Message", "叠加资费，不能预购 ！");
                                 return Rmap;
                             }
 
                         }
-
-
-
 
 
                         //判断是否限制加包
@@ -431,7 +425,7 @@ public class WeixinPacketImpl implements IWeixinPacket {
                 Map<String, Object> OrderMap = new HashMap<>();
 
                 String validate_type = cardPacket.get("wxValidType").toString();//生效类型 默认=设置时生效类型
-                if(monthType.equals("next")){//资费预购 点击进来的
+                if (monthType.equals("next")) {//资费预购 点击进来的
                     if (packet_type.equals("0")) {//基础仅一次 改为 下月生效
                         if (base_packet_type != null && base_packet_type.equals("0")) {
                             validate_type = "2";
@@ -577,8 +571,8 @@ public class WeixinPacketImpl implements IWeixinPacket {
              * 系统内部业务，修改订单状态之类的
              */
             Map<String, Object> FindOrderMap = new HashMap<>();
-            FindOrderMap.put("ord_no",ordNo);
-            Map<String, Object>  order = yzOrderMapper.getOrderBriefly(FindOrderMap);
+            FindOrderMap.put("ord_no", ordNo);
+            Map<String, Object> order = yzOrderMapper.getOrderBriefly(FindOrderMap);
             int ordType = Integer.parseInt(order.get("ord_type").toString());
             String iccid = order.get("iccid").toString();
             String id = order.get("id").toString();
@@ -603,46 +597,46 @@ public class WeixinPacketImpl implements IWeixinPacket {
                     case 2://加包
                         //修改支付状态为 1.支付成功 赋值 微信订单号  2.生产加包任务指令发送
                         Map<String, Object> UpdMap = new HashMap<>();
-                        UpdMap.put("id",id);
-                        UpdMap.put("wx_ord_no",wxOrdNo);
-                        UpdMap.put("status","1");// 支付成功
+                        UpdMap.put("id", id);
+                        UpdMap.put("wx_ord_no", wxOrdNo);
+                        UpdMap.put("status", "1");// 支付成功
                         int count = yzOrderMapper.updStatus(UpdMap);
                         if (count > 0) {
-                            Map<String,Object> findAddPackage_Map = new HashMap<>();
-                            findAddPackage_Map.put("ordFId",id);
-                            List<Map<String,Object>> AddPackageArr = yzOrderMapper.findAddPackage(findAddPackage_Map);
-                            if(AddPackageArr!=null && AddPackageArr.size()>0){
-                                if(AddPackageArr.size()!=1){
-                                    System.out.println("----WXweb回调 查询到多条订单--【"+findAddPackage_Map.toString()+"】--"+AddPackageArr.size());
+                            Map<String, Object> findAddPackage_Map = new HashMap<>();
+                            findAddPackage_Map.put("ordFId", id);
+                            List<Map<String, Object>> AddPackageArr = yzOrderMapper.findAddPackage(findAddPackage_Map);
+                            if (AddPackageArr != null && AddPackageArr.size() > 0) {
+                                if (AddPackageArr.size() != 1) {
+                                    System.out.println("----WXweb回调 查询到多条订单--【" + findAddPackage_Map.toString() + "】--" + AddPackageArr.size());
                                 }
-                                Map<String,Object> AddPackage = AddPackageArr.get(0);
+                                Map<String, Object> AddPackage = AddPackageArr.get(0);
 
                                 //生产任务
                                 try {
                                     //设置任务 路由器 名称 与队列 名称
-                                    rabbitMQConfig.creatExchangeQueue(addPackage_exchangeName, addPackage_queueName, addPackage_routingKey, addPackage_del_exchangeName, addPackage_del_queueName, addPackage_del_routingKey,null);
+                                    rabbitMQConfig.creatExchangeQueue(addPackage_exchangeName, addPackage_queueName, addPackage_routingKey, addPackage_del_exchangeName, addPackage_del_queueName, addPackage_del_routingKey, null);
                                     rabbitTemplate.convertAndSend(addPackage_exchangeName, addPackage_routingKey, JSON.toJSONString(AddPackage), message -> {
                                         // 设置消息过期时间 60 分钟 过期
                                         message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
                                         return message;
                                     });
                                 } catch (Exception e) {
-                                    System.out.println("----WXweb回调 发送加包指令异常--"+e.getMessage());
+                                    System.out.println("----WXweb回调 发送加包指令异常--" + e.getMessage());
                                 }
                             }
 
                             //3.生产 订单生产后开机开网 诊断 功能 等 到 卡诊断修复 队列 （）
                             String card_exchangeName = "admin_card_exchange", card_queueName = "admin_CardDiagnosis_queue", card_routingKey = "admin.CardDiagnosis.queue",
-                                    card_del_exchangeName = "dlx_"+card_exchangeName,card_del_queueName = "dlx_"+card_queueName, card_del_routingKey = "dlx_"+card_routingKey;
+                                    card_del_exchangeName = "dlx_" + card_exchangeName, card_del_queueName = "dlx_" + card_queueName, card_del_routingKey = "dlx_" + card_routingKey;
                             try {
-                                rabbitMQConfig.creatExchangeQueue(card_exchangeName, card_queueName, card_routingKey, card_del_exchangeName, card_del_queueName, card_del_routingKey,null);
-                                Map<String,Object> CardDiagnosisMap = new HashMap<>();
-                                List<String> operationArr = new  ArrayList<String>();
+                                rabbitMQConfig.creatExchangeQueue(card_exchangeName, card_queueName, card_routingKey, card_del_exchangeName, card_del_queueName, card_del_routingKey, null);
+                                Map<String, Object> CardDiagnosisMap = new HashMap<>();
+                                List<String> operationArr = new ArrayList<String>();
                                 operationArr.add("PowerOn");//开机
                                 operationArr.add("OpenNetwork");//开网
-                                CardDiagnosisMap.put("optionType",operationArr);
-                                CardDiagnosisMap.put("iccid",iccid);
-                                CardDiagnosisMap.put("status_id",iccid);
+                                CardDiagnosisMap.put("optionType", operationArr);
+                                CardDiagnosisMap.put("iccid", iccid);
+                                CardDiagnosisMap.put("status_id", iccid);
 
 
                                 rabbitTemplate.convertAndSend(card_exchangeName, card_routingKey, JSON.toJSONString(CardDiagnosisMap), message -> {
@@ -658,19 +652,19 @@ public class WeixinPacketImpl implements IWeixinPacket {
                         break;
                     case 3://商品购买
                         Map<String, Object> UpdMap_1 = new HashMap<>();
-                        UpdMap_1.put("id",id);
-                        UpdMap_1.put("wx_ord_no",wxOrdNo);
-                        UpdMap_1.put("status","1");// 支付成功
+                        UpdMap_1.put("id", id);
+                        UpdMap_1.put("wx_ord_no", wxOrdNo);
+                        UpdMap_1.put("status", "1");// 支付成功
                         int count_1 = yzOrderMapper.updStatus(UpdMap_1);
                         if (count_1 > 0) {
                             //1.生产 购买后邮件抄送 队列 （）
                             String card_exchangeName = "admin_CC_exchange", card_queueName = "admin_ShoppingEmail_queue", card_routingKey = "admin.ShoppingEmail.queue",
-                                    card_del_exchangeName = "dlx_"+card_exchangeName,card_del_queueName = "dlx_"+card_queueName, card_del_routingKey = "dlx_"+card_routingKey;
+                                    card_del_exchangeName = "dlx_" + card_exchangeName, card_del_queueName = "dlx_" + card_queueName, card_del_routingKey = "dlx_" + card_routingKey;
                             try {
-                                rabbitMQConfig.creatExchangeQueue(card_exchangeName, card_queueName, card_routingKey, card_del_exchangeName, card_del_queueName, card_del_routingKey,null);
-                                Map<String,Object> CCShoppingEmailMap = new HashMap<>();
-                                CCShoppingEmailMap.put("id",id);
-                                CCShoppingEmailMap.put("ord_no",ordNo);
+                                rabbitMQConfig.creatExchangeQueue(card_exchangeName, card_queueName, card_routingKey, card_del_exchangeName, card_del_queueName, card_del_routingKey, null);
+                                Map<String, Object> CCShoppingEmailMap = new HashMap<>();
+                                CCShoppingEmailMap.put("id", id);
+                                CCShoppingEmailMap.put("ord_no", ordNo);
                                 rabbitTemplate.convertAndSend(card_exchangeName, card_routingKey, JSON.toJSONString(CCShoppingEmailMap), message -> {
                                     // 设置消息过期时间 30 分钟 过期
                                     message.getMessageProperties().setExpiration("" + (30 * 1000 * 60));
@@ -708,9 +702,9 @@ public class WeixinPacketImpl implements IWeixinPacket {
         Rmap.put("code", "500");
         Map<String, Object> IccidMap = yzCardServiceImpl.findIccid(Pmap);
         if (IccidMap != null && IccidMap.get("iccid") != null && IccidMap.get("iccid").toString().length() > 0) {
-            if(IccidMap.get("del_flag")!=null){
+            if (IccidMap.get("del_flag") != null) {
                 String xk_status = IccidMap.get("del_flag").toString();
-                if(xk_status.equals("1")){
+                if (xk_status.equals("1")) {
                     Rmap.put("Message", "绑定卡号系统未找到！");
                     return Rmap;
                 }
@@ -720,81 +714,81 @@ public class WeixinPacketImpl implements IWeixinPacket {
             String iccid = IccidMap.get("iccid").toString();
             //查询当前卡号是否已经绑定，若绑定了同一个公众号，则可以无限次绑定
             //若在已经绑定公众号的同时，想绑定另一个公众号，不允许
-            Map<String,Object> findMap = new HashMap<>();
-            findMap.put("iccid",iccid);
-            findMap.put("openid",openid);
-            Map<String,Object> wxUser =  yzWeChatUserImpl.find(findMap);
-            Object bindAppid=null;
-            if(wxUser!=null){
-                bindAppid=wxUser.get("app_id");
-                if(bindAppid!=null){
-                    if(!appId.equals(bindAppid)){
+            Map<String, Object> findMap = new HashMap<>();
+            findMap.put("iccid", iccid);
+            findMap.put("openid", openid);
+            Map<String, Object> wxUser = yzWeChatUserImpl.find(findMap);
+            Object bindAppid = null;
+            if (wxUser != null) {
+                bindAppid = wxUser.get("app_id");
+                if (bindAppid != null) {
+                    if (!appId.equals(bindAppid)) {
                         Rmap.put("Message", "当前卡号已经绑定过公众号！");
                         return Rmap;
                     }
                 }
-            }else{
+            } else {
                 // 获取微信用户基本信息
-                Map<String,Object> ins = new HashMap<>();
+                Map<String, Object> ins = new HashMap<>();
                 try {
                     WxMpService wxMpService = yzWxConfigInit.wxMpService().switchoverTo(appId);
                     WxMpUser userWxInfo = wxMpService.getUserService().userInfo(openid, null);
                     if (userWxInfo != null) {
-                        ins.put("country",userWxInfo.getCountry());
-                        ins.put("province",userWxInfo.getProvince());
-                        ins.put("city",userWxInfo.getCity());
-                        ins.put("head_image",userWxInfo.getHeadImgUrl());
-                        ins.put("city",userWxInfo.getSex());
-                        ins.put("user_name",userWxInfo.getNickname());
+                        ins.put("country", userWxInfo.getCountry());
+                        ins.put("province", userWxInfo.getProvince());
+                        ins.put("city", userWxInfo.getCity());
+                        ins.put("head_image", userWxInfo.getHeadImgUrl());
+                        ins.put("city", userWxInfo.getSex());
+                        ins.put("user_name", userWxInfo.getNickname());
                     }
                 } catch (Exception e) {
-                    System.out.println("获取iccid绑定的微信信息异常："+e.getMessage());
+                    System.out.println("获取iccid绑定的微信信息异常：" + e.getMessage());
                 }
-                ins.put("status",1);
-                ins.put("iccid",iccid);
-                ins.put("app_id",appId);
-                ins.put("openid",openid);
-                ins.put("bind_status",1);
+                ins.put("status", 1);
+                ins.put("iccid", iccid);
+                ins.put("app_id", appId);
+                ins.put("openid", openid);
+                ins.put("bind_status", 1);
                 yzWeChatUserImpl.save(ins);
             }
-            Map<String,Object> rmap=new HashMap<>();
-            rmap.put("iccid",iccid);
-            rmap.put("appId",appId);
+            Map<String, Object> rmap = new HashMap<>();
+            rmap.put("iccid", iccid);
+            rmap.put("appId", appId);
             //rmap.put("paySign",paySign);
             //微信公众号缓存token
-            String webToken =openid+"-_yunzeweb_-"+tokenProcess.makeToken();
-            redisUtilYz.setKey(openid+"-yzAuth-web-token",webToken);
-            rmap.put("webToken",webToken);
+            String webToken = openid + "-_yunzeweb_-" + tokenProcess.makeToken();
+            redisUtilYz.setKey(openid + "-yzAuth-web-token", webToken);
+            rmap.put("webToken", webToken);
             //查找对应的openid，添加iccid，更改状态为1
-            Map<String,Object> Updmap = new HashMap<>();
-            Updmap.put("iccid",iccid);
-            Updmap.put("bind_status",1);
-            Updmap.put("openid",openid);
-            if(yzWeChatUserImpl.upd(Updmap)>0){
+            Map<String, Object> Updmap = new HashMap<>();
+            Updmap.put("iccid", iccid);
+            Updmap.put("bind_status", 1);
+            Updmap.put("openid", openid);
+            if (yzWeChatUserImpl.upd(Updmap) > 0) {
                 try {
-                    Object obj = redisUtilYz.redisTemplate.opsForValue().get(iccid+"_cardType");
-                    if(obj!=null){
-                        rmap.put("cardType",obj);
-                    }else{
+                    Object obj = redisUtilYz.redisTemplate.opsForValue().get(iccid + "_cardType");
+                    if (obj != null) {
+                        rmap.put("cardType", obj);
+                    } else {
                         String cd_operator_type = yzCardServiceImpl.findOperatorType(Pmap);
                         String cardType = "默认";
-                        if(cd_operator_type!=null && cd_operator_type.length()>0){
+                        if (cd_operator_type != null && cd_operator_type.length() > 0) {
                             cardType = cd_operator_type;
                         }
-                        rmap.put("cardType",cardType);
+                        rmap.put("cardType", cardType);
                         try {
-                            redisUtilYz.setExpire(iccid+"_cardType",cardType,60*5);
-                        }catch (Exception e){
-                            System.out.println(iccid+"redis存储_cardType 异常"+e.getMessage());
+                            redisUtilYz.setExpire(iccid + "_cardType", cardType, 60 * 5);
+                        } catch (Exception e) {
+                            System.out.println(iccid + "redis存储_cardType 异常" + e.getMessage());
                         }
                     }
-                }catch (Exception e){
+                } catch (Exception e) {
                     System.out.println("获取 cardType  异常");
                 }
                 Rmap.put("Data", rmap);
                 Rmap.put("code", "200");
                 Rmap.put("Message", "操作成功！");
-            }else{
+            } else {
                 Rmap.put("Message", "绑定失败，请联系反馈客服！");
             }
         } else {
@@ -811,17 +805,17 @@ public class WeixinPacketImpl implements IWeixinPacket {
         Map<String, Object> IccidMap = yzCardServiceImpl.findIccid(Pmap);
         Map<String, Object> cardPacket = null;//
         if (IccidMap.get("iccid") != null && IccidMap.get("iccid").toString().length() > 0) {
-            Map<String,Object> Updmap = new HashMap<>();
-            Updmap.put("iccid","");
-            Updmap.put("bind_status",0);
-            Updmap.put("openid",Pmap.get("openid"));
+            Map<String, Object> Updmap = new HashMap<>();
+            Updmap.put("iccid", "");
+            Updmap.put("bind_status", 0);
+            Updmap.put("openid", Pmap.get("openid"));
             try {
-                if(yzWeChatUserImpl.upd(Updmap)>0){
+                if (yzWeChatUserImpl.upd(Updmap) > 0) {
                     Rmap.put("code", "200");
                     Rmap.put("Message", "解绑成功！");
                 }
             } catch (Exception e) {
-                Rmap.put("Message", "解绑异常！"+ e.getMessage());
+                Rmap.put("Message", "解绑异常！" + e.getMessage());
             }
         } else {
             Rmap.put("code", "500");
@@ -833,30 +827,30 @@ public class WeixinPacketImpl implements IWeixinPacket {
     @Override
     public Map<String, Object> goWebIndex(Map<String, Object> Pmap) {
         Map<String, Object> Rmap = new HashMap<>();
-        Map<String,Object> map=new HashMap<>();
+        Map<String, Object> map = new HashMap<>();
         Rmap.put("code", "500");
         Map<String, Object> IccidMap = yzCardServiceImpl.findIccid(Pmap);
         Map<String, Object> cardPacket = null;//
         if (IccidMap.get("iccid") != null && IccidMap.get("iccid").toString().length() > 0) {
-            if(IccidMap.get("del_flag")!=null){
+            if (IccidMap.get("del_flag") != null) {
                 String xk_status = IccidMap.get("del_flag").toString();
-                if(xk_status.equals("1")){
+                if (xk_status.equals("1")) {
                     Rmap.put("Message", "绑定卡号系统未找到！");
                     return Rmap;
                 }
             }
             String iccid = IccidMap.get("iccid").toString();
-            map.put("iccid",iccid);
+            map.put("iccid", iccid);
             String cd_operator_type = yzCardServiceImpl.findOperatorType(map);
             String cardType = "默认";
-            if(cd_operator_type!=null && cd_operator_type.length()>0){
+            if (cd_operator_type != null && cd_operator_type.length() > 0) {
                 cardType = cd_operator_type;
             }
-            map.put("cardType",cardType);
+            map.put("cardType", cardType);
             try {
-                redisUtilYz.setExpire(iccid+"_cardType",cardType,60*5);
-            }catch (Exception e){
-                System.out.println(iccid+"redis存储_cardType 异常"+e.getMessage());
+                redisUtilYz.setExpire(iccid + "_cardType", cardType, 60 * 5);
+            } catch (Exception e) {
+                System.out.println(iccid + "redis存储_cardType 异常" + e.getMessage());
             }
             Rmap.put("code", "200");
             Rmap.put("Data", map);
@@ -871,36 +865,34 @@ public class WeixinPacketImpl implements IWeixinPacket {
     @Override
     public Map<String, Object> checkBind(Map<String, Object> Pmap) {
         Map<String, Object> Rmap = new HashMap<>();
-        Map<String,Object> map=new HashMap<>();
+        Map<String, Object> map = new HashMap<>();
         Rmap.put("code", "200");
         Rmap.put("Data", null);
         Rmap.put("Message", "操作成功！");
         try {
             Map<String, Object> wxUser = yzWeChatUserMapper.findBindtatus(Pmap);
-            if(null==wxUser){
+            if (null == wxUser) {
                 return Rmap;
             }
             String iccid = wxUser.get("iccid").toString();
             int bindStatus = Integer.parseInt(wxUser.get("bind_status").toString());
-            if(com.yunze.business.util.CheckIsNull.isNull(iccid) ||bindStatus!=1){
+            if (com.yunze.business.util.CheckIsNull.isNull(iccid) || bindStatus != 1) {
                 return Rmap;
-            }else{
-                map.put("iccid",iccid);
-                map.put("bindStatus",bindStatus);
+            } else {
+                map.put("iccid", iccid);
+                map.put("bindStatus", bindStatus);
                 Rmap.put("Data", map);
             }
-        }catch (Exception e){
-            Rmap.put("Message", "操作异常 "+e.getMessage());
+        } catch (Exception e) {
+            Rmap.put("Message", "操作异常 " + e.getMessage());
         }
         return Rmap;
     }
 
-
-
     @Override
     public Map<String, Object> getDictionary(Map<String, Object> Pmap) {
         Map<String, Object> Rmap = new HashMap<>();
-        Map<String,Object> map=new HashMap<>();
+        Map<String, Object> map = new HashMap<>();
         Rmap.put("code", "200");
         Rmap.put("Message", "操作成功！");
         String dict_type = Pmap.get("dict_type").toString();
@@ -916,7 +908,7 @@ public class WeixinPacketImpl implements IWeixinPacket {
             } else {
                 dict_dataArr = yzCardMapper.findDict(Pmap);
             }
-            Rmap.put("Data",dict_dataArr);
+            Rmap.put("Data", dict_dataArr);
         } catch (Exception e) {
             System.out.println("{getDictionary 异常}" + e.getMessage());
         }
@@ -926,26 +918,25 @@ public class WeixinPacketImpl implements IWeixinPacket {
     @Override
     public Map<String, Object> getOrderFlow(Map<String, Object> Pmap) {
         Map<String, Object> Rmap = new HashMap<>();
-        Map<String,Object> map=new HashMap<>();
+        Map<String, Object> map = new HashMap<>();
         Rmap.put("code", "500");
         Map<String, Object> IccidMap = yzCardServiceImpl.findIccid(Pmap);
         Map<String, Object> cardPacket = null;//
         if (IccidMap.get("iccid") != null && IccidMap.get("iccid").toString().length() > 0) {
             String iccid = IccidMap.get("iccid").toString();
             try {
-                Pmap.put("iccid",iccid);
+                Pmap.put("iccid", iccid);
                 Rmap.put("Data", yzCardFlowMapper.webFindFlow(Pmap));
                 Rmap.put("code", "200");
-            }catch (Exception e){
-                Rmap.put("Message", "操作异常 "+e.getMessage());
+            } catch (Exception e) {
+                Rmap.put("Message", "操作异常 " + e.getMessage());
             }
-        }else {
+        } else {
             Rmap.put("code", "500");
             Rmap.put("Message", "未找到号码！操作取消！");
         }
         return Rmap;
     }
-
 
     /**
      * 同步用量
@@ -988,6 +979,79 @@ public class WeixinPacketImpl implements IWeixinPacket {
         return null;
     }
 
+    public String synCardStatus(String iccid, Map<String, Object> find_card_route_map) {
+        try {
+            if (!StringUtils.isEmpty(iccid)) {
+                Map<String, Object> Parammap = new HashMap<>();
+                Parammap.put("iccid", iccid);
+                Map<String, Object> StateRmap = internalApiRequest.queryCardStatus(Parammap, find_card_route_map);//同步状态
+                String code = StateRmap.get("code") != null ? StateRmap.get("code").toString() : "500";
+                if (code.equals("200")) {
+                    //获取 卡状态
+                    if (StateRmap.get("statusCode") != null && StateRmap.get("statusCode") != "" && StateRmap.get("statusCode").toString().trim().length() > 0) {
+                        String statusCode = StateRmap.get("statusCode").toString().trim();
+                        if (!statusCode.equals("0")) {
+                            Map<String, Object> Upd_Map = new HashMap<>();
+                            String status_ShowId = getShowStatId(statusCode);
+                            Upd_Map.put("status_id", statusCode);
+                            Upd_Map.put("status_ShowId", status_ShowId);
+                            Upd_Map.put("iccid", iccid);
+                            try {
+                                boolean bool = yzCardMapper.updStatusId(Upd_Map) > 0;//变更卡状态
+                                if (bool) {
+                                    log.info("已成功同步卡状态！");
+                                    return status_ShowId;
+                                } else {
+                                    log.error("保存状态异常:False！");
+                                }
+                            } catch (Exception e) {
+                                log.error("DB保存状态异常！e:{} " + e.getMessage());
+                            }
+                        } else {
+                            log.error("接口超频返回暂无数据返回，请稍后重试！");
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println(">>错误 - web 卡状态同步失败<<" + e.getMessage());
+        }
+        return null;
+    }
+
+    public String getShowStatId(String status_id) {
+        //卡状态描述 转换 卡状态
+        String status_ShowId = "8";
+        if (status_id.equals("13") || status_id.equals("14") || status_id.equals("22") || status_id.equals("19")) {
+            status_ShowId = "1";
+        }
+        if (status_id.equals("17")) {
+            status_ShowId = "2";
+        }
+        if (status_id.equals("9") || status_id.equals("7") || status_id.equals("15")) {
+            status_ShowId = "3";
+        }
+        if (status_id.equals("1")) {
+            status_ShowId = "4";
+        }
+        if (status_id.equals("3") || status_id.equals("2") || status_id.equals("10") || status_id.equals("11") ||
+                status_id.equals("20") || status_id.equals("30") || status_id.equals("31") || status_id.equals("32") ||
+                status_id.equals("21") || status_id.equals("27") || status_id.equals("33") || status_id.equals("12")) {
+            status_ShowId = "5";
+        }
+        if (status_id.equals("4")) {
+            status_ShowId = "6";
+        }
+        if (status_id.equals("16") || status_id.equals("23") || status_id.equals("24") || status_id.equals("5") ||
+                status_id.equals("6") || status_id.equals("28") || status_id.equals("26") || status_id.equals("18") ||
+                status_id.equals("25")) {
+            status_ShowId = "7";
+        }
+        if (status_id.equals("8") || status_id.equals("29")) {
+            status_ShowId = "8";
+        }
+        return status_ShowId;
+    }
 
     /**
      * 获取字典数据
@@ -1029,13 +1093,6 @@ public class WeixinPacketImpl implements IWeixinPacket {
         return dict_label;
     }
 
-
-
-
-
-
-
-
     /**
      * 获取list map 对应数据
      *
@@ -1059,14 +1116,12 @@ public class WeixinPacketImpl implements IWeixinPacket {
         return null;
     }
 
-
     /**
      * 描述： 1元钱转为 100分
      */
     private int yuanToFee(BigDecimal bigDecimal) {
         return bigDecimal.multiply(new BigDecimal(100)).intValue();
     }
-
 
     /**
      * 描述： 获取当前appid的微信回调URL
@@ -1080,15 +1135,12 @@ public class WeixinPacketImpl implements IWeixinPacket {
         return yzWxConfigMapper.find(map);
     }
 
-
     /**
      * 描述： 时间戳
      */
     private String createTimestamp() {
         return Long.toString(System.currentTimeMillis() / 1000);
     }
-
-
 
 
 
