@@ -247,8 +247,9 @@ public class ApiUtil_NoStatic {
                     if (codeOn.equals("0000")) {
                         Map<String, Object> Data = ((List<Map<String, Object>>) JsonData.get("terminals")).get(0);
                         Use = Double.parseDouble(Data.get("monthToDateUsage").toString());
+                    } else {
+                        Use = 0.00;
                     }
-                    Use = 0.00;
                     //根据联通接口26账单日数据封装自然月
                     //Use = Use - queryHisFlowSys(iccid);
                 } else if (cd_code.equals("YiDong_EC") || cd_code.equals("YiDong_EC_TOKE_ShuoLang") || cd_code.equals("YiDong_EC_TengYu") || cd_code.equals("YiDong_EC_Combo") || cd_code.equals("ECV5_token_MW")) {
@@ -521,7 +522,6 @@ public class ApiUtil_NoStatic {
     }
 
     /**
-     *
      * @param map
      * @return
      */
