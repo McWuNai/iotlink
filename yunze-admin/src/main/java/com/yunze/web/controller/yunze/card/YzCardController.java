@@ -364,7 +364,7 @@ public class YzCardController extends MyBaseController {
                             Double Use = Double.parseDouble(Rmap.get("Use").toString());
                             if (Use >= 0) {
                                 try {
-                                    Map<String, Object> RMap = cardFlowSyn.CalculationFlow(Parammap.get("iccid").toString(), Use);
+                                    Map<String, Object> RMap = cardFlowSyn.CalculationFlow(Parammap.get("iccid").toString(), Use, Route);
                                     return MyRetunSuccess(RMap, "已成功同步用量！");
                                 } catch (Exception e) {
                                     return Myerr("用量内部计算错误！" + e.getMessage().toString());

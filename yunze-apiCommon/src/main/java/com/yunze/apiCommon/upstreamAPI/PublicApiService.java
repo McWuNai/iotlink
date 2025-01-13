@@ -32,14 +32,11 @@ import com.yunze.apiCommon.utils.VeDate;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 @Component
 public class PublicApiService {
 
@@ -53,6 +50,8 @@ public class PublicApiService {
     @Lazy
     @Resource
     private DxDcpUtil dxDcpUtil;
+    @Resource
+    private PublicApiService publicApiService;
 
     /**
      * 内部API 调用
@@ -62,6 +61,9 @@ public class PublicApiService {
      * @return
      */
     public Map<String, Object> insideApi(Map<String, Object> Param, String function_name, Map<String, Object> find_card_route_map) {
+        return publicApiService.inside(Param, function_name, find_card_route_map);
+    }
+    public Map<String, Object> inside(Map<String, Object> Param, String function_name, Map<String, Object> find_card_route_map) {
         Map<String, Object> Rmap = new HashMap<>();
         String code = "200";
         String msg = "操作成功！";
@@ -69,12 +71,15 @@ public class PublicApiService {
         try {
             data = CPU(Param, function_name, find_card_route_map);
         } catch (Exception e) {
+            code = "500";
+            msg = "上游接口异常！";
             System.out.println("= insideApi [" + function_name + "]==");
             System.out.println(e.getMessage());
             System.out.println(JSON.toJSONString(Param));
             System.out.println(JSON.toJSONString(find_card_route_map));
-            code = "500";
-            msg = "上游接口异常！";
+            if (!e.toString().contains("429")) {
+                throw e;
+            }
         }
         Rmap.put("code", code);
         Rmap.put("msg", msg);
@@ -573,7 +578,11 @@ public class PublicApiService {
                 if (function_name.equals("queryFlow") || function_name.equals("queryCardActiveTime")) {
                     //实例化 联通 CMP 查询 类
                     Query_LT Qy = new Query_LT(find_card_route_map);
-                    rmap.put("Data", Qy.queryFlow(iccid));
+                    try {
+                        rmap.put("Data", Qy.queryFlow(iccid));
+                    } catch (Exception e) {
+                        if (!e.toString().contains("429")) throw new RuntimeException(e.getMessage());
+                    }
                 } else if (function_name.equals("queryFlowHis")) {
                     //实例化 联通 CMP 查询 类
                     Query_LT Qy = new Query_LT(find_card_route_map);
@@ -598,7 +607,12 @@ public class PublicApiService {
                     if (operType != null || map.get("unbind") != null) {
                         String type = null;
                         Query_LT Qy = new Query_LT(find_card_route_map);
-                        Map<String, Object> Obj = ((List<Map<String, Object>>) Qy.queryFlow(iccid).get("terminals")).get(0);
+                        Map<String, Object> Obj = null;
+                        try {
+                            Obj = ((List<Map<String, Object>>) Qy.queryFlow(iccid).get("terminals")).get(0);
+                        } catch (Exception e) {
+                            if (!e.getMessage().contains("429")) throw new RuntimeException(e.getMessage());
+                        }
                         int StatusCd = Integer.parseInt(Obj.get("simStatus").toString()); //当前卡状态码
 
                         if (operType == null) {

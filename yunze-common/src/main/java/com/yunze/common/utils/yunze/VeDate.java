@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 
@@ -130,9 +131,92 @@ public class VeDate {
   String dateString = formatter.format(currentTime);
   return dateString;
  }
+ /**
+  * 获取昨天时间
+  *
+  * @return 返回短时间字符串格式yyyy-MM-dd
+  */
+ public static String getStringDateShortYesterday() {
+  // 获取昨天的日期
+  LocalDate yesterday = LocalDate.now().minusDays(1);
+  // 定义格式
+  DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+  // 格式化日期
+  return yesterday.format(formatter);
+ }
+ /**
+  * 获取昨天日期集合
+  * @return
+  */
+ public static String[] getYyyyAndMmShortYesterday(){
+  return getStringDateShortYesterday().split("-");
+ }
+ /**
+  * 计算上个月27号到最后一天的天数
+  *
+  * @return 返回计算完毕的差值天数
+  */
+ public static int getStringDateShortStart() {
+  // 获取当前日期
+  LocalDate currentDate = LocalDate.now();
+  //获取到上个月26号
+  LocalDate lastMonth26th = currentDate.withDayOfMonth(1).minusMonths(1).withDayOfMonth(26);
+  //计算差值天数
+  return (int) ChronoUnit.DAYS.between(lastMonth26th,getStringDateShortEnd());
+ }
 
+ /**
+  * 获取上个月最后一天
+  *
+  * @return 返回上个月最后一天
+  */
+ public static LocalDate getStringDateShortEnd() {
+  // 获取当前日期
+  LocalDate currentDate = LocalDate.now();
+  //获取到上个月最后一天
+  return currentDate.minusMonths(1).with(TemporalAdjusters.lastDayOfMonth());
+ }
+ /**
+  * 获取上个月最后一天日期集合
+  * @return
+  */
+ public static String[] getYyyyAndMmShortEnd(){
+  LocalDate data=getStringDateShortEnd();
+  DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+  return data.format(formatter).split("-");
+ }
+ /**
+  * 自动根据账期获取27号
+  *
+  * @return 返回短时间字符串格式yyyy-MM-dd
+  */
+ public static String getStringDateShortCycle() {
+  // 获取当前日期
+  LocalDate currentDate = LocalDate.now();
+  // 定义格式
+  DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
+  int currentDayOfMonth = currentDate.getDayOfMonth();
 
+  // 检查当前日期是否小于等于26号
+  if (currentDayOfMonth <= 26) {
+   // 如果是，则获取上个月26号的日期
+   LocalDate lastMonth26th = currentDate.withDayOfMonth(1).minusMonths(1).withDayOfMonth(26);
+   return lastMonth26th.format(formatter);
+  } else {
+   // 否则，获取本月26号的日期
+   LocalDate thisMonth26th = currentDate.withDayOfMonth(26);
+   return thisMonth26th.format(formatter);
+  }
+ }
+ /**
+  * 获取账期年月集合
+  * @return
+  */
+ public static String[] getYyyyAndMmCycle(){
+  String data=getStringDateShortCycle();
+  return data.split("-");
+ }
  /**
   * 获取现在时间
   *
@@ -141,8 +225,7 @@ public class VeDate {
  public static String getStringDateShort() {
   Date currentTime = new Date();
   SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
-  String dateString = formatter.format(currentTime);
-  return dateString;
+  return formatter.format(currentTime);
  }
  /**
   * 获取当前年月集合

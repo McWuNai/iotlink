@@ -281,7 +281,7 @@ public class PublicFlowState {
                                         Double Use = Double.parseDouble(FlowRmap.get("Use").toString());
                                         if (Use >= 0) {
                                             try {
-                                                Map<String, Object> FlowSynRmap = cardFlowSyn.CalculationFlow(Obj.get("iccid").toString(), Use);
+                                                Map<String, Object> FlowSynRmap = cardFlowSyn.CalculationFlow(Obj.get("iccid").toString(), Use, findRouteArr.get(i));
                                                 boolean bool_info = (boolean) FlowSynRmap.get("bool_info");
                                                 if (bool_info) { //为true成功
                                                     used = FlowSynRmap.get("used").toString();

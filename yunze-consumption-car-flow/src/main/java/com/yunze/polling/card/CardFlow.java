@@ -3,6 +3,7 @@ package com.yunze.polling.card;
 import com.alibaba.fastjson.JSON;
 import com.rabbitmq.client.Channel;
 import com.yunze.apiCommon.utils.InternalApiRequest;
+import com.yunze.apiCommon.utils.RateLimiterUtil;
 import com.yunze.common.core.redis.RedisCache;
 import com.yunze.common.utils.yunze.CardFlowSyn;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +33,8 @@ public class CardFlow {
     @Resource
     private CardFlowSyn cardFlowSyn;
 
-
+    @Resource
+    RateLimiterUtil rateLimiterUtil;
 
 
 
@@ -119,7 +121,7 @@ public class CardFlow {
                         Double Use = Double.parseDouble(Rmap.get("Use").toString());
                         if (Use >= 0) {
                             try {
-                                Map<String, Object> RMap = cardFlowSyn.CalculationFlow(iccid, Use);
+                                Map<String, Object> RMap = cardFlowSyn.CalculationFlow(iccid, Use, map);
                                 log.info(">>cardFlowSyn - 卡用量轮询消费者 同步卡用量返回:{} | {} | {} | {} <<", polling_id, iccid, JSON.toJSON(RMap), JSON.toJSON(Rmap));
                             } catch (Exception e) {
                                 log.error(">>cardFlowSyn - 卡用量轮询消费者 同步卡用量失败:{} | {} | {}  | {}<<", polling_id, iccid, JSON.toJSON(Rmap) , e.getMessage().toString());

@@ -2,6 +2,7 @@ package com.yunze.task.yunze.polling;
 
 import com.alibaba.fastjson.JSON;
 import com.yunze.apiCommon.mapper.YzCardRouteMapper;
+import com.yunze.apiCommon.utils.RateLimiterUtil;
 import com.yunze.apiCommon.utils.VeDate;
 import com.yunze.common.config.RabbitMQConfig;
 import com.yunze.common.mapper.yunze.YzCardMapper;
@@ -12,11 +13,8 @@ import org.springframework.amqp.rabbit.annotation.RabbitHandler;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
-
 import javax.annotation.Resource;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Slf4j
 @Component
@@ -66,12 +64,11 @@ public class CardFlowTaskMQ {
 
         List<Map<String, Object>> channelArr = yzCardRouteMapper.findRouteID(findRouteID_Map);
         if (channelArr != null && channelArr.size() > 0) {
-            String CardFlow_routingKey = "";
+            final String CardFlow_routingKey = "polling.cardCardFlow.routingKey";
             try {
                 //设置任务 路由器 名称 与队列 名称
                 ad_exchangeName = "polling_cardCardFlow_exchange";
                 ad_queueName = "polling_cardCardFlow_queue";
-                CardFlow_routingKey = "polling.cardCardFlow.routingKey";
                 ad_del_exchangeName = "polling_dlxcardCardFlow_exchange";
                 ad_del_queueName = "polling_dlxcardCardFlow_queue";
                 ad_del_routingKey = "polling.dlxcardCardFlow.routingKey";
@@ -81,8 +78,84 @@ public class CardFlowTaskMQ {
             }
 
             //2.获取 通道下卡号
-            for (int i = 0; i < channelArr.size(); i++) {
-                Map<String, Object> channel_obj = channelArr.get(i);
+            /*// 创建一个固定大小的线程池，大小可以根据你的硬件资源和需求调整
+            int threadPoolSize = Runtime.getRuntime().availableProcessors();
+            ExecutorService executor = Executors.newFixedThreadPool(threadPoolSize);
+
+            try {
+                // 提交每个通道的任务到线程池中
+                for (Map<String, Object> channel_obj : channelArr) {
+                    // 每个通道创建一个独立的RateLimiter，设置为每秒最多2个许可
+                    RateLimiter rateLimiter = RateLimiter.create(10.0); // 每秒2个token
+
+                    executor.submit(() -> {
+                        try {
+                            Map<String, Object> findMap = new HashMap<>();
+                            String cd_id = channel_obj.get("cd_id").toString();
+                            findMap.put("channel_id", cd_id);
+                            List<Map<String, Object>> cardArr = yzCardMapper.findChannelIdCar(findMap);
+
+                            if (cardArr != null && !cardArr.isEmpty()) {
+                                // 插入 通道轮询详情表
+                                Map<String, Object> pollingPublic_Map = new HashMap<>();
+                                pollingPublic_Map.put("cd_id", cd_id);
+                                pollingPublic_Map.put("cd_current", 0);
+                                String polling_id = VeDate.getNo(4);
+
+                                pollingPublic_Map.put("polling_type", "3");
+                                pollingPublic_Map.put("cd_count", cardArr.size());
+                                pollingPublic_Map.put("polling_id", polling_id);
+                                yzPassagewayPollingMapper.add(pollingPublic_Map); // 新增 轮询详情表
+
+                                // 预计算静态值
+                                String expiration = "" + (time * 1000 * 60);
+
+                                // 使用流式处理发送消息，并通过RateLimiter进行限流
+                                for (Map<String, Object> card : cardArr) {
+                                    // 等待获取一个许可（即等待足够的时间以确保不超过速率）
+                                    rateLimiter.acquire(); // 默认获取1个许可
+
+                                    Map<String, Object> Card = new HashMap<>(channel_obj);
+                                    Card.put("iccid", card.get("iccid"));
+                                    Card.put("card_no", card.get("card_no"));
+                                    Card.put("network_type", card.get("network_type"));
+                                    Card.put("polling_id", polling_id); // 轮询任务详情编号
+
+                                    String msg = JSON.toJSONString(Card);
+
+                                    // 生产任务
+                                    try {
+                                        rabbitTemplate.convertAndSend("polling_cardCardFlow_exchange", CardFlow_routingKey, msg, message -> {
+                                            message.getMessageProperties().setExpiration(expiration);
+                                            return message;
+                                        });
+                                    } catch (Exception e) {
+                                        System.out.println(e.getMessage().toString());
+                                    }
+                                }
+                            }
+                        } catch (Exception e) {
+                            System.out.println(e.getMessage().toString());
+                        }
+                    });
+                }
+
+                // 关闭线程池并等待所有任务完成
+                executor.shutdown();
+                try {
+                    if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+                        executor.shutdownNow();
+                    }
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            } finally {
+                if (!executor.isTerminated()) {
+                    executor.shutdownNow();
+                }
+            }*/
+
+            for (Map<String, Object> channel_obj : channelArr) {
                 Map<String, Object> findMap = new HashMap<>();
                 String cd_id = channel_obj.get("cd_id").toString();
                 findMap.put("channel_id", cd_id);
@@ -101,7 +174,32 @@ public class CardFlowTaskMQ {
                     yzPassagewayPollingMapper.add(pollingPublic_Map);//新增 轮询详情表
                     //2.卡状态
                     //卡号放入路由
-                    for (int j = 0; j < cardArr.size(); j++) {
+
+                    // 预计算静态值
+                    String expiration = "" + (time * 1000 * 60);
+
+                    cardArr.parallelStream()
+                            .forEach(card -> {
+                                Map<String, Object> Card = new HashMap<>(channel_obj);
+                                Card.put("iccid", card.get("iccid"));
+                                Card.put("card_no", card.get("card_no"));
+                                Card.put("network_type", card.get("network_type"));
+                                Card.put("polling_id", polling_id); // 轮询任务详情编号
+
+                                String msg = JSON.toJSONString(Card);
+
+                                // 生产任务
+                                try {
+                                    rabbitTemplate.convertAndSend("polling_cardCardFlow_exchange", CardFlow_routingKey, msg, message -> {
+                                        message.getMessageProperties().setExpiration(expiration);
+                                        return message;
+                                    });
+                                } catch (Exception e) {
+                                    System.out.println(e.getMessage());
+                                }
+                            });
+
+                    /*for (int j = 0; j < cardArr.size(); j++) {
                         Map<String, Object> card = cardArr.get(j);
                         Map<String, Object> Card = new HashMap<>();
                         Card.putAll(channel_obj);
@@ -120,7 +218,7 @@ public class CardFlowTaskMQ {
                         } catch (Exception e) {
                             System.out.println(e.getMessage().toString());
                         }
-                    }
+                    }*/
                 }
             }
         }

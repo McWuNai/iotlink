@@ -1362,7 +1362,7 @@ public class YzCardServiceImpl implements IYzCardService {
                                 Double Use = Double.parseDouble(Rmap.get("Use").toString());
                                 if (Use >= 0) {
                                     try {
-                                        cardFlowSyn.CalculationFlow(map.get("iccid").toString(), Use);
+                                        cardFlowSyn.CalculationFlow(map.get("iccid").toString(), Use, Route);
                                     } catch (Exception e) {
                                         return ("用量内部计算错误！" + e.getMessage().toString());
                                     }

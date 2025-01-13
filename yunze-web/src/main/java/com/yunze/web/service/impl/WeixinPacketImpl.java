@@ -968,8 +968,8 @@ public class WeixinPacketImpl implements IWeixinPacket {
                     Double Use = Double.parseDouble(Rmap.get("Use").toString());
                     if (Use >= 0) {
                         try {
-                            Map<String, Object> RMap = cardFlowSyn.CalculationFlow(iccid, Use);
-                            //Map<String,Object> RMap = cardFlowSyn.CalculationFlowQueue(iccid,Use);
+                            Map<String, Object> RMap = cardFlowSyn.CalculationFlow(iccid, Use,find_card_route_map);
+                            //Map<String,Object> RMap = cardFlowSyn.CalculationFlowQueue(iccid,Use,find_card_route_map);
                             return RMap;
                         } catch (Exception e) {
                             System.out.println(">>cardFlowSyn -  同步卡用量失败:{" + iccid + "} | {" + e.getMessage() + "}<<");

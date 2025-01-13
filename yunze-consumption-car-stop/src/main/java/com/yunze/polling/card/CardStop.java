@@ -107,7 +107,7 @@ public class CardStop {
                             Double Use = Double.parseDouble(Rmap.get("Use").toString());
                             if(Use>=0){
                                 try {
-                                    Map<String,Object> RMap = cardFlowSyn.CalculationFlow(iccid,Use);
+                                    Map<String,Object> RMap = cardFlowSyn.CalculationFlow(iccid,Use,map);
                                     log.info(">>cardFlowSyn - 达量停机-卡用量轮询消费者 同步卡用量返回:{} | {}<<",iccid,JSON.toJSON(RMap));
                                     Double used =  Double.parseDouble(RMap.get("used").toString());
                                     log.info(">>cardFlowSyn - {} | used {} | Max {}  | used>=Max {} <<",iccid,used,Max,used>=Max);

@@ -103,7 +103,7 @@ public class CardUsed {
 
 
     private void Syn(String iccid,Double Use) {
-        Map<String,Object> RMap = cardFlowSyn.CalculationFlow(iccid,Use);
+        Map<String,Object> RMap = cardFlowSyn.CalculationFlow(iccid,Use,null);
         log.info("RMap {}",RMap);
     }
 

@@ -25,7 +25,7 @@ public class Query_LT extends LT_CMP_Api {
      * @param
      * @return
      */
-    public static Map<String, Object> queryFlow(String iccid) {
+    public static Map<String, Object> queryFlow(String iccid) throws Exception {
 
         Map<String, Object> rmap = new HashMap<String, Object>();
         try {
@@ -53,6 +53,7 @@ public class Query_LT extends LT_CMP_Api {
             }
         } catch (Exception e) {
             e.printStackTrace();
+            if (!e.toString().contains("429")) throw new RuntimeException(e.getMessage());
         }
         return rmap;
     }

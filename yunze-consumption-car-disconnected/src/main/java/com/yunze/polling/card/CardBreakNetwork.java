@@ -82,7 +82,7 @@ public class CardBreakNetwork {
                     Double Use = Double.parseDouble(Rmap.get("Use").toString());
                     if(Use>=0){
                         try {
-                            Map<String,Object> cardFlowSynRMap = cardFlowSyn.CalculationFlow(iccid,Use);
+                            Map<String,Object> cardFlowSynRMap = cardFlowSyn.CalculationFlow(iccid,Use,map);
                             log.info(">>cardFlowSyn - 未订购资费断网轮询-卡用量轮询消费者 同步卡用量返回:{} | {}<<",iccid,JSON.toJSON(cardFlowSynRMap));
                             Double remaining =  Double.parseDouble(cardFlowSynRMap.get("remaining").toString());
                             if(remaining<=0 && remaining!=-1){
