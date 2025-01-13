@@ -16,15 +16,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			iccid = #{iccid}
 			AND `year` = #{year}
 			AND `month` = #{month}
-			AND `day` <![CDATA[ < ]]> #{day}
+			AND `day` = #{day}
 		</where>
-		ORDER BY
-			`day` DESC
-			LIMIT 1
 	</select>
 
 
-	<insert id="save" parameterType="java.util.HashMap"  >
+	<!--<insert id="save" parameterType="java.util.HashMap"  >
 		insert  into
 		yz_card_flow_his
 		(
@@ -49,10 +46,68 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			#{total_show_flow},
 			#{total_show_flow_now}
 		)
+	</insert>-->
+
+	<insert id="save" parameterType="java.util.HashMap">
+		insert into yz_card_flow_his
+		(
+		total_flow,
+		total_flow_now,
+		month,
+		year,
+		day,
+		iccid,
+		create_time,
+		total_show_flow,
+		total_show_flow_now
+		)
+		values
+		(
+		<choose>
+			<when test="total_flow != null and total_flow != ''">
+				#{total_flow}
+			</when>
+			<otherwise>
+				0.00
+			</otherwise>
+		</choose>,
+
+		<choose>
+			<when test="total_flow_now != null and total_flow_now != ''">
+				#{total_flow_now}
+			</when>
+			<otherwise>
+				0.00
+			</otherwise>
+		</choose>,
+
+		#{month},
+		#{year},
+		#{day},
+		#{iccid},
+		now(),
+
+		<choose>
+			<when test="total_show_flow != null and total_show_flow != ''">
+				#{total_show_flow}
+			</when>
+			<otherwise>
+				0.00
+			</otherwise>
+		</choose>,
+
+		<choose>
+			<when test="total_show_flow_now != null and total_show_flow_now != ''">
+				#{total_show_flow_now}
+			</when>
+			<otherwise>
+				0.00
+			</otherwise>
+		</choose>
+		)
 	</insert>
 
-
-	<update id="edit" parameterType="java.util.HashMap"  >
+	<!--<update id="edit" parameterType="java.util.HashMap"  >
 		update
 			yz_card_flow_his
 		<set>
@@ -61,6 +116,36 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			update_time = now(),
 			total_show_flow = #{total_show_flow},
 			total_show_flow_now = #{total_show_flow_now}
+		</set>
+		<where>
+			iccid = #{iccid}
+			AND `year` = #{year}
+			AND `month` = #{month}
+			AND `day` = #{day}
+		</where>
+	</update>-->
+
+	<update id="edit" parameterType="java.util.HashMap">
+		update yz_card_flow_his
+		<set>
+			<!-- 只有在 total_flow 存在且非空时才更新 -->
+			<if test="total_flow != null and total_flow != ''">
+				total_flow = #{total_flow},
+			</if>
+			<!-- 只有在 total_flow_now 存在且非空时才更新 -->
+			<if test="total_flow_now != null and total_flow_now != ''">
+				total_flow_now = #{total_flow_now},
+			</if>
+			<!-- 无论如何都会更新 update_time -->
+			update_time = now(),
+			<!-- 只有在 total_show_flow 存在且非空时才更新 -->
+			<if test="total_show_flow != null and total_show_flow != ''">
+				total_show_flow = #{total_show_flow},
+			</if>
+			<!-- 只有在 total_show_flow_now 存在且非空时才更新 -->
+			<if test="total_show_flow_now != null and total_show_flow_now != ''">
+				total_show_flow_now = #{total_show_flow_now},
+			</if>
 		</set>
 		<where>
 			iccid = #{iccid}
