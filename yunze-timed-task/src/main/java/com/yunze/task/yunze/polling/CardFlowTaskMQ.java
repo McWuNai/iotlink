@@ -13,6 +13,7 @@ import org.springframework.amqp.rabbit.annotation.RabbitHandler;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
+
 import javax.annotation.Resource;
 import java.util.*;
 
@@ -20,33 +21,27 @@ import java.util.*;
 @Component
 public class CardFlowTaskMQ {
 
+    //卡轮询 路由队列
+    String polling_queueName = "polling_card_flow";
+    String polling_routingKey = "polling.card.flow";
+    String polling_exchangeName = "polling_card";
+    //
+    String ad_exchangeName = null, ad_queueName = null, ad_routingKey = null,
+            ad_del_exchangeName = null, ad_del_queueName = null, ad_del_routingKey = null;
     @Resource
     private YzCardRouteMapper yzCardRouteMapper;
     @Resource
     private YzCardMapper yzCardMapper;
     @Resource
     private RabbitTemplate rabbitTemplate;
-
     @Resource
     private YzPassagewayPollingMapper yzPassagewayPollingMapper;
-
     @Resource
     private RabbitMQConfig rabbitMQConfig;
 
-    //卡轮询 路由队列
-    String polling_queueName = "polling_card_flow";
-    String polling_routingKey = "polling.card.flow";
-    String polling_exchangeName = "polling_card";
-
-    //
-    String ad_exchangeName = null, ad_queueName = null, ad_routingKey = null,
-            ad_del_exchangeName = null, ad_del_queueName = null, ad_del_routingKey = null;
-
-
-
     /**
      * 轮询 卡状态
-     *  time 多少 分钟 后失效
+     * time 多少 分钟 后失效
      */
     @RabbitHandler
     @RabbitListener(queues = "admin_pollingCardFlowTest_queue")
@@ -54,7 +49,7 @@ public class CardFlowTaskMQ {
         if (StringUtils.isEmpty(msg2)) {
             return;
         }
-        Map<String,Object> Pmap = JSON.parseObject(msg2);
+        Map<String, Object> Pmap = JSON.parseObject(msg2);
         Integer time = Integer.parseInt(Pmap.get("time").toString());
         //1.状态 正常 轮询开启 时 获取  每个 通道下卡号 加入队列
         Map<String, Object> findRouteID_Map = new HashMap<>();
@@ -179,6 +174,7 @@ public class CardFlowTaskMQ {
                     String expiration = "" + (time * 1000 * 60);
 
                     cardArr.parallelStream()
+                            .filter(card -> "1".equals(card.get("status_id")) || "2".equals(card.get("status_id")))
                             .forEach(card -> {
                                 Map<String, Object> Card = new HashMap<>(channel_obj);
                                 Card.put("iccid", card.get("iccid"));
