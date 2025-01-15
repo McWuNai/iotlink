@@ -1055,7 +1055,8 @@
 		SELECT
 		iccid,
 		msisdn AS card_no,
-		network_type
+		network_type,
+		status_id
 		FROM
 		yz_card_info
 		<where>
@@ -1171,7 +1172,7 @@
 			<foreach item="Arr" collection="Arr" index="Arr" open="(" separator="," close=")">
 				#{Arr.iccid}
 			</foreach>
-			and LENGTH(trim( activate_date )) <![CDATA[ < ]]> 1
+			AND (activate_date IS NULL OR trim(activate_date) = '')
 
 		</where>
 	</select>
