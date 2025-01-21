@@ -5,6 +5,7 @@ import com.rabbitmq.client.Channel;
 import com.yunze.apiCommon.utils.InternalApiRequest;
 import com.yunze.apiCommon.utils.RateLimiterUtil;
 import com.yunze.common.core.redis.RedisCache;
+import com.yunze.common.mapper.yunze.YzCardMapper;
 import com.yunze.common.utils.yunze.CardFlowSyn;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -36,8 +37,8 @@ public class CardFlow {
     @Resource
     RateLimiterUtil rateLimiterUtil;
 
-
-
+    @Resource
+    YzCardMapper yzCardMapper;
     /**
      *
      * @param msg
@@ -113,14 +114,15 @@ public class CardFlow {
 
                 Map<String, Object> Parammap = new HashMap<>();
                 Parammap.put("iccid", iccid);
-                Map<String, Object> Rmap = internalApiRequest.queryFlow(Parammap, map);
+                Map<String, Object> Rmap = internalApiRequest.autocompleteCard(Parammap, map);
                 String code = Rmap.get("code") != null ? Rmap.get("code").toString() : "500";
                 if (code.equals("200")) {
                     //获取 卡用量 开卡日期 更新 card info
-                    if (Rmap.get("Use") != null && Rmap.get("Use") != "" && Rmap.get("Use").toString().trim().length() > 0) {
-                        Double Use = Double.parseDouble(Rmap.get("Use").toString());
+                    if (Rmap.get("used") != null && Rmap.get("used") != "" && Rmap.get("used").toString().trim().length() > 0) {
+                        Double Use = Double.parseDouble(Rmap.get("used").toString());
                         if (Use >= 0) {
                             try {
+                                yzCardMapper.updSingleCardData(Rmap);
                                 Map<String, Object> RMap = cardFlowSyn.CalculationFlow(iccid, Use, map);
                                 log.info(">>cardFlowSyn - 卡用量轮询消费者 同步卡用量返回:{} | {} | {} | {} <<", polling_id, iccid, JSON.toJSON(RMap), JSON.toJSON(Rmap));
                             } catch (Exception e) {

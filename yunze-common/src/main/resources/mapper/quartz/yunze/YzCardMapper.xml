@@ -2166,9 +2166,9 @@
 			<if test="imei != null">
 				imei =#{imei},
 			</if>
-			<if test="used != null">
+			<!--<if test="used != null">
 				used =#{used}
-			</if>
+			</if>-->
 		</set>
 		<where>
 			iccid =#{iccid}
