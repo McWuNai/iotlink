@@ -644,6 +644,7 @@ public class PublicApiService {
                                 break;
                             case "6":
                                 if (StatusCd == 1) type = "3";
+                                if (StatusCd == 0) type = "2";
                                 break;
                         }
 
