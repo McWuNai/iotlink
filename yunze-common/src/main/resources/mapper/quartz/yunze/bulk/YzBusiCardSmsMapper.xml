@@ -86,7 +86,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 		FROM
 		yz_busi_card_sms
 		<include refid="selwhere"/>
-		ORDER BY create_time DESC
+		ORDER BY create_date DESC
 		LIMIT #{StarRow},#{PageSize}
 	</select>
 

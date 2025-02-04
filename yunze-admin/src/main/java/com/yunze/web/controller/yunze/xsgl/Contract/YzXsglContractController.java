@@ -112,7 +112,7 @@ public class YzXsglContractController extends MyBaseController
 
         }catch (Exception e){
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> yunze:XsglContract:add  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ",e.getCause().toString());
+            logger.error("<br/> yunze:XsglContract:add  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> " + e);
         }
         return Myerr("新增销售合同 操作失败！");
     }

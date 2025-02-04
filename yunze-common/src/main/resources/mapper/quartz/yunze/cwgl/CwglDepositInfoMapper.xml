@@ -111,7 +111,7 @@
     <select id="countSel" parameterType="java.util.HashMap" resultType="java.lang.Integer">
         SELECT
         COUNT(1)
-        FROMs
+        FROM
         cwgl_deposit_info A,
         yz_xsgl_contract B,
         cwgl_deposit_info_details C
@@ -151,16 +151,16 @@
         A.Dio_ID,
         A.Dio_Contract_ID,
         DATE_FORMAT(B.c_time,'%Y-%m-%d') AS Time,
-        B.Ct_Contract_Amount AS Prepaid_Amount,
-        B.Ct_The_Actual_Amount AS The_Actual_Amount,
+        B.c_contract_amount AS Prepaid_Amount,
+        B.c_the_actual_amount AS The_Actual_Amount,
         B.c_name AS CoName,
         B.c_name AS FatName,
         A.Dio_DsID,
         A.Dio_Deposit_Total,
         A.Dio_Unpaid,
-        Ct_USERID AS USERID,
+        c_userId AS USERID,
         c_userName AS NAME,
-        Ct_discount AS discount,
+        C_discount AS discount,
         c_id AS CoID
         FROM
         CWGL_Deposit_Info A,
@@ -414,8 +414,8 @@
         B.c_name,
         B.c_name,
         B.c_userName,
-        B.Ct_Contract_Amount,
-        B.Ct_The_Actual_Amount
+        B.C_Contract_Amount,
+        B.C_The_Actual_Amount
         FROM
         CWGL_Deposit_Info A,
         yz_xsgl_contract B
@@ -460,7 +460,7 @@
             </if>
         </where>
         ORDER BY c_time DESC
-        LIMIT #{StarRow},#{PageSize}
+        LIMIT #{StarRow},#{PageSize};
     </select>
 
     <!-- 查询销售合同入款记录基本信息总数 -->

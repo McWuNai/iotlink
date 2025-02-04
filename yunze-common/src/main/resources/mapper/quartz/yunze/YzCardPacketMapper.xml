@@ -594,10 +594,10 @@
             t1.packet_valid_time,
             t1.packet_price,
             t1.is_month,
-            t1.is_dd,
+            /*t1.is_dd,*/
             t1.error_flow,
-            t1.error_so,
-            t1.underscorePrice
+            t1.error_so/*,
+            t1.underscorePrice*/
         FROM
             yz_card_packet t1
         WHERE

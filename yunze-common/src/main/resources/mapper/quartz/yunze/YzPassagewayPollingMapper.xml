@@ -61,7 +61,7 @@
         SELECT
             id,
             cd_id,
-            reateTime,
+            /*reateTime,*/
             DATE_FORMAT(
             create_date,
             '%Y-%m-%d %H:%i:%S'

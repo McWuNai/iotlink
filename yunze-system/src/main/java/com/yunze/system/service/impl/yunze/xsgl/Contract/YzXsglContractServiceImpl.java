@@ -217,7 +217,11 @@ public class YzXsglContractServiceImpl implements IYzXsglContractService {
             map.put("code", Ct_ID);//赋值id
             CMap.put("code", Ct_ID);
 
-            bool = yzXsglContractMapper.save(CMap)>0;
+            try {
+                bool = yzXsglContractMapper.save(CMap)>0;
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
+            }
             //2.新增合同标配信息
             map.put("Csd_CtID",CMap.get("id"));
             List<Map<String,Object>> standardList = (List<Map<String, Object>>) map.get("standardList");
