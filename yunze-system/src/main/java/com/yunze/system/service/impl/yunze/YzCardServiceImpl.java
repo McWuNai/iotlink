@@ -71,11 +71,11 @@ public class YzCardServiceImpl implements IYzCardService {
 
     @Resource
     private YzCardMapper yzCardMapper;
-    @Autowired
+    @Resource
     private SysDeptMapper deptMapper;
-    @Autowired
+    @Resource
     private SysDictDataMapper dictDataMapper;
-    @Autowired
+    @Resource
     private SysUserMapper userMapper;
     @Resource
     private YzCardRouteMapper yzCardRouteMapper;
