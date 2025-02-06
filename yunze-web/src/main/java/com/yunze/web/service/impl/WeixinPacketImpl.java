@@ -144,7 +144,18 @@ public class WeixinPacketImpl implements IWeixinPacket {
                             if (synMap.get("SumFlow") != null) {
                                 total = Double.parseDouble(synMap.get("SumFlow").toString());
                             }
-
+                            if (R_remain > 0.00) {
+                                // 提前获取status_ShowId
+                                Object statusShowIdObj = yzCardMapper.find(IccidMap).get("status_ShowId");
+                                Integer status_ShowId = statusShowIdObj instanceof Integer ? (Integer) statusShowIdObj : null;
+                                // 只有当status_ShowId存在且等于5时，才进行后续操作
+                                if (status_ShowId != null && status_ShowId == 5) {
+                                    Map<String, Object> map = new HashMap<>();
+                                    map.put("iccid", iccid);
+                                    map.put("status_ShowId", "1");
+                                    yzCardServiceImpl.singleState(map);
+                                }
+                            }
                         } else {
                             Rmap.put("Message", "同步数据 上游返回异常，稍后重试 ");
                         }
