@@ -52,4 +52,18 @@ public interface YzCardMapper
      * @return
      */
     public int updStatusId(Map<String, Object> map);
+
+    /**
+     * 查询单卡信息
+     * @param map
+     * @return
+     */
+    public Map<String,Object> find(Map<String, Object> map);
+
+    /**
+     * 查询 卡号 分配 通道 状态
+     * @param map
+     * @return
+     */
+    public Map<String, Object> findRoute(Map<String, Object> map);
 }
