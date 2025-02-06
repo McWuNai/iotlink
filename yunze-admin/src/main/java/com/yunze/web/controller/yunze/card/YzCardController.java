@@ -9,6 +9,7 @@ import com.yunze.common.core.domain.entity.SysUser;
 import com.yunze.common.core.domain.entity.YzCard;
 import com.yunze.common.core.domain.model.LoginUser;
 import com.yunze.common.enums.BusinessType;
+import com.yunze.common.mapper.yunze.YzCardMapper;
 import com.yunze.common.utils.ServletUtils;
 import com.yunze.common.utils.StringUtils;
 import com.yunze.common.utils.ip.IpUtils;
@@ -51,6 +52,9 @@ public class YzCardController extends MyBaseController {
     private GetShowStatIdArr getShowStatIdArr;
     @Resource
     private InternalApiRequest internalApiRequest;
+
+    @Resource
+    private YzCardMapper yzCardMapper;
 
     @Log(title = "周期备注", businessType = BusinessType.IMPORT)
     @PreAuthorize("@ss.hasPermi('yunze:card:import')")
@@ -365,6 +369,13 @@ public class YzCardController extends MyBaseController {
                             if (Use >= 0) {
                                 try {
                                     Map<String, Object> RMap = cardFlowSyn.CalculationFlow(Parammap.get("iccid").toString(), Use, Route);
+                                    int status_ShowId = (int) yzCardMapper.find(Parammap).get("status_ShowId");
+                                    if (Double.parseDouble(RMap.get("remaining").toString()) > 0.00 && status_ShowId == 5) {
+                                        Map<String, Object> map = new HashMap<>();
+                                        map.put("iccid", Parammap.get("iccid").toString());
+                                        map.put("status_ShowId", "1");
+                                        yzCardServiceImpl.singleState(map);
+                                    }
                                     return MyRetunSuccess(RMap, "已成功同步用量！");
                                 } catch (Exception e) {
                                     return Myerr("用量内部计算错误！" + e.getMessage().toString());
