@@ -2,8 +2,6 @@ package com.yunze.cn.service;
 
 
 
-import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -29,4 +27,5 @@ public interface IYzCardService
     public String findOperatorType(Map<String, Object> map);
 
 
+    void singleState(Map<String, Object> map);
 }
