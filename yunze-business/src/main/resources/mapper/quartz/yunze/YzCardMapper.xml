@@ -55,7 +55,93 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			dict_type = #{dict_type}
 	</select>
 
+	<!--查询 卡号 分配 通道 状态  -->
+	<select id="findRoute" resultType="java.util.HashMap">
+		SELECT
+		b.cd_status,
+		a.iccid,
+		a.msisdn AS card_no,
+		cd_code,
+		cd_username,
+		cd_pwd,
+		cd_key,
+		a.status_ShowId as 'status_id',
+		a.connection_status,
+		a.activate_date ,
+		b.cd_control_type,
+		a.network_type,
+		DATE_FORMAT( a.stateTime, "%Y-%m-%d %H:%i:%S" ) as 'stateTime',
+		DATE_FORMAT( a.flowTime, "%Y-%m-%d %H:%i:%S" ) as 'flowTime',
+		DATE_FORMAT( a.firstUseTime, "%Y-%m-%d %H:%i:%S" ) as 'firstUseTime'
+		FROM
+		yz_card_info a,
+		yz_card_route b
+		<where>
+			a.channel_id = b.cd_id
+			and a.iccid = #{iccid}
+		</where>
+	</select>
 
+	<!--查询单条 卡板数据 数据-->
+	<select id="find" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+		a.id,
+		a.vid,
+		a.msisdn,
+		a.iccid,
+		a.imsi,
+		DATE_FORMAT( a.open_date, '%Y-%m-%d' ) as 'open_date',
+		a.activate_date,
+		a.agent_id,
+		a.channel_id,
+		a.is_pool,
+		a.pool_id,
+		a.remind_ratio,
+		a.virtual_ratio,
+		DATE_FORMAT( a.batch_date, "%Y-%m-%d" ) AS batch_date,
+		DATE_FORMAT( a.syn_Time, "%Y-%m-%d %H:%i:%S" ) AS syn_Time,
+		DATE_FORMAT( a.create_date, "%Y-%m-%d %H:%i:%S" ) AS create_date,
+		DATE_FORMAT( a.update_date, "%Y-%m-%d %H:%i:%S" ) AS update_date,
+		DATE_FORMAT( a.flowTime, "%Y-%m-%d %H:%i:%S" ) AS flowTime,
+		DATE_FORMAT( a.stateTime, "%Y-%m-%d %H:%i:%S" ) AS stateTime,
+		DATE_FORMAT( a.firstUseTime, "%Y-%m-%d %H:%i:%S" ) AS firstUseTime,
+		a.create_by,
+		a.update_by,
+		a.remarks,
+		a.del_flag,
+		a.status_id,
+		a.status_ShowId ,
+		a.package_id,
+		b.dept_name,
+		c.cd_operator_type,
+		c.cd_name,
+		a.used,
+		a.remaining,
+		a.deliver_date,
+		a.imei,
+		a.type,
+		a.network_type,
+		a.is_sms,
+		a.sms_number,
+		a.gprs,
+		a.out_of_stock,
+		a.connection_status,
+		a.customize_grouping,
+		a.is_Disconnected,
+		a.is_NetworkBreak,
+		a.is_polling,
+		a.change_other
+		FROM
+		yz_card_info a,
+		sys_dept b,
+		yz_card_route c
+		<where>
+			a.iccid = #{iccid}
+			and a.dept_id = b.dept_id
+			and a.channel_id = c.cd_id
+		</where>
+		LIMIT 1
+	</select>
 
 	<!-- 修改 卡用量-->
 	<update id="updUsed" parameterType="java.util.HashMap" >
