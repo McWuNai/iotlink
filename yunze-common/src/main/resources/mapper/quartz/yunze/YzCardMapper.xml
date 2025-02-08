@@ -2155,23 +2155,34 @@
 
 	<!--单卡 补全部分信息-->
 	<update id="updSingleCardData" parameterType="java.util.HashMap">
-		update yz_card_info
+		UPDATE yz_card_info
 		<set>
+			<!-- 动态字段更新 -->
 			<if test="msisdn != null">
-				msisdn =#{msisdn},
+				msisdn = #{msisdn},
 			</if>
 			<if test="imsi != null">
-				imsi =#{imsi},
+				imsi = #{imsi},
 			</if>
 			<if test="imei != null">
-				imei =#{imei},
+				imei = #{imei},
 			</if>
-			<!--<if test="used != null">
-				used =#{used}
-			</if>-->
 		</set>
 		<where>
-			iccid =#{iccid}
+			iccid = #{iccid}
+			<!-- 动态条件：至少有一个字段的值发生变化 -->
+			<trim prefix="AND (" suffix=")" prefixOverrides="OR">
+				<!-- MySQL NULL安全比较写法 -->
+				<if test="msisdn != null">
+					OR NOT (msisdn &lt;=&gt; #{msisdn})
+				</if>
+				<if test="imsi != null">
+					OR NOT (imsi &lt;=&gt; #{imsi})
+				</if>
+				<if test="imei != null">
+					OR NOT (imei &lt;=&gt; #{imei})
+				</if>
+			</trim>
 		</where>
 	</update>
 
