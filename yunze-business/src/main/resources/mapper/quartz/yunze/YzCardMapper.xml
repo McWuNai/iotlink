@@ -19,7 +19,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			status_ShowId as 'status_id',
 			used,
 			remaining,
-			package_id
+			package_id,
+			activate_date
 		FROM
 			yz_card_info
 		<where>

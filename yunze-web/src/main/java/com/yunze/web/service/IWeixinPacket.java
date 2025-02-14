@@ -103,8 +103,5 @@ public interface IWeixinPacket {
     public Map<String, Object> getOrderFlow (Map<String,Object> Pmap);
 
 
-
-
-
-
+    Map<String, Object> weixinTo(Map<String, Object> paramMap);
 }

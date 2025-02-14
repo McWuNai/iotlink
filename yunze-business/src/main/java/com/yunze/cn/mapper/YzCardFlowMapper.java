@@ -1,8 +1,7 @@
 package com.yunze.cn.mapper;
 
 
-
-
+import org.apache.ibatis.annotations.Param;
 
 import java.util.HashMap;
 import java.util.List;
@@ -219,4 +218,9 @@ public interface YzCardFlowMapper
      * @return
      */
     public Map<String,Object> findInvalidationSum(Map<String, Object> map);
+
+    /**
+     * 查询 资费组名称
+     */
+    public String findPackageNameById(@Param("packageId") String packageId);
 }

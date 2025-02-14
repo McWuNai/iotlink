@@ -1930,6 +1930,7 @@
 		UPDATE
 		yz_card_info
 		<set>
+			<if test="vid!=null and myUpdType!=0">vid = #{vid},</if>
 			<if test="msisdn!=null and myUpdType!=1">msisdn = #{msisdn},</if>
 			<if test="iccid!=null and myUpdType!=2">iccid = #{iccid},</if>
 			<if test="imsi!=null and myUpdType!=3">imsi = #{imsi},</if>

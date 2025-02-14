@@ -1,7 +1,6 @@
 package com.yunze.web.service.impl;
 
 
-import com.baomidou.mybatisplus.extension.api.R;
 import com.github.binarywang.wxpay.bean.notify.WxPayOrderNotifyResult;
 import com.alibaba.fastjson.JSON;
 import com.github.binarywang.wxpay.bean.request.WxPayUnifiedOrderRequest;
@@ -22,6 +21,8 @@ import com.yunze.cn.config.RabbitMQConfig;
 import com.yunze.cn.config.YzWxConfigInit;
 import com.yunze.cn.service.impl.YzWeChatUserImpl;
 import com.yunze.cn.service.impl.YzCardServiceImpl;
+import com.yunze.web.utils.HttpUtil;
+import com.yunze.web.utils.QueryStringUtil;
 import lombok.extern.slf4j.Slf4j;
 import me.chanjar.weixin.mp.api.WxMpService;
 import me.chanjar.weixin.mp.bean.result.WxMpUser;
@@ -34,6 +35,8 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.InetAddress;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * @Auther: zhang feng
@@ -93,13 +96,15 @@ public class WeixinPacketImpl implements IWeixinPacket {
             String iccid = IccidMap.get("iccid").toString();
             Rmap.put("iccid", iccid);
             String EndTime = "-";
-            Object obj = redisUtilYz.redisTemplate.opsForValue().get(iccid + openid);
-            if (obj != null) {
+            Map<Object, Object> obj = redisUtilYz.redisTemplate.opsForHash().entries(iccid + openid);
+            if (obj.size() != 0) {
                 Double used = IccidMap.get("used") == null ? 0.00 : Double.parseDouble(IccidMap.get("used").toString());
                 Double remain = IccidMap.get("remaining") == null ? 0.00 : Double.parseDouble(IccidMap.get("remaining").toString());
                 Rmap.put("used", used);
                 Rmap.put("remain", remain);
-                Rmap.put("EndTime", obj);
+                Rmap.put("EndTime", obj.get("EndTime") != null ? obj.get("EndTime") : "--");
+                Rmap.put("packetName", obj.get("packetName") != null ? obj.get("packetName") : "--");
+                Rmap.put("activateDate", obj.get("activateDate") != null ? obj.get("activateDate") : "--");
                 if (used == -1.00) {
                     Rmap.put("total", 0.00);
                 } else {
@@ -115,72 +120,79 @@ public class WeixinPacketImpl implements IWeixinPacket {
                 return Rmap;
             } else {
                 EndTime = yzCardFlowMapper.findEndTime(IccidMap);
-                redisUtilYz.setExpire(iccid + openid, EndTime, 60);
-            }
-            Double R_used = 0.0;
-            Double R_remain = 0.0;
-            Double total = 0.0;
-            Object channel_id = IccidMap.get("channel_id");
-            if (channel_id != null && channel_id.toString().length() > 0) {
-                Map<String, Object> Route = yzCardRouteMapper.find_route(Rmap);
-                if (Route != null) {
-                    String cd_status = Route.get("cd_status").toString();
-                    if (cd_status != null && cd_status != "" && cd_status.equals("1")) {
-                        Map<String, Object> synMap = synCardFlow(iccid, Route);
-                        if (IccidMap.get("status_id") != null) {
-                            //获取字典卡状态
-                            String synCardStatus = synCardStatus(iccid, Route);
-                            String cardStatus = getdictLabel("yunze_card_status_ShowId", synCardStatus == null ? IccidMap.get("status_id").toString() : synCardStatus);
-                            cardStatus = cardStatus != null ? cardStatus : "未知";
-                            Rmap.put("cardStatus", cardStatus);
-                        }
-                        if (synMap != null) {
-                            if (synMap.get("used") != null) {
-                                R_used = Double.parseDouble(synMap.get("used").toString());
+
+                Double R_used = 0.0;
+                Double R_remain = 0.0;
+                Double total = 0.0;
+                Object channel_id = IccidMap.get("channel_id");
+                if (channel_id != null && channel_id.toString().length() > 0) {
+                    Map<String, Object> Route = yzCardRouteMapper.find_route(Rmap);
+                    if (Route != null) {
+                        String cd_status = Route.get("cd_status").toString();
+                        if (cd_status != null && cd_status != "" && cd_status.equals("1")) {
+                            Map<String, Object> synMap = synCardFlow(iccid, Route);
+                            if (IccidMap.get("status_id") != null) {
+                                //获取字典卡状态
+                                String synCardStatus = synCardStatus(iccid, Route);
+                                String cardStatus = getdictLabel("yunze_card_status_ShowId", synCardStatus == null ? IccidMap.get("status_id").toString() : synCardStatus);
+                                cardStatus = cardStatus != null ? cardStatus : "未知";
+                                Rmap.put("cardStatus", cardStatus);
                             }
-                            if (synMap.get("remaining") != null) {
-                                R_remain = Double.parseDouble(synMap.get("remaining").toString());
-                            }
-                            if (synMap.get("SumFlow") != null) {
-                                total = Double.parseDouble(synMap.get("SumFlow").toString());
-                            }
-                            if (R_remain > 0.00) {
-                                // 提前获取status_ShowId
-                                Object statusShowIdObj = yzCardMapper.find(IccidMap).get("status_ShowId");
-                                Integer status_ShowId = statusShowIdObj instanceof Integer ? (Integer) statusShowIdObj : null;
-                                // 只有当status_ShowId存在且等于5时，才进行后续操作
-                                if (status_ShowId != null && status_ShowId == 5) {
-                                    Map<String, Object> map = new HashMap<>();
-                                    map.put("iccid", iccid);
-                                    map.put("status_ShowId", "1");
-                                    yzCardServiceImpl.singleState(map);
+                            if (synMap != null) {
+                                if (synMap.get("used") != null) {
+                                    R_used = Double.parseDouble(synMap.get("used").toString());
                                 }
+                                if (synMap.get("remaining") != null) {
+                                    R_remain = Double.parseDouble(synMap.get("remaining").toString());
+                                }
+                                if (synMap.get("SumFlow") != null) {
+                                    total = Double.parseDouble(synMap.get("SumFlow").toString());
+                                }
+                                if (R_remain > 0.00) {
+                                    Map<String, Object> stringObjectMap = yzCardMapper.find(IccidMap);
+                                    // 提前获取status_ShowId
+                                    Object statusShowIdObj = stringObjectMap.get("status_ShowId");
+                                    Integer status_ShowId = statusShowIdObj instanceof Integer ? (Integer) statusShowIdObj : null;
+                                    // 只有当status_ShowId存在且等于5时，才进行后续操作
+                                    if (status_ShowId != null && status_ShowId == 5) {
+                                        Map<String, Object> map = new HashMap<>();
+                                        map.put("iccid", iccid);
+                                        map.put("status_ShowId", "1");
+                                        yzCardServiceImpl.singleState(map);
+                                    }
+                                    if (IccidMap.get("package_id") != null && IccidMap.get("package_id") != "") {
+                                        String packageName = yzCardFlowMapper.findPackageNameById(IccidMap.get("package_id").toString());
+                                        Rmap.put("packetName", packageName);
+                                    }
+                                    if (stringObjectMap.get("activate_date") != null && stringObjectMap.get("activate_date") != "") {
+                                        Rmap.put("activateDate", stringObjectMap.get("activate_date"));
+                                    }
+                                }
+                            } else {
+                                Rmap.put("Message", "同步数据 上游返回异常，稍后重试 ");
                             }
                         } else {
-                            Rmap.put("Message", "同步数据 上游返回异常，稍后重试 ");
+                            String statusVal = cd_status.equals("2") ? "已停用" : cd_status.equals("3") ? "已删除" : "状态未知";
+                            Rmap.put("Message", "同步数据 取消 通道 " + statusVal);
+                            return Rmap;
                         }
-                    } else {
-                        String statusVal = cd_status.equals("2") ? "已停用" : cd_status.equals("3") ? "已删除" : "状态未知";
-                        Rmap.put("Message", "同步数据 取消 通道 " + statusVal);
-                        return Rmap;
                     }
                 }
+
+                Rmap.put("EndTime", EndTime);
+                Rmap.put("used", R_used);
+                Rmap.put("remain", R_remain);
+                Rmap.put("total", total);
+                Rmap.put("code", "200");
+                redisUtilYz.redisTemplate.opsForHash().putAll(iccid + openid, Rmap);
+                redisUtilYz.redisTemplate.expire(iccid + openid, 60, TimeUnit.SECONDS);
             }
-
-
-            Rmap.put("EndTime", EndTime);
-            Rmap.put("used", R_used);
-            Rmap.put("remain", R_remain);
-            Rmap.put("total", total);
-            Rmap.put("code", "200");
         } else {
             Rmap.put("code", "500");
             Rmap.put("Message", "未找到号码！信息同步取消！");
         }
         return Rmap;
     }    //执行 加包 队列信息
-    String addPackage_exchangeName = "polling_addPackage_card", addPackage_queueName = "p_addPackage_card", addPackage_routingKey = "p.addPackage.card",
-            addPackage_del_exchangeName = "dlx_" + addPackage_exchangeName, addPackage_del_queueName = "dlx_" + addPackage_queueName, addPackage_del_routingKey = "dlx_" + addPackage_routingKey;
 
     @Override
     public Map<String, Object> getWxPackets(Map<String, Object> Pmap) {
@@ -259,6 +271,9 @@ public class WeixinPacketImpl implements IWeixinPacket {
         return Rmap;
     }
 
+    String addPackage_exchangeName = "polling_addPackage_card", addPackage_queueName = "p_addPackage_card", addPackage_routingKey = "p.addPackage.card",
+            addPackage_del_exchangeName = "dlx_" + addPackage_exchangeName, addPackage_del_queueName = "dlx_" + addPackage_queueName, addPackage_del_routingKey = "dlx_" + addPackage_routingKey;
+
     @Override
     public Map<String, Object> querPayType(Map<String, Object> Pmap) {
         Map<String, Object> Rmap = new HashMap<>();
@@ -289,6 +304,143 @@ public class WeixinPacketImpl implements IWeixinPacket {
         }
         return Rmap;
     }
+
+    @Override
+    public Map<String, Object> weixinTo(Map<String, Object> map) {
+        Map<String, Object> resultMap = new HashMap<>();
+        String appId = (String) map.get("appId");
+        // 检查appId是否有效
+        if (appId == null || appId.isEmpty()) {
+            return errorResult(resultMap, "Invalid appId");
+        }
+
+        // 构建返回数据
+        Map<String, Object> dataMap = new HashMap<>();
+        //预设值键名
+        String key = "wechat:resultMap:" + appId;
+
+        //判断是否存在并获取
+        Map<Object, Object> obj = redisUtilYz.redisTemplate.opsForHash().entries(key);
+        if (obj.size() > 0) {
+            dataMap =  obj.entrySet().stream()
+                    .collect(Collectors.toMap(
+                            entry -> entry.getKey().toString(), // 将键转换为 String
+                            Map.Entry::getValue // 保持值不变
+                    ));
+            resultMap.put("Data", dataMap);
+            resultMap.put("code", "200");
+            return resultMap;
+        }
+
+        // 获取app信息
+        Map<String, Object> appInfo = yzWxConfigMapper.find(Collections.singletonMap("app_id", appId));
+        if (appInfo == null || appInfo.isEmpty()) {
+            return errorResult(resultMap, "Failed to find app info");
+        }
+
+        // 获取access token
+        Map<String, String> tokenParams = new HashMap<>(3);
+        tokenParams.put("appid", (String) appInfo.get("app_id"));
+        tokenParams.put("secret", (String) appInfo.get("app_secret"));
+        tokenParams.put("grant_type", "client_credential");
+        Map<String, Object> accessTokenResponse = HttpUtil.getHttp("https://api.weixin.qq.com/cgi-bin/token", tokenParams);
+
+        if (accessTokenResponse == null || !accessTokenResponse.containsKey("access_token")) {
+            return errorResult(resultMap, "Failed to get access token");
+        } else {
+            dataMap.put("access_token", accessTokenResponse.get("access_token"));
+        }
+
+        // 获取jsapi ticket
+        Map<String, String> ticketParams = new HashMap<>(2);
+        ticketParams.put("access_token", (String) accessTokenResponse.get("access_token"));
+        ticketParams.put("type", "jsapi");
+        Map<String, Object> jsApiTicketResponse = HttpUtil.getHttp("https://api.weixin.qq.com/cgi-bin/ticket/getticket", ticketParams);
+
+        if (!"ok".equals(jsApiTicketResponse.get("errmsg"))) {
+            return errorResult(resultMap, "Failed to get jsapi ticket");
+        } else {
+            dataMap.put("jsapi_ticket", jsApiTicketResponse.get("ticket"));
+        }
+
+        // 组合参数构建签名
+        String timeStamp = createTimestamp();
+        String nonceStr = String.valueOf(System.currentTimeMillis());
+        Map<String, String> signInfo = new HashMap<>(4);
+        signInfo.put("url", appInfo.get("index_url").toString().replaceFirst("\\?.*", "/index"));
+        signInfo.put("noncestr", nonceStr);
+        signInfo.put("timestamp", timeStamp);
+        signInfo.put("jsapi_ticket", (String) jsApiTicketResponse.get("ticket"));
+
+        String sign = QueryStringUtil.safeSha1(QueryStringUtil.mapToSortedQueryString(signInfo));
+        if (sign == null || sign.isEmpty()) {
+            return errorResult(resultMap, "Failed to generate signature");
+        }
+
+        dataMap.put("appId", appId);
+        dataMap.put("timeStamp", timeStamp);
+        dataMap.put("nonceStr", nonceStr);
+        dataMap.put("paySign", sign);
+        dataMap.put("signType", "MD5");
+        dataMap.put("appIdTo", map.get("appIdTo"));
+        dataMap.put("path", map.get("path"));
+        dataMap.put("iccid", map.get("iccid"));
+
+        resultMap.put("Data", dataMap);
+        resultMap.put("code", "200");
+
+        setCacheWithTTL(key, dataMap);
+        return resultMap;
+    }
+
+    private Map<String, Object> errorResult(Map<String, Object> resultMap, String message) {
+        resultMap.put("code", "500");
+        resultMap.put("message", message);
+        return resultMap;
+    }
+
+    private void setCacheWithTTL(String key, Map<String, Object> dataMap) {
+
+        // 如果你想根据提供的timestamp来设置过期时间，则可以这样做：
+        long expireAt = Long.parseLong(dataMap.get("timeStamp").toString()) + 7200; // 得到过期的时间戳
+
+        // 获取当前时间戳
+        long currentTimestamp = System.currentTimeMillis() / 1000;
+
+        // 计算相对于当前时间的实际TTL
+        long actualTTL = expireAt - currentTimestamp;
+
+        // 假设 redisTemplate 已经被正确配置和注入
+        redisUtilYz.redisTemplate.opsForHash().putAll(key, dataMap);
+
+        if(actualTTL > 0) { // 确保TTL是正值
+            // 设置TTL
+            redisUtilYz.redisTemplate.expire(key, actualTTL, TimeUnit.SECONDS);
+        } else {
+            // 设置TTL
+            redisUtilYz.redisTemplate.expire(key, 60, TimeUnit.SECONDS);
+            // 处理异常情况，例如过期时间已经过去
+            throw new IllegalArgumentException("The expiration time has already passed.");
+        }
+    }
+
+    /*public static void main(String[] args) {
+        String timeStamp = createTimestamp();
+        String nonceStr = String.valueOf(System.currentTimeMillis());
+        Map<String, String> signInfo = new HashMap<>();
+        signInfo.put("jsapi_ticket", "O3SMpm8bG7kJnF36aXbe80u8y9nMXlhacz3GC-nLEoJAKPjPo-es1q5KQQOilI_2innOfT1akFD7BAzYVanzrQ");
+        signInfo.put("noncestr", nonceStr);
+        signInfo.put("timestamp", timeStamp);
+        signInfo.put("url", "https://www.iotesim.cn/wechat?appId=wxe8338ad8db225d43");
+
+        // 拼接成字符串
+        String queryString = QueryStringUtil.mapToSortedQueryString(signInfo);
+        System.out.println("QueryString: " + queryString);
+
+        // 计算SHA-1哈希值
+        String signature = QueryStringUtil.safeSha1(queryString);
+        System.out.println("Signature: " + signature);
+    }*/
 
     @Override
     public Map<String, Object> weixinPay(Map<String, Object> map) {
@@ -957,6 +1109,7 @@ public class WeixinPacketImpl implements IWeixinPacket {
         return Rmap;
     }
 
+
     /**
      * 同步用量
      *
@@ -979,7 +1132,7 @@ public class WeixinPacketImpl implements IWeixinPacket {
                     Double Use = Double.parseDouble(Rmap.get("Use").toString());
                     if (Use >= 0) {
                         try {
-                            Map<String, Object> RMap = cardFlowSyn.CalculationFlow(iccid, Use,find_card_route_map);
+                            Map<String, Object> RMap = cardFlowSyn.CalculationFlow(iccid, Use, find_card_route_map);
                             //Map<String,Object> RMap = cardFlowSyn.CalculationFlowQueue(iccid,Use,find_card_route_map);
                             return RMap;
                         } catch (Exception e) {
@@ -1159,12 +1312,9 @@ public class WeixinPacketImpl implements IWeixinPacket {
     /**
      * 描述： 时间戳
      */
-    private String createTimestamp() {
+    private static String createTimestamp() {
         return Long.toString(System.currentTimeMillis() / 1000);
     }
-
-
-
 
 
 }

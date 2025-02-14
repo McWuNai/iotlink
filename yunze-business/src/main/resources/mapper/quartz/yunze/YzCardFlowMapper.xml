@@ -586,7 +586,15 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 		</where>
 	</select>
 
-
+    <select id="findPackageNameById" resultType="java.lang.String">
+		select
+		package_name
+		from
+		yz_card_package
+		<where>
+		package_id = #{packageId}
+		</where>
+	</select>
 
 
 </mapper>
