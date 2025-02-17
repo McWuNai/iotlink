@@ -102,6 +102,7 @@ public class WeixinPacketImpl implements IWeixinPacket {
                 Double remain = IccidMap.get("remaining") == null ? 0.00 : Double.parseDouble(IccidMap.get("remaining").toString());
                 Rmap.put("used", used);
                 Rmap.put("remain", remain);
+                Rmap.put("imsi", obj.get("imsi"));
                 Rmap.put("EndTime", obj.get("EndTime") != null ? obj.get("EndTime") : "--");
                 Rmap.put("packetName", obj.get("packetName") != null ? obj.get("packetName") : "--");
                 Rmap.put("activateDate", obj.get("activateDate") != null ? obj.get("activateDate") : "--");
@@ -183,6 +184,7 @@ public class WeixinPacketImpl implements IWeixinPacket {
                 Rmap.put("used", R_used);
                 Rmap.put("remain", R_remain);
                 Rmap.put("total", total);
+                Rmap.put("imsi", IccidMap.get("imsi") != null ? IccidMap.get("imsi") : "--");
                 Rmap.put("code", "200");
                 redisUtilYz.redisTemplate.opsForHash().putAll(iccid + openid, Rmap);
                 redisUtilYz.redisTemplate.expire(iccid + openid, 60, TimeUnit.SECONDS);
@@ -367,7 +369,7 @@ public class WeixinPacketImpl implements IWeixinPacket {
         String timeStamp = createTimestamp();
         String nonceStr = String.valueOf(System.currentTimeMillis());
         Map<String, String> signInfo = new HashMap<>(4);
-        signInfo.put("url", appInfo.get("index_url").toString().replaceFirst("\\?.*", "/index"));
+        signInfo.put("url", map.get("url").toString());
         signInfo.put("noncestr", nonceStr);
         signInfo.put("timestamp", timeStamp);
         signInfo.put("jsapi_ticket", (String) jsApiTicketResponse.get("ticket"));
