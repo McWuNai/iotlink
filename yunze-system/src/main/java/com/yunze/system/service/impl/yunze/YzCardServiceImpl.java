@@ -1,6 +1,5 @@
 package com.yunze.system.service.impl.yunze;
 
-
 import com.alibaba.excel.EasyExcel;
 import com.alibaba.excel.context.AnalysisContext;
 import com.alibaba.excel.read.listener.ReadListener;
@@ -32,6 +31,8 @@ import com.yunze.common.mapper.yunze.commodity.YzWxByProductAgentMapper;
 import com.yunze.common.utils.ServletUtils;
 import com.yunze.common.utils.StringUtils;
 import com.yunze.common.utils.ip.IpUtils;
+import com.yunze.common.utils.poi.ExcelStreamingReader;
+import com.yunze.common.utils.poi.PageResult;
 import com.yunze.common.utils.yunze.*;
 import com.yunze.system.mapper.SysDeptMapper;
 import com.yunze.system.mapper.SysDictDataMapper;
@@ -39,7 +40,9 @@ import com.yunze.system.mapper.SysUserMapper;
 import com.yunze.system.service.yunze.IYzCardService;
 import com.yunze.system.service.yunze.IYzUserService;
 import org.apache.commons.compress.utils.Lists;
-import org.apache.poi.ss.usermodel.BorderStyle;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.AmqpException;
@@ -48,17 +51,35 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.apache.poi.openxml4j.opc.OPCPackage;
+import org.apache.poi.xssf.eventusermodel.XSSFReader;
+import org.apache.poi.xssf.model.SharedStringsTable;
+import org.xml.sax.Attributes;
+import org.xml.sax.ContentHandler;
+import org.xml.sax.InputSource;
+import org.xml.sax.XMLReader;
+import org.xml.sax.helpers.DefaultHandler;
+import org.xml.sax.helpers.XMLReaderFactory;
+import org.apache.commons.codec.digest.DigestUtils;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
+import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.math.BigDecimal;
 import java.net.URLEncoder;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.time.YearMonth;
 
 /**
  * 卡信息 业务实现类
@@ -110,6 +131,251 @@ public class YzCardServiceImpl implements IYzCardService {
     @Resource
     private YzCardFlowMapper cardFlowMapper;
 
+    private static final String CACHE_PREFIX = "yunze:card:excel:";
+    private static final int CACHE_HOURS = 1;
+    private static final String BUSINESS_STATS_PREFIX = "yunze:card:getBusinessStatistics:";
+
+    /**
+     * 获取业务统计数据
+     */
+    public Map<String, Object> getBusinessStatistics(String filePath) {
+        // 从文件名中解析日期（格式：YYYY-mm-DD）
+        String fileName = new File(filePath).getName();
+        String dateStr = fileName.replace(".xlsx", "");
+        String[] dateParts = dateStr.split("-");
+        LocalDate fileDate = LocalDate.of(
+                Integer.parseInt(dateParts[0]), // 年
+                Integer.parseInt(dateParts[1]), // 月
+                1); // 日（用1即可，因为我们只比较年月）
+
+        // 构建新的缓存key格式：yunze:card:getBusinessStatistics:mm:YYYY:DD
+        String cacheKey = String.format("%s%s:%s:%s",
+                BUSINESS_STATS_PREFIX,
+                dateParts[1], // mm
+                dateParts[0], // YYYY
+                dateParts[2]); // DD
+
+        // 先从Redis中获取缓存数据
+        @SuppressWarnings("unchecked")
+        Map<String, Object> cachedStats = (Map<String, Object>) (Map<?, ?>) redisCache.getCacheMap(cacheKey);
+        if (cachedStats != null && !cachedStats.isEmpty()) {
+            return cachedStats;
+        }
+
+        Map<String, Object> statistics = new HashMap<>();
+
+        try {
+            ExcelStreamingReader reader = new ExcelStreamingReader();
+            // 构建完整的文件路径
+            String canonicalPath = new File("").getCanonicalPath();
+            String baseDir = "/mnt/file/flowCount/";
+            String monthDir = dateParts[1] + "/"; // 月份目录
+            String yearDir = dateParts[0] + "/"; // 年份目录
+            String fullPath = Paths.get(canonicalPath, baseDir, monthDir, yearDir, fileName).toString();
+
+            PageResult result = reader.readExcel(fullPath, 1, Integer.MAX_VALUE, false); // 需要完整统计
+
+            List<List<String>> allData = result.getRowData();
+
+            if (allData.isEmpty()) {
+                return statistics;
+            }
+
+            // 获取标题行并查找关键列索引
+            List<String> headerRow = allData.get(0);
+            int flowIndex = -1, statusIndex = -1, activateTimeIndex = -1;
+
+            for (int i = 0; i < headerRow.size(); i++) {
+                String header = headerRow.get(i);
+                if (header.contains("周期累计用量")) {
+                    flowIndex = i;
+                }
+                if (header.equals("SIM卡状态")) {
+                    statusIndex = i;
+                }
+                if (header.contains("激活时间")) {
+                    activateTimeIndex = i;
+                }
+            }
+
+            // 初始化统计变量
+            double totalFlow = 0.0;
+            int simCardCount = 0;
+            int downCount = 0;
+            int simCardNewCount = 0;
+            int usedFlowCount = 0; // 新增：有使用流量的卡数量
+            int todayActivatedCount = 0; // 新增：当天激活的卡数量
+            Map<String, Integer> lifeCycleDistribution = new HashMap<>();
+
+            // 处理数据行（跳过标题行）
+            int totalRows = 0;
+            for (int i = 1; i < allData.size(); i++) {
+                List<String> row = allData.get(i);
+                if (row.isEmpty()) {
+                    continue;
+                }
+
+                totalRows++;
+
+                // 处理状态
+                String status = row.get(statusIndex);
+                if (!"-".equals(status)) {
+                    lifeCycleDistribution.merge(status, 1, Integer::sum);
+                    if ("停机".equals(status)) {
+                        downCount++;
+                    }
+                }
+
+                // 处理流量
+                String flow = row.get(flowIndex);
+                if (!"-".equals(flow) && !flow.isEmpty()) {
+                    try {
+                        double flowValue = Double.parseDouble(flow);
+                        totalFlow += flowValue;
+                        if (flowValue > 0) { // 新增：统计有使用流量的卡
+                            usedFlowCount++;
+                        }
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+
+                // 处理激活时间
+                String activateTime = row.get(activateTimeIndex);
+                if (!"-".equals(activateTime) && !activateTime.isEmpty()) {
+                    try {
+                        LocalDate activateDate = LocalDate.parse(activateTime.split(" ")[0]);
+                        // 检查是否是当月激活
+                        if (activateDate.getYear() == fileDate.getYear() &&
+                                activateDate.getMonthValue() == fileDate.getMonthValue()) {
+                            simCardNewCount++;
+
+                            // 检查是否是当天激活
+                            if (activateDate.equals(fileDate)) {
+                                todayActivatedCount++;
+                            }
+                        }
+                    } catch (Exception ignored) {
+                    }
+                }
+            }
+
+            simCardCount = totalRows;
+            // 计算卡月活跃度（百分比）
+            double simActivity = 0.0;
+            if (simCardCount > 0) { // 防止除数为0
+                simActivity = (double) usedFlowCount / simCardCount * 100;
+            }
+
+            // 计算当天用量
+            double currentDay = 0.0;
+            if (dateParts[2].equals("27")) {
+                // 为27号则等于今天的总流量
+                currentDay = totalFlow / 1024;
+            } else {
+                // 不为27号则获取前一天的数据
+                LocalDate previousDay = LocalDate.of(
+                        Integer.parseInt(dateParts[0]),
+                        Integer.parseInt(dateParts[1]),
+                        Integer.parseInt(dateParts[2])).minusDays(1);
+
+                // 构建前一天的缓存key
+                String previousCacheKey = String.format("%s%02d:%d:%02d",
+                        BUSINESS_STATS_PREFIX,
+                        previousDay.getMonthValue(),
+                        previousDay.getYear(),
+                        previousDay.getDayOfMonth());
+
+                // 从Redis获取前一天的数据
+                @SuppressWarnings("unchecked")
+                Map<String, Object> previousStats = (Map<String, Object>) (Map<?, ?>) redisCache
+                        .getCacheMap(previousCacheKey);
+
+                if (previousStats != null && previousStats.containsKey("currentMonth")) {
+                    double previousFlow = Double.parseDouble(previousStats.get("currentMonth").toString());
+                    currentDay = (totalFlow / 1024) - previousFlow;
+                } else {
+                    // 如果获取不到前一天的数据，则当天用量等于总流量
+                    currentDay = totalFlow / 1024;
+                }
+            }
+
+            // 确保当天用量不为负数
+            currentDay = Math.max(0, currentDay);
+
+            // 封装返回数据
+            statistics.put("simCardCount", simCardCount);
+            statistics.put("downCount", downCount);
+            statistics.put("simCardNewCount", simCardNewCount);
+            statistics.put("todayActivatedCount", todayActivatedCount); // 新增：当天激活的卡数量
+            statistics.put("currentMonth", totalFlow / 1024);
+            statistics.put("currentDay", currentDay);
+            statistics.put("usedFlowCount", usedFlowCount);
+            statistics.put("simActivity", simActivity); // 保留两位小数
+            statistics.put("update_date", LocalDateTime.now().toString());
+            statistics.put("record_date", LocalDate.now().toString());
+
+            // 生命周期分布（保持原有格式）
+            List<Map<String, Object>> cycleData = new ArrayList<>();
+            lifeCycleDistribution.forEach((status, count) -> {
+                Map<String, Object> item = new HashMap<>();
+                item.put("name", status);
+                item.put("value", count);
+                cycleData.add(item);
+            });
+            Map<String, Object> distribution = new HashMap<>();
+            distribution.put("data", cycleData);
+            statistics.put("lifeCycleDistribution", distribution);
+
+            // 将统计结果存入Redis
+            if (!statistics.isEmpty()) {
+                redisCache.setCacheMap(cacheKey, statistics);
+                log.debug("已更新缓存，key: {}", cacheKey);
+            }
+
+            return statistics;
+
+        } catch (Exception e) {
+            log.error("统计业务数据失败: {} (文件: {})", e.getMessage(), filePath, e);
+            throw new RuntimeException("读取Excel文件失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 清除指定文件的业务统计缓存
+     * 
+     * @param filePath 文件路径
+     */
+    public void clearBusinessStatisticsCache(String filePath) {
+        String fileName = new File(filePath).getName();
+        String cacheKey = BUSINESS_STATS_PREFIX + fileName;
+        redisCache.deleteObject(cacheKey);
+    }
+
+    /**
+     * Excel处理相关方法
+     */
+    public PageResult getPagedContentFromExcel(String filePath, int pageNumber, int pageSize) {
+        // 从文件名中解析日期（格式：YYYY-mm-DD）
+        String fileName = new File(filePath).getName();
+        String dateStr = fileName.replace(".xlsx", "");
+        String[] dateParts = dateStr.split("-");
+
+        try {
+            ExcelStreamingReader reader = new ExcelStreamingReader();
+            // 构建完整的文件路径
+            String canonicalPath = new File("").getCanonicalPath();
+            String baseDir = "/mnt/file/flowCount/";
+            String monthDir = dateParts[1] + "/"; // 月份目录
+            String yearDir = dateParts[0] + "/"; // 年份目录
+            String fullPath = canonicalPath + baseDir + monthDir + yearDir + fileName;
+
+            return reader.readExcel(fullPath, pageNumber, pageSize, true); // 快速返回模式
+        } catch (Exception e) {
+            log.error("读取Excel文件分页内容失败: {} (文件: {})", e.getMessage(), filePath, e);
+            throw new RuntimeException("读取Excel文件失败: " + e.getMessage());
+        }
+    }
+
     @Override
     public Map<String, Object> selMap(Map<String, Object> map) {
         Map<String, Object> omp = new HashMap<String, Object>();
@@ -120,8 +386,8 @@ public class YzCardServiceImpl implements IYzCardService {
         CountMap.putAll(map);
         CountMap.remove("queryParams");
         boolean is_Internal = false;
-        //System.out.println(CountMap.remove("queryParams"));
-        //权限过滤
+        // System.out.println(CountMap.remove("queryParams"));
+        // 权限过滤
         if (map.get("agent_id") != null) {
             List<Integer> agent_id = (List<Integer>) map.get("agent_id");
             if (!Different.Is_existence(agent_id, 100)) {
@@ -129,14 +395,13 @@ public class YzCardServiceImpl implements IYzCardService {
                 map.put("user_id", user_id);
                 CountMap.put("user_id", user_id);
             } else {
-                is_Internal = true;//内部人员 部门是 100 的 可看字段增加
+                is_Internal = true;// 内部人员 部门是 100 的 可看字段增加
             }
         } else {
-            is_Internal = true;//内部人员 部门是 100 的 可看字段增加
+            is_Internal = true;// 内部人员 部门是 100 的 可看字段增加
         }
         map.put("is_Internal", is_Internal);
         map = getChannelIdArr(map);
-
 
         CountMap.put("channel_id", map.get("channel_id"));
         PageUtil pu = null;
@@ -149,23 +414,25 @@ public class YzCardServiceImpl implements IYzCardService {
         } else {
             rowCount = yzCardMapper.selMapCount(CountMap);
         }
-      /*
-        //同查询条件 缓存 查询总数 120 S
-        Object isExecute = redisCache.getCacheObject(JSON.toJSONString(CountMap));
-        if (isExecute == null) {
-            if (selLianTong) {
-                rowCount = yzCardMapper.selMapLianTongCount(CountMap);
-            } else {
-                rowCount = yzCardMapper.selMapCount(CountMap);
-            }
-            //redis 存储
-            redisCache.setCacheObject(JSON.toJSONString(CountMap), rowCount, 120, TimeUnit.SECONDS);//120 秒缓存
-        } else {
-            rowCount = Integer.parseInt(isExecute.toString());
-        }*/
+        /*
+         * //同查询条件 缓存 查询总数 120 S
+         * Object isExecute = redisCache.getCacheObject(JSON.toJSONString(CountMap));
+         * if (isExecute == null) {
+         * if (selLianTong) {
+         * rowCount = yzCardMapper.selMapLianTongCount(CountMap);
+         * } else {
+         * rowCount = yzCardMapper.selMapCount(CountMap);
+         * }
+         * //redis 存储
+         * redisCache.setCacheObject(JSON.toJSONString(CountMap), rowCount, 120,
+         * TimeUnit.SECONDS);//120 秒缓存
+         * } else {
+         * rowCount = Integer.parseInt(isExecute.toString());
+         * }
+         */
 
         rowCount = rowCount != null ? rowCount : 0;
-        pu = new PageUtil(rowCount, currenPage, pageSize);//初始化分页工具类
+        pu = new PageUtil(rowCount, currenPage, pageSize);// 初始化分页工具类
         map.put("StarRow", pu.getStarRow());
         map.put("PageSize", pu.getPageSize());
         if (selLianTong) {
@@ -173,9 +440,9 @@ public class YzCardServiceImpl implements IYzCardService {
         } else {
             Rlist = yzCardMapper.selMap(map);
         }
-        //数据打包'
-        //System.out.println(map);
-        //System.out.println(yzCardMapper.selMap(map));
+        // 数据打包'
+        // System.out.println(map);
+        // System.out.println(yzCardMapper.selMap(map));
         omp.put("Pu", pu);
         omp.put("Data", Rlist);
         omp.put("Pmap", map);
@@ -194,7 +461,6 @@ public class YzCardServiceImpl implements IYzCardService {
         return findMap;
     }
 
-
     @Override
     public String uploadCard(MultipartFile file, boolean updateSupport, SysUser User) throws IOException {
         String filename = file.getOriginalFilename();
@@ -208,112 +474,116 @@ public class YzCardServiceImpl implements IYzCardService {
              */
             File file2 = new File("");
             String filePath = file2.getCanonicalPath();
-            File newFile = new File(filePath + ReadName );
-            File Url = new File(filePath + flieUrlRx +"1.txt");//tomcat 生成路径
+            File newFile = new File(filePath + ReadName);
+            File Url = new File(filePath + flieUrlRx + "1.txt");// tomcat 生成路径
             Upload.mkdirsmy(Url);
             file.transferTo(newFile);
 
-
-
-
-
-
-            //1.创建路由 绑定 生产队列 发送消息
-            //导卡 路由队列
+            // 1.创建路由 绑定 生产队列 发送消息
+            // 导卡 路由队列
             String polling_queueName = "admin_saveCard_queue";
             String polling_routingKey = "admin.saveCard.queue";
-            String polling_exchangeName = "admin_exchange";//路由
+            String polling_exchangeName = "admin_exchange";// 路由
             try {
-                // rabbitMQConfig.creatExchangeQueue(polling_exchangeName, polling_queueName, polling_routingKey, null, null, null, BuiltinExchangeType.DIRECT);
+                // rabbitMQConfig.creatExchangeQueue(polling_exchangeName, polling_queueName,
+                // polling_routingKey, null, null, null, BuiltinExchangeType.DIRECT);
                 Map<String, Object> start_type = new HashMap<>();
-                start_type.put("type", "importCardData");//启动类型
-                start_type.put("filePath", filePath);//项目根目录
-                start_type.put("ReadName", ReadName);//上传新文件名
-                start_type.put("newName", newName);//输出文件名
-                start_type.put("User", User);//登录用户信息
-                rabbitTemplate.convertAndSend(polling_exchangeName, polling_routingKey, JSON.toJSONString(start_type), message -> {
-                    // 设置消息过期时间 30 分钟 过期
-                    message.getMessageProperties().setExpiration("" + (30 * 1000 * 60));
-                    return message;
-                });
+                start_type.put("type", "importCardData");// 启动类型
+                start_type.put("filePath", filePath);// 项目根目录
+                start_type.put("ReadName", ReadName);// 上传新文件名
+                start_type.put("newName", newName);// 输出文件名
+                start_type.put("User", User);// 登录用户信息
+                rabbitTemplate.convertAndSend(polling_exchangeName, polling_routingKey, JSON.toJSONString(start_type),
+                        message -> {
+                            // 设置消息过期时间 30 分钟 过期
+                            message.getMessageProperties().setExpiration("" + (30 * 1000 * 60));
+                            return message;
+                        });
             } catch (Exception e) {
                 System.out.println("导入 卡号 失败 " + e.getMessage().toString());
                 return ("物联卡管理 导入 操作失败！");
             }
 
-
-            /*String path = filePath  + ReadName;
-            ExcelConfig excelConfig = new ExcelConfig();
-            String columns[] = {"msisdn","iccid","imsi","open_date","activate_date","agent_id","channel_id","is_pool","batch_date","remarks","status_id","package_id","imei","type","network_type","is_sms","sms_number","gprs","user_id"};
-            String maxVid  = yzCardMapper.findMaxVid();
-            maxVid = maxVid!=null?maxVid:"16800000000";
-            Long maxVidInt = Long.parseLong(maxVid);
-            List<Map<String, String>> list = excelConfig.getExcelListMap(path,columns,maxVidInt);
-            String  create_by = " [ "+User.getDept().getDeptName()+" ] - "+" [ "+User.getUserName()+" ] ";
-
-
-
-            if(list!=null && list.size()>0){
-                //筛选出  vid msisdn iccid imsi 的 卡号 重复项
-                HashMap<String, Object> map = new HashMap<>();
-                map.put("card_arrs",list);
-                map.put("type","3");
-                List<String>  iccidarr = yzCardMapper.isExistence(map);
-
-                String SaveUrl = "/getcsv/"+newName+".csv";
-                String task_name ="连接管理上传 [导入] ";
-                Map<String, Object> task_map = new HashMap<String, Object>();
-                task_map.put("auth",create_by);
-                task_map.put("task_name",task_name);
-                task_map.put("url",SaveUrl);
-                task_map.put("agent_id", User.getDept().getDeptId());
-
-                executionTaskMapper.add(task_map);//添加执行 任务表
-
-                //1.判断上传数据与数据库现有数据做对比 大于 0 证明有 以存在数据
-                if(iccidarr.size()>0){
-                    //上传数据>数据库查询 赛选出
-                    List<String> list1 = new ArrayList<>();
-                    for (int i = 0; i <list.size() ; i++) {
-                        list1.add(list.get(i).get("iccid"));
-                    }
-                    //找出与数据库已存在 相同 ICCID 去除 重复 iccid
-                    List<Map<String, String>> Out_list_Different = Different.getIdentical(list1,iccidarr,"iccid");
-                    if(Out_list_Different.size()>0){
-                        OutCSV(Out_list_Different,newName,"ICCID重复导入失败！",create_by,"导入失败");
-                    }
-
-                    list = Different.delIdentical(list,iccidarr,"iccid");//删除相同的数据 进行批量上传
-                }
-                map.put("card_arrs",list);//更新 list
-                map.put("create_by",create_by);
-                try {
-                    if(list.size()>0){
-                        int  sInt = yzCardMapper.importCard(map);
-                        if(sInt>0){
-                            OutCSV(list,newName,"成功导入卡列表数据 ["+sInt+"] 条",create_by,"导入成功");
-                            executionTaskMapper.set_end_time(task_map);//任务结束
-                        }
-                    }else{
-                        executionTaskMapper.set_end_time(task_map);//任务结束
-                        return " 上传数据已全部在数据库，无需上传卡信息！ ";
-                    }
-                }catch (DuplicateKeyException e){
-                    System.out.println("===="+e.getCause().toString());
-                    String[] solit=e.getCause().toString().split("'");
-                    OutCSV(list,newName,e.getCause().toString(),create_by,"导入失败");
-                    executionTaskMapper.set_end_time(task_map);//任务结束
-                    return "上传excel异常 [插入数据 DuplicateKeyException ] "+e.getCause().toString() ;
-                }catch (Exception e){
-                    System.out.println("===="+e.getCause().toString());
-                    OutCSV(list,newName,e.getCause().toString(),create_by,"导入失败");
-                    executionTaskMapper.set_end_time(task_map);//任务结束
-                    return "上传excel异常 [插入数据 Exception] "+e.getCause().toString() ;
-                }
-
-            }else{
-                return "上传表格数据不能为空！";
-            }*/
+            /*
+             * String path = filePath + ReadName;
+             * ExcelConfig excelConfig = new ExcelConfig();
+             * String columns[] =
+             * {"msisdn","iccid","imsi","open_date","activate_date","agent_id","channel_id",
+             * "is_pool","batch_date","remarks","status_id","package_id","imei","type",
+             * "network_type","is_sms","sms_number","gprs","user_id"};
+             * String maxVid = yzCardMapper.findMaxVid();
+             * maxVid = maxVid!=null?maxVid:"16800000000";
+             * Long maxVidInt = Long.parseLong(maxVid);
+             * List<Map<String, String>> list =
+             * excelConfig.getExcelListMap(path,columns,maxVidInt);
+             * String create_by =
+             * " [ "+User.getDept().getDeptName()+" ] - "+" [ "+User.getUserName()+" ] ";
+             * 
+             * 
+             * 
+             * if(list!=null && list.size()>0){
+             * //筛选出 vid msisdn iccid imsi 的 卡号 重复项
+             * HashMap<String, Object> map = new HashMap<>();
+             * map.put("card_arrs",list);
+             * map.put("type","3");
+             * List<String> iccidarr = yzCardMapper.isExistence(map);
+             * 
+             * String SaveUrl = "/getcsv/"+newName+".csv";
+             * String task_name ="连接管理上传 [导入] ";
+             * Map<String, Object> task_map = new HashMap<String, Object>();
+             * task_map.put("auth",create_by);
+             * task_map.put("task_name",task_name);
+             * task_map.put("url",SaveUrl);
+             * task_map.put("agent_id", User.getDept().getDeptId());
+             * 
+             * executionTaskMapper.add(task_map);//添加执行 任务表
+             * 
+             * //1.判断上传数据与数据库现有数据做对比 大于 0 证明有 以存在数据
+             * if(iccidarr.size()>0){
+             * //上传数据>数据库查询 赛选出
+             * List<String> list1 = new ArrayList<>();
+             * for (int i = 0; i <list.size() ; i++) {
+             * list1.add(list.get(i).get("iccid"));
+             * }
+             * //找出与数据库已存在 相同 ICCID 去除 重复 iccid
+             * List<Map<String, String>> Out_list_Different =
+             * Different.getIdentical(list1,iccidarr,"iccid");
+             * if(Out_list_Different.size()>0){
+             * OutCSV(Out_list_Different,newName,"ICCID重复导入失败！",create_by,"导入失败");
+             * }
+             * 
+             * list = Different.delIdentical(list,iccidarr,"iccid");//删除相同的数据 进行批量上传
+             * }
+             * map.put("card_arrs",list);//更新 list
+             * map.put("create_by",create_by);
+             * try {
+             * if(list.size()>0){
+             * int sInt = yzCardMapper.importCard(map);
+             * if(sInt>0){
+             * OutCSV(list,newName,"成功导入卡列表数据 ["+sInt+"] 条",create_by,"导入成功");
+             * executionTaskMapper.set_end_time(task_map);//任务结束
+             * }
+             * }else{
+             * executionTaskMapper.set_end_time(task_map);//任务结束
+             * return " 上传数据已全部在数据库，无需上传卡信息！ ";
+             * }
+             * }catch (DuplicateKeyException e){
+             * System.out.println("===="+e.getCause().toString());
+             * String[] solit=e.getCause().toString().split("'");
+             * OutCSV(list,newName,e.getCause().toString(),create_by,"导入失败");
+             * executionTaskMapper.set_end_time(task_map);//任务结束
+             * return "上传excel异常 [插入数据 DuplicateKeyException ] "+e.getCause().toString() ;
+             * }catch (Exception e){
+             * System.out.println("===="+e.getCause().toString());
+             * OutCSV(list,newName,e.getCause().toString(),create_by,"导入失败");
+             * executionTaskMapper.set_end_time(task_map);//任务结束
+             * return "上传excel异常 [插入数据 Exception] "+e.getCause().toString() ;
+             * }
+             * 
+             * }else{
+             * return "上传表格数据不能为空！";
+             * }
+             */
         } catch (Exception e) {
             System.out.println(e);
             return "上传excel异常";
@@ -335,7 +605,7 @@ public class YzCardServiceImpl implements IYzCardService {
     @Override
     public String exportData(Map<String, Object> map, SysUser User) {
         Object MapAgent_id = map.get("agent_id");
-        //导出时 未选中 当前 企业编号时 且登录 部门不是 总平台 赋值部门
+        // 导出时 未选中 当前 企业编号时 且登录 部门不是 总平台 赋值部门
         if (MapAgent_id == null && User.getDeptId() != 100) {
             List<String> agent_idArr = new ArrayList<String>();
             agent_idArr.add("" + User.getDeptId());
@@ -345,7 +615,7 @@ public class YzCardServiceImpl implements IYzCardService {
         map.remove("pageSize");
         map = getChannelIdArr(map);
         List<String> outCardIccidArr = null;
-        //权限过滤
+        // 权限过滤
         if (map.get("agent_id") != null) {
             List<Integer> agent_id = (List<Integer>) map.get("agent_id");
             if (!Different.Is_existence(agent_id, 100)) {
@@ -375,25 +645,25 @@ public class YzCardServiceImpl implements IYzCardService {
             task_map.put("agent_id", agent_id);
             task_map.put("type", "1");
 
-            //获取字典信息
-            List<SysDictData> stateOptions = dictDataMapper.selectDictDataByType("yunze_card_status_ShowId");//卡状态
-            List<SysDictData> card_types = dictDataMapper.selectDictDataByType("yunze_card_card_type");//卡类型
-            List<SysDictData> customize_whether = dictDataMapper.selectDictDataByType("yunze_customize_whether");//系统是否
-            List<SysDictData> cardConnection_type = dictDataMapper.selectDictDataByType("yz_cardConnection_type");//断开网状态
-            //获取 用户信息
+            // 获取字典信息
+            List<SysDictData> stateOptions = dictDataMapper.selectDictDataByType("yunze_card_status_ShowId");// 卡状态
+            List<SysDictData> card_types = dictDataMapper.selectDictDataByType("yunze_card_card_type");// 卡类型
+            List<SysDictData> customize_whether = dictDataMapper.selectDictDataByType("yunze_customize_whether");// 系统是否
+            List<SysDictData> cardConnection_type = dictDataMapper.selectDictDataByType("yz_cardConnection_type");// 断开网状态
+            // 获取 用户信息
             List<Map<String, Object>> userArr = userMapper.find_simple();
 
-
-            //1.创建路由 绑定 生产队列 发送消息
-            //导卡 路由队列
+            // 1.创建路由 绑定 生产队列 发送消息
+            // 导卡 路由队列
             String polling_queueName = "admin_OutCard_queue";
             String polling_routingKey = "admin_OutCard_queue";
-            String polling_exchangeName = "admin_exchange";//路由
+            String polling_exchangeName = "admin_exchange";// 路由
             try {
-                //rabbitMQConfig.creatExchangeQueue(polling_exchangeName, polling_queueName, polling_routingKey, null, null, null, BuiltinExchangeType.DIRECT);
+                // rabbitMQConfig.creatExchangeQueue(polling_exchangeName, polling_queueName,
+                // polling_routingKey, null, null, null, BuiltinExchangeType.DIRECT);
                 Map<String, Object> start_type = new HashMap<>();
-                start_type.put("type", "importCardData");//启动类型
-                start_type.put("newName", newName);//输出文件名
+                start_type.put("type", "importCardData");// 启动类型
+                start_type.put("newName", newName);// 输出文件名
                 start_type.put("task_map", task_map);//
                 start_type.put("create_by", create_by);//
                 start_type.put("User", User);
@@ -405,11 +675,12 @@ public class YzCardServiceImpl implements IYzCardService {
                 start_type.put("cardConnection_type", cardConnection_type);
                 start_type.put("map", map);
 
-                rabbitTemplate.convertAndSend(polling_exchangeName, polling_routingKey, JSON.toJSONString(start_type), message -> {
-                    // 设置消息过期时间 30 分钟 过期
-                    message.getMessageProperties().setExpiration("" + (30 * 1000 * 60));
-                    return message;
-                });
+                rabbitTemplate.convertAndSend(polling_exchangeName, polling_routingKey, JSON.toJSONString(start_type),
+                        message -> {
+                            // 设置消息过期时间 30 分钟 过期
+                            message.getMessageProperties().setExpiration("" + (30 * 1000 * 60));
+                            return message;
+                        });
             } catch (Exception e) {
                 System.out.println("导入 卡号 失败 " + e.getMessage().toString());
                 return "物联卡管理 导入 操作失败！";
@@ -426,12 +697,11 @@ public class YzCardServiceImpl implements IYzCardService {
         CountMap.putAll(map);
         CountMap.remove("pageNum");
         CountMap.remove("pageSize");
-        //权限过滤
+        // 权限过滤
         List<String> user_id = iYzUserService.getUserID(CountMap);
         map.put("user_id", user_id);
         return yzCardMapper.outCardIccid(map);
     }
-
 
     @Override
     public List<String> selId(Map<String, Object> map, boolean selLianTong) {
@@ -439,7 +709,7 @@ public class YzCardServiceImpl implements IYzCardService {
         CountMap.putAll(map);
         CountMap.remove("pageNum");
         CountMap.remove("pageSize");
-        //权限过滤
+        // 权限过滤
         List<String> user_id = iYzUserService.getUserID(CountMap);
         map.put("user_id", user_id);
 
@@ -455,14 +725,13 @@ public class YzCardServiceImpl implements IYzCardService {
         return yzCardMapper.updStatusId(map) > 0;
     }
 
-
     @Override
     public String dividCard(Map<String, Object> map) {
         String Message = "";
         map.remove("pageNum");
         map.remove("pageSize");
         map = getChannelIdArr(map);
-        //权限过滤
+        // 权限过滤
         if (map.get("agent_id") != null) {
             List<Integer> agent_id = (List<Integer>) map.get("agent_id");
             if (!Different.Is_existence(agent_id, 100)) {
@@ -474,33 +743,35 @@ public class YzCardServiceImpl implements IYzCardService {
         List<String> dividIdArr = selId(map, selLianTong);
 
         if (dividIdArr != null && dividIdArr.size() > 0) {
-            //1.创建路由 绑定 生产队列 发送消息
-            //导卡 路由队列
+            // 1.创建路由 绑定 生产队列 发送消息
+            // 导卡 路由队列
             String polling_queueName = "admin_DistributeCard_queue";
             String polling_routingKey = "admin.DistributeCard.queue";
-            String polling_exchangeName = "admin_exchange";//路由
+            String polling_exchangeName = "admin_exchange";// 路由
             try {
-                //rabbitMQConfig.creatExchangeQueue(polling_exchangeName, polling_queueName, polling_routingKey, null, null, null, BuiltinExchangeType.DIRECT);
+                // rabbitMQConfig.creatExchangeQueue(polling_exchangeName, polling_queueName,
+                // polling_routingKey, null, null, null, BuiltinExchangeType.DIRECT);
                 Map<String, Object> start_type = new HashMap<>();
                 start_type.putAll(map);
-                start_type.put("type", "DistributeCard");//启动类型
-                start_type.put("dividIdArr", dividIdArr);//需要划分的数据
-                rabbitTemplate.convertAndSend(polling_exchangeName, polling_routingKey, JSON.toJSONString(start_type), message -> {
-                    // 设置消息过期时间 30 分钟 过期
-                    message.getMessageProperties().setExpiration("" + (30 * 1000 * 60));
-                    return message;
-                });
+                start_type.put("type", "DistributeCard");// 启动类型
+                start_type.put("dividIdArr", dividIdArr);// 需要划分的数据
+                rabbitTemplate.convertAndSend(polling_exchangeName, polling_routingKey, JSON.toJSONString(start_type),
+                        message -> {
+                            // 设置消息过期时间 30 分钟 过期
+                            message.getMessageProperties().setExpiration("" + (30 * 1000 * 60));
+                            return message;
+                        });
             } catch (Exception e) {
                 System.out.println("划卡 失败 " + e.getMessage().toString());
                 return ("物联卡管理 划卡 操作失败！");
             }
-            Message = "当前筛选条件下需要划分的数据 [ " + dividIdArr.size() + " ] 条 至 [ " + map.get("set_dept_name") + " ] [ " + map.get("set_user_name") + " ] 指令已下发详情查看 【执行日志管理】 ！";
+            Message = "当前筛选条件下需要划分的数据 [ " + dividIdArr.size() + " ] 条 至 [ " + map.get("set_dept_name") + " ] [ "
+                    + map.get("set_user_name") + " ] 指令已下发详情查看 【执行日志管理】 ！";
         } else {
             Message = "当前筛选条件下未找到需要划分的数据！请核对后重试！";
         }
         return Message;
     }
-
 
     /**
      * 获取 运营商类型 的通道id
@@ -509,17 +780,17 @@ public class YzCardServiceImpl implements IYzCardService {
      * @return
      */
     private Map<String, Object> getChannelIdArr(Map<String, Object> map) {
-        //判断是否选择 运营商类型
+        // 判断是否选择 运营商类型
         map.put("selLianTong", false);
 
         if (map.get("cd_operator_type") != null) {
             List<String> cd_operator_type = (List<String>) map.get("cd_operator_type");
-            if ( cd_operator_type.size() > 0) {
+            if (cd_operator_type.size() > 0) {
                 List<Map<String, Object>> smap = yzCardRouteMapper.find_simpleOperatorArr(map);
-                //添加 【符合 运营类型】 的 通道 查询条件
+                // 添加 【符合 运营类型】 的 通道 查询条件
                 List<String> channel_id = new ArrayList<String>();
 
-                if(map.get("channel_id") != null){
+                if (map.get("channel_id") != null) {
                     List<String> Channel = (List<String>) map.get("channel_id");
                     channel_id.addAll(Channel);
                 }
@@ -529,16 +800,16 @@ public class YzCardServiceImpl implements IYzCardService {
                         channel_id.add(smap.get(i).get("cd_id").toString());
                     }
                 }
-                //未找到相匹配的通道时 将 通道id传参 -1 使查询不到相对应数据
+                // 未找到相匹配的通道时 将 通道id传参 -1 使查询不到相对应数据
                 if (channel_id.size() == 0) {
                     channel_id.add("-1");
-                }else {
+                } else {
                     map.put("channel_id", channel_id);
                 }
-                //如果是联通的查询 条件 且 条件是 卡号 查询长度大于19 或 起止 条件 是 iccid
+                // 如果是联通的查询 条件 且 条件是 卡号 查询长度大于19 或 起止 条件 是 iccid
                 boolean LianTong = false;
                 for (int i = 0; i < cd_operator_type.size(); i++) {
-                    if(cd_operator_type.get(i).equals("2")){
+                    if (cd_operator_type.get(i).equals("2")) {
                         LianTong = true;
                     }
                 }
@@ -551,11 +822,12 @@ public class YzCardServiceImpl implements IYzCardService {
                     Object StartAndEndtype = map.get("StartAndEndtype");
                     Object StartValue = map.get("StartValue");
                     Object EndValue = map.get("EndValue");
-                    if (StartAndEndtype != null && StartAndEndtype.equals("3") && StartValue != null && EndValue != null) {
+                    if (StartAndEndtype != null && StartAndEndtype.equals("3") && StartValue != null
+                            && EndValue != null) {
                         map.put("selLianTong", true);
                     }
-                    List<Map<String, Object>> UpArr = (List<Map<String, Object>>) map.get("UpArr");//导入查询
-                    if (UpArr != null && UpArr.size()>0) {
+                    List<Map<String, Object>> UpArr = (List<Map<String, Object>>) map.get("UpArr");// 导入查询
+                    if (UpArr != null && UpArr.size() > 0) {
                         map.put("selLianTong", true);
                     }
                 }
@@ -563,7 +835,6 @@ public class YzCardServiceImpl implements IYzCardService {
         }
         return map;
     }
-
 
     @Override
     public String importSet(MultipartFile file, Map<String, Object> map) throws IOException {
@@ -576,23 +847,29 @@ public class YzCardServiceImpl implements IYzCardService {
             File file2 = new File("");
             String filePath = file2.getCanonicalPath();
             File newFile = new File(filePath + ReadName);
-            File Url = new File(filePath + flieUrlRx +"1.txt");//tomcat 生成路径
+            File Url = new File(filePath + flieUrlRx + "1.txt");// tomcat 生成路径
             Upload.mkdirsmy(Url);
             file.transferTo(newFile);
-            //1.创建路由 绑定 生产队列 发送消息
-            String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_CardImportSet_queue", addOrder_routingKey = "admin.CardImportSet.queue",
-                    addOrder_del_exchangeName = "dlx_" + addOrder_exchangeName, addOrder_del_queueName = "dlx_" + addOrder_queueName, addOrder_del_routingKey = "dlx_" + addOrder_routingKey;
+            // 1.创建路由 绑定 生产队列 发送消息
+            String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_CardImportSet_queue",
+                    addOrder_routingKey = "admin.CardImportSet.queue",
+                    addOrder_del_exchangeName = "dlx_" + addOrder_exchangeName,
+                    addOrder_del_queueName = "dlx_" + addOrder_queueName,
+                    addOrder_del_routingKey = "dlx_" + addOrder_routingKey;
             try {
-                //rabbitMQConfig.creatExchangeQueue(addOrder_exchangeName, addOrder_queueName, addOrder_routingKey, addOrder_del_exchangeName, addOrder_del_queueName, addOrder_del_routingKey, null);
+                // rabbitMQConfig.creatExchangeQueue(addOrder_exchangeName, addOrder_queueName,
+                // addOrder_routingKey, addOrder_del_exchangeName, addOrder_del_queueName,
+                // addOrder_del_routingKey, null);
                 Map<String, Object> start_type = new HashMap<>();
-                start_type.put("filePath", filePath);//项目根目录
-                start_type.put("ReadName", ReadName);//上传新文件名
-                start_type.put("map", map);//参数
-                rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type), message -> {
-                    // 设置消息过期时间 60 分钟 过期
-                    message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
-                    return message;
-                });
+                start_type.put("filePath", filePath);// 项目根目录
+                start_type.put("ReadName", ReadName);// 上传新文件名
+                start_type.put("map", map);// 参数
+                rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type),
+                        message -> {
+                            // 设置消息过期时间 60 分钟 过期
+                            message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
+                            return message;
+                        });
             } catch (Exception e) {
                 System.out.println("连接设置 生产指令  失败 " + e.getMessage().toString());
                 return ("连接设置 生产指令 操作失败！");
@@ -604,7 +881,6 @@ public class YzCardServiceImpl implements IYzCardService {
         return "连接设置 指令 已发送，连接设置详细信息请在 【执行日志管理】查询！";
     }
 
-
     @Override
     public String importSelImei(MultipartFile file, Map<String, Object> map) throws IOException {
         String filename = file.getOriginalFilename();
@@ -615,45 +891,47 @@ public class YzCardServiceImpl implements IYzCardService {
             // 获取当前项目的工作路径
             File file2 = new File("");
             String filePath = file2.getCanonicalPath();
-            File newFile = new File(filePath +   ReadName);
-            File Url = new File(filePath + flieUrlRx +"1.txt");//tomcat 生成路径
+            File newFile = new File(filePath + ReadName);
+            File Url = new File(filePath + flieUrlRx + "1.txt");// tomcat 生成路径
             Upload.mkdirsmy(Url);
             file.transferTo(newFile);
 
-
             String agent_id = map.get("agent_id").toString();
-            //新增批量执行表
+            // 新增批量执行表
             Map<String, Object> bulkMap = new HashMap<>();
             String task_name = "【查询IMEI】";
             String code = VeDate.getNo(8);
-            SysUser User =   (SysUser)map.get("User");//登录用户信息
-            SysDept Dept =User.getDept();
-            String  create_by = " [ "+Dept.getDeptName()+" ] - "+" [ "+User.getUserName()+" ] ";
+            SysUser User = (SysUser) map.get("User");// 登录用户信息
+            SysDept Dept = User.getDept();
+            String create_by = " [ " + Dept.getDeptName() + " ] - " + " [ " + User.getUserName() + " ] ";
             bulkMap.put("code", code);
-            bulkMap.put("task_name",task_name);
-            bulkMap.put("auth",create_by);
-            bulkMap.put("agent_id",agent_id);
-            bulkMap.put("type","9");//查询IMEI 9
+            bulkMap.put("task_name", task_name);
+            bulkMap.put("auth", create_by);
+            bulkMap.put("agent_id", agent_id);
+            bulkMap.put("type", "9");// 查询IMEI 9
             yzBulkBusinessMapper.add(bulkMap);
 
-
-
-
-            //1.创建路由 绑定 生产队列 发送消息
-            String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_CardImportSelImei_queue", addOrder_routingKey = "admin.CardImportSelImei.queue",
-                    addOrder_del_exchangeName = "dlx_" + addOrder_exchangeName, addOrder_del_queueName = "dlx_" + addOrder_queueName, addOrder_del_routingKey = "dlx_" + addOrder_routingKey;
+            // 1.创建路由 绑定 生产队列 发送消息
+            String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_CardImportSelImei_queue",
+                    addOrder_routingKey = "admin.CardImportSelImei.queue",
+                    addOrder_del_exchangeName = "dlx_" + addOrder_exchangeName,
+                    addOrder_del_queueName = "dlx_" + addOrder_queueName,
+                    addOrder_del_routingKey = "dlx_" + addOrder_routingKey;
             try {
-                //rabbitMQConfig.creatExchangeQueue(addOrder_exchangeName, addOrder_queueName, addOrder_routingKey, addOrder_del_exchangeName, addOrder_del_queueName, addOrder_del_routingKey, null);
+                // rabbitMQConfig.creatExchangeQueue(addOrder_exchangeName, addOrder_queueName,
+                // addOrder_routingKey, addOrder_del_exchangeName, addOrder_del_queueName,
+                // addOrder_del_routingKey, null);
                 Map<String, Object> start_type = new HashMap<>();
-                start_type.put("filePath", filePath);//项目根目录
-                start_type.put("ReadName", ReadName);//上传新文件名
-                start_type.put("bulkMap", bulkMap);//批量任务主表 信息
-                start_type.put("map", map);//参数
-                rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type), message -> {
-                    // 设置消息过期时间 60 分钟 过期
-                    message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
-                    return message;
-                });
+                start_type.put("filePath", filePath);// 项目根目录
+                start_type.put("ReadName", ReadName);// 上传新文件名
+                start_type.put("bulkMap", bulkMap);// 批量任务主表 信息
+                start_type.put("map", map);// 参数
+                rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type),
+                        message -> {
+                            // 设置消息过期时间 60 分钟 过期
+                            message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
+                            return message;
+                        });
             } catch (Exception e) {
                 System.out.println("特殊操作查询IMEI 生产指令  失败 " + e.getMessage().toString());
                 return ("特殊操作查询IMEI 生产指令 操作失败！");
@@ -667,87 +945,86 @@ public class YzCardServiceImpl implements IYzCardService {
 
     @Override
     public String status(MultipartFile file, Map<String, Object> map) throws IOException {
-            String filename = file.getOriginalFilename();
-            String ReadName = UUID.randomUUID().toString().replace("-", "") + filename;
-            String flieUrlRx = "/upload/importSelImei/";
-            ReadName = flieUrlRx + ReadName;
-            try {
-                // 获取当前项目的工作路径
-                File file2 = new File("");
-                String filePath = file2.getCanonicalPath();
-                File newFile = new File(filePath + ReadName);
-                File Url = new File(filePath + flieUrlRx + "/1.txt");//tomcat 生成路径
-                Upload.mkdirsmy(Url);
-                file.transferTo(newFile);
+        String filename = file.getOriginalFilename();
+        String ReadName = UUID.randomUUID().toString().replace("-", "") + filename;
+        String flieUrlRx = "/upload/importSelImei/";
+        ReadName = flieUrlRx + ReadName;
+        try {
+            // 获取当前项目的工作路径
+            File file2 = new File("");
+            String filePath = file2.getCanonicalPath();
+            File newFile = new File(filePath + ReadName);
+            File Url = new File(filePath + flieUrlRx + "/1.txt");// tomcat 生成路径
+            Upload.mkdirsmy(Url);
+            file.transferTo(newFile);
 
-                String agent_id = map.get("agent_id").toString();
+            String agent_id = map.get("agent_id").toString();
 
+            String type = "";
+            String task_name = "";
+            String Is_remind_ratio = map.get("Is_remind_ratio").toString();
 
+            String Switch_network = map.get("Switch_network").toString();
 
-
-                String type = "";
-                String task_name = "";
-                String Is_remind_ratio = map.get("Is_remind_ratio").toString();
-
-                String Switch_network = map.get("Switch_network").toString();
-
-                if (Is_remind_ratio.equals("3")) {//批量复机 1
-                    type = "1";
-                    task_name = "【批量复机】";
-                }else if (Is_remind_ratio.equals("2")) {//批量停机 2
-                    type = "2";
-                    task_name = "【批量停机】";
-                }else if (Switch_network.equals("3") ) {//批量开网 4
-                    type = "4";
-                    task_name = "【批量开网】";
-                }else if (Switch_network.equals("2")) {//批量断网 3
-                    type = "3";
-                    task_name = "【批量断网】";
-                }
-
-
-                //新增批量执行表
-                Map<String, Object> bulkMap = new HashMap<>();
-
-                String code = VeDate.getNo(8);
-                SysUser User =   (SysUser)map.get("User");//登录用户信息
-                SysDept Dept =User.getDept();
-                String  create_by = " [ "+Dept.getDeptName()+" ] - "+" [ "+User.getUserName()+" ] ";
-                bulkMap.put("code", code);
-                bulkMap.put("task_name",task_name);
-                bulkMap.put("auth",create_by);
-                bulkMap.put("agent_id",agent_id);
-                bulkMap.put("type",type);
-                yzBulkBusinessMapper.add(bulkMap);
-
-
-
-                //1.创建路由 绑定 生产队列 发送消息
-                String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_CardImportBatch_queue", addOrder_routingKey = "admin.CardImportBatch.queue",
-                        addOrder_del_exchangeName = "dlx_" + addOrder_exchangeName, addOrder_del_queueName = "dlx_" + addOrder_queueName, addOrder_del_routingKey = "dlx_" + addOrder_routingKey;
-                try {
-                    // rabbitMQConfig.creatExchangeQueue(addOrder_exchangeName, addOrder_queueName, addOrder_routingKey, addOrder_del_exchangeName, addOrder_del_queueName, addOrder_del_routingKey, null);
-                    Map<String, Object> start_type = new HashMap<>();
-                    start_type.put("filePath", filePath);//项目根目录
-                    start_type.put("ReadName", ReadName);//上传新文件名
-                    start_type.put("bulkMap", bulkMap);//批量任务主表 信息
-                    start_type.put("map", map);//参数
-                    rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type), message -> {
-                        // 设置消息过期时间 60 分钟 过期
-                        message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
-                        return message;
-                    });
-                } catch (Exception e) {
-                    System.out.println("批量停复机、断开网 生产指令  失败 " + e.getMessage().toString());
-                    return ("批量停复机、断开网 生产指令 操作失败！");
-                }
-            } catch (Exception e) {
-                System.out.println(e);
-                return "上传excel异常";
+            if (Is_remind_ratio.equals("3")) {// 批量复机 1
+                type = "1";
+                task_name = "【批量复机】";
+            } else if (Is_remind_ratio.equals("2")) {// 批量停机 2
+                type = "2";
+                task_name = "【批量停机】";
+            } else if (Switch_network.equals("3")) {// 批量开网 4
+                type = "4";
+                task_name = "【批量开网】";
+            } else if (Switch_network.equals("2")) {// 批量断网 3
+                type = "3";
+                task_name = "【批量断网】";
             }
-            return "批量停复机、断开网 指令 已发送，连接设置详细信息请在 【批量业务受理】查询！";
-    }
 
+            // 新增批量执行表
+            Map<String, Object> bulkMap = new HashMap<>();
+
+            String code = VeDate.getNo(8);
+            SysUser User = (SysUser) map.get("User");// 登录用户信息
+            SysDept Dept = User.getDept();
+            String create_by = " [ " + Dept.getDeptName() + " ] - " + " [ " + User.getUserName() + " ] ";
+            bulkMap.put("code", code);
+            bulkMap.put("task_name", task_name);
+            bulkMap.put("auth", create_by);
+            bulkMap.put("agent_id", agent_id);
+            bulkMap.put("type", type);
+            yzBulkBusinessMapper.add(bulkMap);
+
+            // 1.创建路由 绑定 生产队列 发送消息
+            String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_CardImportBatch_queue",
+                    addOrder_routingKey = "admin.CardImportBatch.queue",
+                    addOrder_del_exchangeName = "dlx_" + addOrder_exchangeName,
+                    addOrder_del_queueName = "dlx_" + addOrder_queueName,
+                    addOrder_del_routingKey = "dlx_" + addOrder_routingKey;
+            try {
+                // rabbitMQConfig.creatExchangeQueue(addOrder_exchangeName, addOrder_queueName,
+                // addOrder_routingKey, addOrder_del_exchangeName, addOrder_del_queueName,
+                // addOrder_del_routingKey, null);
+                Map<String, Object> start_type = new HashMap<>();
+                start_type.put("filePath", filePath);// 项目根目录
+                start_type.put("ReadName", ReadName);// 上传新文件名
+                start_type.put("bulkMap", bulkMap);// 批量任务主表 信息
+                start_type.put("map", map);// 参数
+                rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type),
+                        message -> {
+                            // 设置消息过期时间 60 分钟 过期
+                            message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
+                            return message;
+                        });
+            } catch (Exception e) {
+                System.out.println("批量停复机、断开网 生产指令  失败 " + e.getMessage().toString());
+                return ("批量停复机、断开网 生产指令 操作失败！");
+            }
+        } catch (Exception e) {
+            System.out.println(e);
+            return "上传excel异常";
+        }
+        return "批量停复机、断开网 指令 已发送，连接设置详细信息请在 【批量业务受理】查询！";
+    }
 
     @Override
     public Map<String, Object> CardNumberImport(MultipartFile file, Map<String, Object> map) throws IOException {
@@ -760,21 +1037,20 @@ public class YzCardServiceImpl implements IYzCardService {
             File file2 = new File("");
             String filePath = file2.getCanonicalPath();
             File newFile = new File(filePath + ReadName);
-            File Url = new File(filePath + flieUrlRx +"1.txt");//tomcat 生成路径
+            File Url = new File(filePath + flieUrlRx + "1.txt");// tomcat 生成路径
             Upload.mkdirsmy(Url);
             file.transferTo(newFile);
             ExcelConfig excelConfig = new ExcelConfig();
-            String columns[] = {"cardNumber"};
-            List<Map<String, Object>> list = excelConfig.getExcelListMap(filePath +  ReadName, columns);
-            //System.out.println(list.toString());
-            //System.out.println(list);
+            String columns[] = { "cardNumber" };
+            List<Map<String, Object>> list = excelConfig.getExcelListMap(filePath + ReadName, columns);
+            // System.out.println(list.toString());
+            // System.out.println(list);
             map.put("UpArr", list);
         } catch (Exception e) {
             System.out.println(e);
         }
         return selMap(map);
     }
-
 
     @Override
     public String importSetCardInfo(MultipartFile file, Map<String, Object> map) throws IOException {
@@ -786,24 +1062,30 @@ public class YzCardServiceImpl implements IYzCardService {
             // 获取当前项目的工作路径
             File file2 = new File("");
             String filePath = file2.getCanonicalPath();
-            File newFile = new File(filePath+ ReadName);
-            File Url = new File(filePath + flieUrlRx+"1.txt");//tomcat 生成路径
+            File newFile = new File(filePath + ReadName);
+            File Url = new File(filePath + flieUrlRx + "1.txt");// tomcat 生成路径
             Upload.mkdirsmy(Url);
             file.transferTo(newFile);
-            //1.创建路由 绑定 生产队列 发送消息
-            String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_importSetCardInfo_queue", addOrder_routingKey = "admin.importSetCardInfo.queue",
-                    addOrder_del_exchangeName = "dlx_" + addOrder_exchangeName, addOrder_del_queueName = "dlx_" + addOrder_queueName, addOrder_del_routingKey = "dlx_" + addOrder_routingKey;
+            // 1.创建路由 绑定 生产队列 发送消息
+            String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_importSetCardInfo_queue",
+                    addOrder_routingKey = "admin.importSetCardInfo.queue",
+                    addOrder_del_exchangeName = "dlx_" + addOrder_exchangeName,
+                    addOrder_del_queueName = "dlx_" + addOrder_queueName,
+                    addOrder_del_routingKey = "dlx_" + addOrder_routingKey;
             try {
-                // rabbitMQConfig.creatExchangeQueue(addOrder_exchangeName, addOrder_queueName, addOrder_routingKey, addOrder_del_exchangeName, addOrder_del_queueName, addOrder_del_routingKey, null);
+                // rabbitMQConfig.creatExchangeQueue(addOrder_exchangeName, addOrder_queueName,
+                // addOrder_routingKey, addOrder_del_exchangeName, addOrder_del_queueName,
+                // addOrder_del_routingKey, null);
                 Map<String, Object> start_type = new HashMap<>();
-                start_type.put("filePath", filePath);//项目根目录
-                start_type.put("ReadName", ReadName);//上传新文件名
-                start_type.put("map", map);//参数
-                rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type), message -> {
-                    // 设置消息过期时间 60 分钟 过期
-                    message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
-                    return message;
-                });
+                start_type.put("filePath", filePath);// 项目根目录
+                start_type.put("ReadName", ReadName);// 上传新文件名
+                start_type.put("map", map);// 参数
+                rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type),
+                        message -> {
+                            // 设置消息过期时间 60 分钟 过期
+                            message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
+                            return message;
+                        });
             } catch (Exception e) {
                 System.out.println("特殊操作变更卡分组、备注 生产指令  失败 " + e.getMessage().toString());
                 return ("特殊操作变更卡分组、备注 生产指令 操作失败！");
@@ -817,7 +1099,7 @@ public class YzCardServiceImpl implements IYzCardService {
 
     @Override
     public List<String> getCardGrouping(Map<String, Object> map) {
-        //查询所属下 分组
+        // 查询所属下 分组
         if (map.get("agent_id") != null) {
             map.put("agent_id", yzCardMapper.queryChildrenAreaInfo(map));
         }
@@ -830,98 +1112,113 @@ public class YzCardServiceImpl implements IYzCardService {
         return yzCardMapper.updActivate(map) > 0;
     }
 
-
     @Override
     public boolean UpdateFill(Map<String, Object> map) {
         return yzCardMapper.UpdateFill(map) > 0;
     }
 
-    /***停机*/
+    /*** 停机 */
     @Override
     public String stoppedarr(Map<String, Object> map) {
-            //1.创建路由 绑定 生产队列 发送消息
-            String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_Stopped_queue", addOrder_routingKey = "admin.Stopped.queue",
-                    addOrder_del_exchangeName = "dlx_" + addOrder_exchangeName, addOrder_del_queueName = "dlx_" + addOrder_queueName, addOrder_del_routingKey = "dlx_" + addOrder_routingKey;
-            try {
-                Map<String, Object> start_type = new HashMap<>();
-                start_type.put("map", map);//参数
-                rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type), message -> {
-                    // 设置消息过期时间 60 分钟 过期
-                    message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
-                    return message;
-                });
-            } catch (Exception e) {
-                System.out.println("批量 【停机】 生产指令  失败 " + e.getMessage().toString());
-                return ("批量 【停机】 生产指令 操作失败！");
-            }
+        // 1.创建路由 绑定 生产队列 发送消息
+        String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_Stopped_queue",
+                addOrder_routingKey = "admin.Stopped.queue",
+                addOrder_del_exchangeName = "dlx_" + addOrder_exchangeName,
+                addOrder_del_queueName = "dlx_" + addOrder_queueName,
+                addOrder_del_routingKey = "dlx_" + addOrder_routingKey;
+        try {
+            Map<String, Object> start_type = new HashMap<>();
+            start_type.put("map", map);// 参数
+            rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type),
+                    message -> {
+                        // 设置消息过期时间 60 分钟 过期
+                        message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
+                        return message;
+                    });
+        } catch (Exception e) {
+            System.out.println("批量 【停机】 生产指令  失败 " + e.getMessage().toString());
+            return ("批量 【停机】 生产指令 操作失败！");
+        }
 
-            return "批量 【停机】 指令 已发送，连接设置详细信息请在 【执行日志管理】查询！";
+        return "批量 【停机】 指令 已发送，连接设置详细信息请在 【执行日志管理】查询！";
     }
 
-    /***复机*/
+    /*** 复机 */
     @Override
     public String machinearr(Map<String, Object> map) {
-            //1.创建路由 绑定 生产队列 发送消息
-            String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_Machine_queue", addOrder_routingKey = "admin.Machine.queue",
-                    addOrder_del_exchangeName = "dlx_" + addOrder_exchangeName, addOrder_del_queueName = "dlx_" + addOrder_queueName, addOrder_del_routingKey = "dlx_" + addOrder_routingKey;
-            try {
-                Map<String, Object> start_type = new HashMap<>();
-                start_type.put("map", map);//参数
-                rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type), message -> {
-                    // 设置消息过期时间 60 分钟 过期
-                    message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
-                    return message;
-                });
-            } catch (Exception e) {
-                System.out.println("批量 【复机】 生产指令  失败 " + e.getMessage().toString());
-                return ("批量 【复机】 生产指令 操作失败！");
-            }
+        // 1.创建路由 绑定 生产队列 发送消息
+        String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_Machine_queue",
+                addOrder_routingKey = "admin.Machine.queue",
+                addOrder_del_exchangeName = "dlx_" + addOrder_exchangeName,
+                addOrder_del_queueName = "dlx_" + addOrder_queueName,
+                addOrder_del_routingKey = "dlx_" + addOrder_routingKey;
+        try {
+            Map<String, Object> start_type = new HashMap<>();
+            start_type.put("map", map);// 参数
+            rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type),
+                    message -> {
+                        // 设置消息过期时间 60 分钟 过期
+                        message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
+                        return message;
+                    });
+        } catch (Exception e) {
+            System.out.println("批量 【复机】 生产指令  失败 " + e.getMessage().toString());
+            return ("批量 【复机】 生产指令 操作失败！");
+        }
 
-            return "批量 【复机】 指令 已发送，连接设置详细信息请在 【执行日志管理】查询！";
+        return "批量 【复机】 指令 已发送，连接设置详细信息请在 【执行日志管理】查询！";
     }
 
-    /***断网*/
+    /*** 断网 */
     @Override
     public String disconnectNetworkarr(Map<String, Object> map) {
-            //1.创建路由 绑定 生产队列 发送消息
-            String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_DisconnectNetwork_queue", addOrder_routingKey = "admin.DisconnectNetwork.queue",
-                    addOrder_del_exchangeName = "dlx_" + addOrder_exchangeName, addOrder_del_queueName = "dlx_" + addOrder_queueName, addOrder_del_routingKey = "dlx_" + addOrder_routingKey;
-            try {
-                Map<String, Object> start_type = new HashMap<>();
-                start_type.put("map", map);//参数
-                rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type), message -> {
-                    // 设置消息过期时间 60 分钟 过期
-                    message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
-                    return message;
-                });
-            } catch (Exception e) {
-                System.out.println("批量 【断网】 生产指令  失败 " + e.getMessage().toString());
-                return ("批量 【断网】 生产指令 操作失败！");
-            }
+        // 1.创建路由 绑定 生产队列 发送消息
+        String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_DisconnectNetwork_queue",
+                addOrder_routingKey = "admin.DisconnectNetwork.queue",
+                addOrder_del_exchangeName = "dlx_" + addOrder_exchangeName,
+                addOrder_del_queueName = "dlx_" + addOrder_queueName,
+                addOrder_del_routingKey = "dlx_" + addOrder_routingKey;
+        try {
+            Map<String, Object> start_type = new HashMap<>();
+            start_type.put("map", map);// 参数
+            rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type),
+                    message -> {
+                        // 设置消息过期时间 60 分钟 过期
+                        message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
+                        return message;
+                    });
+        } catch (Exception e) {
+            System.out.println("批量 【断网】 生产指令  失败 " + e.getMessage().toString());
+            return ("批量 【断网】 生产指令 操作失败！");
+        }
 
-            return "批量 【断网】 指令 已发送，连接设置详细信息请在 【执行日志管理】查询！";
+        return "批量 【断网】 指令 已发送，连接设置详细信息请在 【执行日志管理】查询！";
     }
 
-    /***开网*/
+    /*** 开网 */
     @Override
     public String openNetworkarr(Map<String, Object> map) {
-            //1.创建路由 绑定 生产队列 发送消息
-            String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_OpenNetwork_queue", addOrder_routingKey = "admin.OpenNetwork.queue",
-                    addOrder_del_exchangeName = "dlx_" + addOrder_exchangeName, addOrder_del_queueName = "dlx_" + addOrder_queueName, addOrder_del_routingKey = "dlx_" + addOrder_routingKey;
-            try {
-                Map<String, Object> start_type = new HashMap<>();
-                start_type.put("map", map);//参数
-                rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type), message -> {
-                    // 设置消息过期时间 60 分钟 过期
-                    message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
-                    return message;
-                });
-            } catch (Exception e) {
-                System.out.println("批量 【开网】 生产指令  失败 " + e.getMessage().toString());
-                return ("批量 【开网】 生产指令 操作失败！");
-            }
+        // 1.创建路由 绑定 生产队列 发送消息
+        String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_OpenNetwork_queue",
+                addOrder_routingKey = "admin.OpenNetwork.queue",
+                addOrder_del_exchangeName = "dlx_" + addOrder_exchangeName,
+                addOrder_del_queueName = "dlx_" + addOrder_queueName,
+                addOrder_del_routingKey = "dlx_" + addOrder_routingKey;
+        try {
+            Map<String, Object> start_type = new HashMap<>();
+            start_type.put("map", map);// 参数
+            rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type),
+                    message -> {
+                        // 设置消息过期时间 60 分钟 过期
+                        message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
+                        return message;
+                    });
+        } catch (Exception e) {
+            System.out.println("批量 【开网】 生产指令  失败 " + e.getMessage().toString());
+            return ("批量 【开网】 生产指令 操作失败！");
+        }
 
-            return "批量 【开网】 指令 已发送，连接设置详细信息请在 【执行日志管理】查询！";
+        return "批量 【开网】 指令 已发送，连接设置详细信息请在 【执行日志管理】查询！";
     }
 
     /**
@@ -929,23 +1226,27 @@ public class YzCardServiceImpl implements IYzCardService {
      */
     @Override
     public String consumptionarr(Map<String, Object> map) {
-            //1.创建路由 绑定 生产队列 发送消息
-            String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_Consumption_queue", addOrder_routingKey = "admin.Consumption.queue",
-                    addOrder_del_exchangeName = "dlx_" + addOrder_exchangeName, addOrder_del_queueName = "dlx_" + addOrder_queueName, addOrder_del_routingKey = "dlx_" + addOrder_routingKey;
-            try {
-                Map<String, Object> start_type = new HashMap<>();
-                start_type.put("map", map);//参数
-                rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type), message -> {
-                    // 设置消息过期时间 60 分钟 过期
-                    message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
-                    return message;
-                });
-            } catch (Exception e) {
-                System.out.println("批量 【同步用量】 生产指令  失败 " + e.getMessage().toString());
-                return ("批量 【同步用量】 生产指令 操作失败！");
-            }
+        // 1.创建路由 绑定 生产队列 发送消息
+        String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_Consumption_queue",
+                addOrder_routingKey = "admin.Consumption.queue",
+                addOrder_del_exchangeName = "dlx_" + addOrder_exchangeName,
+                addOrder_del_queueName = "dlx_" + addOrder_queueName,
+                addOrder_del_routingKey = "dlx_" + addOrder_routingKey;
+        try {
+            Map<String, Object> start_type = new HashMap<>();
+            start_type.put("map", map);// 参数
+            rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type),
+                    message -> {
+                        // 设置消息过期时间 60 分钟 过期
+                        message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
+                        return message;
+                    });
+        } catch (Exception e) {
+            System.out.println("批量 【同步用量】 生产指令  失败 " + e.getMessage().toString());
+            return ("批量 【同步用量】 生产指令 操作失败！");
+        }
 
-            return "批量 【同步用量】 指令 已发送，连接设置详细信息请在 【执行日志管理】查询！";
+        return "批量 【同步用量】 指令 已发送，连接设置详细信息请在 【执行日志管理】查询！";
     }
 
     /**
@@ -953,23 +1254,27 @@ public class YzCardServiceImpl implements IYzCardService {
      */
     @Override
     public String publicmethodarr(Map<String, Object> map) {
-            //1.创建路由 绑定 生产队列 发送消息
-            String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_PublicMethod_queue", addOrder_routingKey = "admin.PublicMethod.queue",
-                    addOrder_del_exchangeName = "dlx_" + addOrder_exchangeName, addOrder_del_queueName = "dlx_" + addOrder_queueName, addOrder_del_routingKey = "dlx_" + addOrder_routingKey;
-            try {
-                Map<String, Object> start_type = new HashMap<>();
-                start_type.put("map", map);//参数
-                rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type), message -> {
-                    // 设置消息过期时间 60 分钟 过期
-                    message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
-                    return message;
-                });
-            } catch (Exception e) {
-                System.out.println("批量 【同步状态】 生产指令  失败 " + e.getMessage().toString());
-                return ("批量 【同步状态】 生产指令 操作失败！");
-            }
+        // 1.创建路由 绑定 生产队列 发送消息
+        String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_PublicMethod_queue",
+                addOrder_routingKey = "admin.PublicMethod.queue",
+                addOrder_del_exchangeName = "dlx_" + addOrder_exchangeName,
+                addOrder_del_queueName = "dlx_" + addOrder_queueName,
+                addOrder_del_routingKey = "dlx_" + addOrder_routingKey;
+        try {
+            Map<String, Object> start_type = new HashMap<>();
+            start_type.put("map", map);// 参数
+            rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type),
+                    message -> {
+                        // 设置消息过期时间 60 分钟 过期
+                        message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
+                        return message;
+                    });
+        } catch (Exception e) {
+            System.out.println("批量 【同步状态】 生产指令  失败 " + e.getMessage().toString());
+            return ("批量 【同步状态】 生产指令 操作失败！");
+        }
 
-            return "批量 【同步状态】 指令 已发送，连接设置详细信息请在 【执行日志管理】查询！";
+        return "批量 【同步状态】 指令 已发送，连接设置详细信息请在 【执行日志管理】查询！";
     }
 
     /**
@@ -977,23 +1282,27 @@ public class YzCardServiceImpl implements IYzCardService {
      */
     @Override
     public String consumptionandstatearr(Map<String, Object> map) {
-            //1.创建路由 绑定 生产队列 发送消息
-            String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_ConsumptionAndState_queue", addOrder_routingKey = "admin.ConsumptionAndState.queue",
-                    addOrder_del_exchangeName = "dlx_" + addOrder_exchangeName, addOrder_del_queueName = "dlx_" + addOrder_queueName, addOrder_del_routingKey = "dlx_" + addOrder_routingKey;
-            try {
-                Map<String, Object> start_type = new HashMap<>();
-                start_type.put("map", map);//参数
-                rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type), message -> {
-                    // 设置消息过期时间 60 分钟 过期
-                    message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
-                    return message;
-                });
-            } catch (Exception e) {
-                System.out.println("批量 【同步状态和用量】 生产指令  失败 " + e.getMessage().toString());
-                return ("批量 【同步状态和用量】 生产指令 操作失败！");
-            }
+        // 1.创建路由 绑定 生产队列 发送消息
+        String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_ConsumptionAndState_queue",
+                addOrder_routingKey = "admin.ConsumptionAndState.queue",
+                addOrder_del_exchangeName = "dlx_" + addOrder_exchangeName,
+                addOrder_del_queueName = "dlx_" + addOrder_queueName,
+                addOrder_del_routingKey = "dlx_" + addOrder_routingKey;
+        try {
+            Map<String, Object> start_type = new HashMap<>();
+            start_type.put("map", map);// 参数
+            rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type),
+                    message -> {
+                        // 设置消息过期时间 60 分钟 过期
+                        message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
+                        return message;
+                    });
+        } catch (Exception e) {
+            System.out.println("批量 【同步状态和用量】 生产指令  失败 " + e.getMessage().toString());
+            return ("批量 【同步状态和用量】 生产指令 操作失败！");
+        }
 
-            return "批量 【同步状态和用量】 指令 已发送，连接设置详细信息请在 【执行日志管理】查询！";
+        return "批量 【同步状态和用量】 指令 已发送，连接设置详细信息请在 【执行日志管理】查询！";
     }
 
     @Override
@@ -1003,15 +1312,15 @@ public class YzCardServiceImpl implements IYzCardService {
         if (selVidArr != null && selVidArr.size() > 0) {
             Rmap = selVidArr.get(0);
             boolean is_Internal = false;
-            //权限过滤
+            // 权限过滤
             if (map.get("agent_id") != null) {
                 List<Integer> agent_id = (List<Integer>) map.get("agent_id");
                 if (!Different.Is_existence(agent_id, 100)) {
                 } else {
-                    is_Internal = true;//内部人员 部门是 100 的 可看字段增加
+                    is_Internal = true;// 内部人员 部门是 100 的 可看字段增加
                 }
             } else {
-                is_Internal = true;//内部人员 部门是 100 的 可看字段增加
+                is_Internal = true;// 内部人员 部门是 100 的 可看字段增加
             }
             Rmap.put("is_Internal", is_Internal);
         }
@@ -1023,47 +1332,53 @@ public class YzCardServiceImpl implements IYzCardService {
         String filename = file.getOriginalFilename();
         String ReadName = UUID.randomUUID().toString().replace("-", "") + filename;
         String flieUrlRx = "/upload/cancelrealname/";
-        ReadName = flieUrlRx +ReadName;
+        ReadName = flieUrlRx + ReadName;
 
         try {
             // 获取当前项目的工作路径
             File file2 = new File("");
             String filePath = file2.getCanonicalPath();
             File newFile = new File(filePath + ReadName);
-            File Url = new File(filePath + flieUrlRx+"1.txt");//tomcat 生成路径
+            File Url = new File(filePath + flieUrlRx + "1.txt");// tomcat 生成路径
             Upload.mkdirsmy(Url);
             file.transferTo(newFile);
 
-            //新增批量执行表
+            // 新增批量执行表
             String agent_id = map.get("agent_id").toString();
             Map<String, Object> bulkMap = new HashMap<>();
             String task_name = "【取消实名】";
             String code = VeDate.getNo(8);
-            SysUser User =   (SysUser)map.get("User");//登录用户信息
-            SysDept Dept =User.getDept();
-            String  create_by = " [ "+Dept.getDeptName()+" ] - "+" [ "+User.getUserName()+" ] ";
+            SysUser User = (SysUser) map.get("User");// 登录用户信息
+            SysDept Dept = User.getDept();
+            String create_by = " [ " + Dept.getDeptName() + " ] - " + " [ " + User.getUserName() + " ] ";
             bulkMap.put("code", code);
-            bulkMap.put("task_name",task_name);
-            bulkMap.put("auth",create_by);
-            bulkMap.put("agent_id",agent_id);
-            bulkMap.put("type","8");//取消实名 8
+            bulkMap.put("task_name", task_name);
+            bulkMap.put("auth", create_by);
+            bulkMap.put("agent_id", agent_id);
+            bulkMap.put("type", "8");// 取消实名 8
             yzBulkBusinessMapper.add(bulkMap);
 
-            //1.创建路由 绑定 生产队列 发送消息
-            String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_CardCancelrealname_queue", addOrder_routingKey = "admin.CardCancelrealname.queue",
-                    addOrder_del_exchangeName = "dlx_" + addOrder_exchangeName, addOrder_del_queueName = "dlx_" + addOrder_queueName, addOrder_del_routingKey = "dlx_" + addOrder_routingKey;
+            // 1.创建路由 绑定 生产队列 发送消息
+            String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_CardCancelrealname_queue",
+                    addOrder_routingKey = "admin.CardCancelrealname.queue",
+                    addOrder_del_exchangeName = "dlx_" + addOrder_exchangeName,
+                    addOrder_del_queueName = "dlx_" + addOrder_queueName,
+                    addOrder_del_routingKey = "dlx_" + addOrder_routingKey;
             try {
-                // rabbitMQConfig.creatExchangeQueue(addOrder_exchangeName, addOrder_queueName, addOrder_routingKey, addOrder_del_exchangeName, addOrder_del_queueName, addOrder_del_routingKey, null);
+                // rabbitMQConfig.creatExchangeQueue(addOrder_exchangeName, addOrder_queueName,
+                // addOrder_routingKey, addOrder_del_exchangeName, addOrder_del_queueName,
+                // addOrder_del_routingKey, null);
                 Map<String, Object> start_type = new HashMap<>();
-                start_type.put("filePath", filePath);//项目根目录
-                start_type.put("ReadName", ReadName);//上传新文件名
-                start_type.put("bulkMap", bulkMap);//批量任务主表 信息
-                start_type.put("map", map);//参数
-                rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type), message -> {
-                    // 设置消息过期时间 60 分钟 过期
-                    message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
-                    return message;
-                });
+                start_type.put("filePath", filePath);// 项目根目录
+                start_type.put("ReadName", ReadName);// 上传新文件名
+                start_type.put("bulkMap", bulkMap);// 批量任务主表 信息
+                start_type.put("map", map);// 参数
+                rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type),
+                        message -> {
+                            // 设置消息过期时间 60 分钟 过期
+                            message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
+                            return message;
+                        });
             } catch (Exception e) {
                 System.out.println("批量取消实名 生产指令  失败 " + e.getMessage().toString());
                 return ("批量取消实名 生产指令 操作失败！");
@@ -1105,18 +1420,17 @@ public class YzCardServiceImpl implements IYzCardService {
             }
         }
         boolean is_Internal = false;
-        //权限过滤
+        // 权限过滤
         if (map.get("agent_id") != null) {
             List<Integer> agent_id = (List<Integer>) map.get("agent_id");
             if (!Different.Is_existence(agent_id, 100)) {
             } else {
-                is_Internal = true;//内部人员 部门是 100 的 可看字段增加
+                is_Internal = true;// 内部人员 部门是 100 的 可看字段增加
             }
         } else {
-            is_Internal = true;//内部人员 部门是 100 的 可看字段增加
+            is_Internal = true;// 内部人员 部门是 100 的 可看字段增加
         }
         Rmap.put("is_Internal", is_Internal);
-
 
         Rmap.put("cardCount", cardMatchCount);
         Rmap.put("cardMatchMap", cardMatchMap);
@@ -1126,57 +1440,56 @@ public class YzCardServiceImpl implements IYzCardService {
 
     }
 
-
     @Override
     public String importCardReplace(MultipartFile file, Map<String, Object> map) {
         String filename = file.getOriginalFilename();
         String ReadName = UUID.randomUUID().toString().replace("-", "") + filename;
-       String flieUrlRx = "/upload/importCardReplace/";
-        ReadName =  flieUrlRx +ReadName;
-        SysUser User =   (SysUser)map.get("User");//登录用户信息
-        SysDept Dept =User.getDept();
-        String  create_by = " [ "+Dept.getDeptName()+" ] - "+" [ "+User.getUserName()+" ] ";
+        String flieUrlRx = "/upload/importCardReplace/";
+        ReadName = flieUrlRx + ReadName;
+        SysUser User = (SysUser) map.get("User");// 登录用户信息
+        SysDept Dept = User.getDept();
+        String create_by = " [ " + Dept.getDeptName() + " ] - " + " [ " + User.getUserName() + " ] ";
         String task_name = "特殊操作 [批量变更卡信息] ";
-        String newName = UUID.randomUUID().toString().replace("-","")+"_CardInfoReplace";
-        String UpdBackupName = UUID.randomUUID().toString().replace("-","")+"__CardInfoReplaceBackup";//设置分组备注前信息备份名称
+        String newName = UUID.randomUUID().toString().replace("-", "") + "_CardInfoReplace";
+        String UpdBackupName = UUID.randomUUID().toString().replace("-", "") + "__CardInfoReplaceBackup";// 设置分组备注前信息备份名称
 
-        String SaveUrl = "/getcsv/"+newName+".csv";
-        SaveUrl += ",/getcsv/"+UpdBackupName+".csv";
+        String SaveUrl = "/getcsv/" + newName + ".csv";
+        SaveUrl += ",/getcsv/" + UpdBackupName + ".csv";
 
         Map<String, Object> task_map = new HashMap<String, Object>();
-        task_map.put("auth",create_by);
-        task_map.put("task_name",task_name);
-        task_map.put("url",SaveUrl);
-        task_map.put("agent_id",User.getDeptId() );
+        task_map.put("auth", create_by);
+        task_map.put("task_name", task_name);
+        task_map.put("url", SaveUrl);
+        task_map.put("agent_id", User.getDeptId());
         task_map.put("type", "15");
-        yzExecutionTaskMapper.add(task_map);//添加执行 任务表
-
+        yzExecutionTaskMapper.add(task_map);// 添加执行 任务表
 
         try {
             // 获取当前项目的工作路径
             File file2 = new File("");
             String filePath = file2.getCanonicalPath();
-            File newFile = new File(filePath +   ReadName);
-            File Url = new File(filePath + flieUrlRx +"/1.txt");//tomcat 生成路径
+            File newFile = new File(filePath + ReadName);
+            File Url = new File(filePath + flieUrlRx + "/1.txt");// tomcat 生成路径
             Upload.mkdirsmy(Url);
             file.transferTo(newFile);
-            //1.创建路由 绑定 生产队列 发送消息
-            String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_CardImportReplace_queue", addOrder_routingKey = "admin.CardImportReplace.queue";
+            // 1.创建路由 绑定 生产队列 发送消息
+            String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_CardImportReplace_queue",
+                    addOrder_routingKey = "admin.CardImportReplace.queue";
             try {
                 Map<String, Object> start_type = new HashMap<>();
-                start_type.put("filePath", filePath);//项目根目录
-                start_type.put("ReadName", ReadName);//上传新文件名
-                start_type.put("map", map);//参数
-                start_type.put("task_map", task_map);//参数
-                start_type.put("newName", newName);//参数
-                start_type.put("UpdBackupName", UpdBackupName);//参数
+                start_type.put("filePath", filePath);// 项目根目录
+                start_type.put("ReadName", ReadName);// 上传新文件名
+                start_type.put("map", map);// 参数
+                start_type.put("task_map", task_map);// 参数
+                start_type.put("newName", newName);// 参数
+                start_type.put("UpdBackupName", UpdBackupName);// 参数
 
-
-                rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type), message -> {
-                    // 设置消息过期时间 60 分钟 过期
-                    message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
-                    return message;
-                });
+                rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type),
+                        message -> {
+                            // 设置消息过期时间 60 分钟 过期
+                            message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
+                            return message;
+                        });
             } catch (Exception e) {
                 System.out.println("批量更新卡信息 生产指令  失败 " + e.getMessage().toString());
                 return ("批量更新卡信息 生产指令 操作失败！");
@@ -1190,41 +1503,44 @@ public class YzCardServiceImpl implements IYzCardService {
 
     @Override
     public String ChangeF(Map<String, Object> map, SysUser User) {
-            String agent_id = ""+User.getDeptId();
+        String agent_id = "" + User.getDeptId();
 
-            //新增批量执行表
-            Map<String, Object> bulkMap = new HashMap<>();
-            String task_name = "勾选 -【灵活变更状态】";
-            String code = VeDate.getNo(8);
-            SysDept Dept = User.getDept();
-            String  create_by = " [ "+Dept.getDeptName()+" ] - "+" [ "+User.getUserName()+" ] ";
-            bulkMap.put("code", code);
-            bulkMap.put("task_name",task_name);
-            bulkMap.put("auth",create_by);
-            bulkMap.put("agent_id",agent_id);
-            bulkMap.put("type","10");//灵活变更状态 10
-            //yzBulkBusinessMapper.add(bulkMap);
+        // 新增批量执行表
+        Map<String, Object> bulkMap = new HashMap<>();
+        String task_name = "勾选 -【灵活变更状态】";
+        String code = VeDate.getNo(8);
+        SysDept Dept = User.getDept();
+        String create_by = " [ " + Dept.getDeptName() + " ] - " + " [ " + User.getUserName() + " ] ";
+        bulkMap.put("code", code);
+        bulkMap.put("task_name", task_name);
+        bulkMap.put("auth", create_by);
+        bulkMap.put("agent_id", agent_id);
+        bulkMap.put("type", "10");// 灵活变更状态 10
+        // yzBulkBusinessMapper.add(bulkMap);
 
+        // 1.创建路由 绑定 生产队列 发送消息
+        String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_fileFlexible_queue",
+                addOrder_routingKey = "admin.fileFlexible.queue",
+                addOrder_del_exchangeName = "dlx_" + addOrder_exchangeName,
+                addOrder_del_queueName = "dlx_" + addOrder_queueName,
+                addOrder_del_routingKey = "dlx_" + addOrder_routingKey;
+        try {
+            Map<String, Object> start_type = new HashMap<>();
+            start_type.put("bulkMap", bulkMap);// 批量任务主表 信息
+            start_type.put("User", User);
+            start_type.put("map", map);// 参数
+            rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type),
+                    message -> {
+                        // 设置消息过期时间 60 分钟 过期
+                        message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
+                        return message;
+                    });
+        } catch (Exception e) {
+            System.out.println("批量 【灵活变更状态】 生产指令  失败 " + e.getMessage().toString());
+            return ("批量 【灵活变更状态】 生产指令 操作失败！");
+        }
 
-            //1.创建路由 绑定 生产队列 发送消息
-            String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_fileFlexible_queue", addOrder_routingKey = "admin.fileFlexible.queue",
-                    addOrder_del_exchangeName = "dlx_" + addOrder_exchangeName, addOrder_del_queueName = "dlx_" + addOrder_queueName, addOrder_del_routingKey = "dlx_" + addOrder_routingKey;
-            try {
-                Map<String, Object> start_type = new HashMap<>();
-                start_type.put("bulkMap", bulkMap);//批量任务主表 信息
-                start_type.put("User", User);
-                start_type.put("map", map);//参数
-                rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(start_type), message -> {
-                    // 设置消息过期时间 60 分钟 过期
-                    message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
-                    return message;
-                });
-            } catch (Exception e) {
-                System.out.println("批量 【灵活变更状态】 生产指令  失败 " + e.getMessage().toString());
-                return ("批量 【灵活变更状态】 生产指令 操作失败！");
-            }
-
-            return "批量 【灵活变更状态】 指令 已发送，连接设置详细信息请在 【执行日志管理】查询！";
+        return "批量 【灵活变更状态】 指令 已发送，连接设置详细信息请在 【执行日志管理】查询！";
     }
 
     @Override
@@ -1237,18 +1553,17 @@ public class YzCardServiceImpl implements IYzCardService {
 
         Integer mCount = 0;
         Integer openSelCardMaxInt = 0;
-        Object  openSelCardMax = redisCache.getCacheObject("openSelCard.max");
-        if(openSelCardMax!=null && openSelCardMax.toString().length()>0){
+        Object openSelCardMax = redisCache.getCacheObject("openSelCard.max");
+        if (openSelCardMax != null && openSelCardMax.toString().length() > 0) {
             openSelCardMaxInt = Integer.parseInt(openSelCardMax.toString());
-        }else{
+        } else {
             Map<String, Object> openSelCardMap = new HashMap<>();
-            openSelCardMap.put("config_key","openSelCard.max");
+            openSelCardMap.put("config_key", "openSelCard.max");
             String openSelCard_str = yzWxByProductAgentMapper.findConfig(openSelCardMap);
-            openSelCard_str = openSelCard_str!=null&&openSelCard_str.length()>0?openSelCard_str:"5";//默认60秒五次
+            openSelCard_str = openSelCard_str != null && openSelCard_str.length() > 0 ? openSelCard_str : "5";// 默认60秒五次
             openSelCardMaxInt = Integer.parseInt(openSelCard_str);
-            redisCache.setCacheObject("openSelCard.max",openSelCard_str,1,TimeUnit.HOURS);//1 小时 缓存
+            redisCache.setCacheObject("openSelCard.max", openSelCard_str, 1, TimeUnit.HOURS);// 1 小时 缓存
         }
-
 
         Object isExecute = redisCache.getCacheObject(ip);
 
@@ -1257,71 +1572,70 @@ public class YzCardServiceImpl implements IYzCardService {
         }
 
         String rKey = "maxTestPeriodDays";
-        Object  testPeriodDaysIsExecute = redisCache.getCacheObject(rKey);
-        String maxTestPeriodDays = "180";//默认 180 天
-        if(testPeriodDaysIsExecute==null){
+        Object testPeriodDaysIsExecute = redisCache.getCacheObject(rKey);
+        String maxTestPeriodDays = "180";// 默认 180 天
+        if (testPeriodDaysIsExecute == null) {
             HashMap<String, Object> configMap = new HashMap<>();
             configMap.put("config_key", rKey);
-            maxTestPeriodDays =  yzWxByProductAgentMapper.findConfig(configMap);// 最大测试期天数
-            redisCache.setCacheObject(rKey, maxTestPeriodDays, 3*60*60, TimeUnit.SECONDS);// 3 小时 【缓存 系统参数】
-        }else{
+            maxTestPeriodDays = yzWxByProductAgentMapper.findConfig(configMap);// 最大测试期天数
+            redisCache.setCacheObject(rKey, maxTestPeriodDays, 3 * 60 * 60, TimeUnit.SECONDS);// 3 小时 【缓存 系统参数】
+        } else {
             maxTestPeriodDays = redisCache.getCacheObject(rKey).toString();
         }
 
-        boolean flag = isClose(ip,"selCardOpen",openSelCardMaxInt);
-        if(!flag){
+        boolean flag = isClose(ip, "selCardOpen", openSelCardMaxInt);
+        if (!flag) {
             List<String> pList = (List<String>) map.get("cardArr");
             for (int i = 0; i < pList.size(); i++) {
                 String cardNo = pList.get(i);
                 Map<String, Object> pMap = new HashMap<>();
-                pMap.put("value",cardNo);
+                pMap.put("value", cardNo);
                 Map<String, Object> rMap = yzCardMapper.selCardOpen(pMap);
-                if(rMap!=null && rMap.get("iccid")!=null){
-                    String dict_label = rMap.get("dict_label").toString();//卡状态
+                if (rMap != null && rMap.get("iccid") != null) {
+                    String dict_label = rMap.get("dict_label").toString();// 卡状态
                     String MaxActivate_date = "";
-                    if(dict_label.equals("可测试")){//判断是否有开卡日期 推演 开卡日期
-                        if(rMap.get("open_date")!=null && rMap.get("open_date").toString().length()>0){
-                            String open_date = rMap.get("open_date").toString();//开卡日期
-                             MaxActivate_date = VeDate.getBeforeAfterDate(open_date,Integer.parseInt(maxTestPeriodDays));
-                        }else{//卡状态 ‘可测试’ 但是 没有开卡日期的 发送获取开卡日期指令
+                    if (dict_label.equals("可测试")) {// 判断是否有开卡日期 推演 开卡日期
+                        if (rMap.get("open_date") != null && rMap.get("open_date").toString().length() > 0) {
+                            String open_date = rMap.get("open_date").toString();// 开卡日期
+                            MaxActivate_date = VeDate.getBeforeAfterDate(open_date,
+                                    Integer.parseInt(maxTestPeriodDays));
+                        } else {// 卡状态 '可测试' 但是 没有开卡日期的 发送获取开卡日期指令
                             Map<String, Object> sendMap = new HashMap<>();
-                            sendMap.put("iccid",rMap.get("iccid"));
-                            sendMap.put("opType","open");
+                            sendMap.put("iccid", rMap.get("iccid"));
+                            sendMap.put("opType", "open");
                             sendGetOpenDate(sendMap);
                         }
                     }
-                    rMap.put("MaxActivate_date",MaxActivate_date);
+                    rMap.put("MaxActivate_date", MaxActivate_date);
                     rList.add(rMap);
-                }else{
+                } else {
                     dList.add(cardNo);
                 }
             }
             bool = true;
-        }else {
+        } else {
             Message = "您的查询的频次过于频繁请稍后重试！";
         }
-        retMap.put("bool",bool);
-        retMap.put("Message",Message);
-        retMap.put("rList",rList);
-        retMap.put("dList",dList);
+        retMap.put("bool", bool);
+        retMap.put("Message", Message);
+        retMap.put("rList", rList);
+        retMap.put("dList", dList);
         return retMap;
     }
 
     public String addAutoPolling(HashMap<String, Object> parammap) {
-        try{
+        try {
             String iccid = yzCardMapper.selCardIsInAuto(parammap);
             if (iccid == null) {
                 yzCardMapper.addAutoPolling(parammap);
                 return "添加成功!";
-            }else{
+            } else {
                 return "卡已添加至自动轮询!请勿重复操作!";
             }
 
-
-        }catch (Exception e){
-            return "添加失败!:"+e.getMessage();
+        } catch (Exception e) {
+            return "添加失败!:" + e.getMessage();
         }
-
 
     }
 
@@ -1338,7 +1652,7 @@ public class YzCardServiceImpl implements IYzCardService {
     }
 
     @Override
-    public List<Map<String,Object>> getListUsage(Map map) {
+    public List<Map<String, Object>> getListUsage(Map map) {
         return yzCardApiOfferinginfolistMapper.apiIdList(map);
     }
 
@@ -1349,70 +1663,70 @@ public class YzCardServiceImpl implements IYzCardService {
 
     @Override
     public String CardInfoFlow(Map map) {
-            try {
-                Map<String, Object> Route = yzCardMapper.findRoute(map);
-                if (Route != null) {
-                    String cd_status = Route.get("cd_status").toString();
-                    if (cd_status != null && cd_status != "" && cd_status.equals("1")) {
-                        Map<String, Object> Rmap = internalApiRequest.queryFlow(map, Route);
-                        String code = Rmap.get("code") != null ? Rmap.get("code").toString() : "500";
-                        if (code.equals("200")) {
-                            //获取 卡用量 开卡日期 更新 card info
-                            if (Rmap.get("Use") != null && Rmap.get("Use") != "" && Rmap.get("Use").toString().trim().length() > 0) {
-                                Double Use = Double.parseDouble(Rmap.get("Use").toString());
-                                if (Use >= 0) {
-                                    try {
-                                        cardFlowSyn.CalculationFlow(map.get("iccid").toString(), Use, Route);
-                                    } catch (Exception e) {
-                                        return ("用量内部计算错误！" + e.getMessage().toString());
-                                    }
-                                } else {
-                                    return ("接口超频返回暂无数据返回，请稍后重试！");
+        try {
+            Map<String, Object> Route = yzCardMapper.findRoute(map);
+            if (Route != null) {
+                String cd_status = Route.get("cd_status").toString();
+                if (cd_status != null && cd_status != "" && cd_status.equals("1")) {
+                    Map<String, Object> Rmap = internalApiRequest.queryFlow(map, Route);
+                    String code = Rmap.get("code") != null ? Rmap.get("code").toString() : "500";
+                    if (code.equals("200")) {
+                        // 获取 卡用量 开卡日期 更新 card info
+                        if (Rmap.get("Use") != null && Rmap.get("Use") != ""
+                                && Rmap.get("Use").toString().trim().length() > 0) {
+                            Double Use = Double.parseDouble(Rmap.get("Use").toString());
+                            if (Use >= 0) {
+                                try {
+                                    cardFlowSyn.CalculationFlow(map.get("iccid").toString(), Use, Route);
+                                } catch (Exception e) {
+                                    return ("用量内部计算错误！" + e.getMessage().toString());
                                 }
+                            } else {
+                                return ("接口超频返回暂无数据返回，请稍后重试！");
                             }
-                        } else {
-                            return ("网络繁忙稍后重试！" + Rmap.get("Message").toString());
                         }
-                        Map<String, Object> newRmap = internalApiRequest.queryCardStatus(map, Route);
-                        String newcode = newRmap.get("code") != null ? newRmap.get("code").toString() : "500";
-                        if (newcode.equals("200")) {
-                            //获取 卡状态 开卡日期 更新 card info
-                            if (newRmap.get("statusCode") != null && newRmap.get("statusCode") != "" && newRmap.get("statusCode").toString().trim().length() > 0) {
-                                String statusCode = newRmap.get("statusCode").toString().trim();
-                                if (!statusCode.equals("0")) {
-                                    Map<String, Object> Upd_Map = new HashMap<>();
-                                    Upd_Map.put("status_id", statusCode);
-                                    Upd_Map.put("status_ShowId", getShowStatIdArr.GetShowStatId(statusCode));
-                                    Upd_Map.put("iccid", map.get("iccid").toString());
-                                    try {
-                                        yzCardMapper.updStatusId(Upd_Map);//变更卡状态
-                                    } catch (Exception e) {
-                                        return ("DB保存状态操作失败！" + e.getMessage().toString());
-                                    }
-                                } else {
-                                    return ("接口超频返回暂无数据返回，请稍后重试！");
-                                }
-                            }
-                        } else {
-                            return ("网络繁忙稍后重试！" + newRmap.get("Message").toString());
-                        }
-                        return "同步用量和状态 操作成功";
                     } else {
-                        String statusVal = cd_status.equals("2") ? "已停用" : cd_status.equals("3") ? "已删除" : "状态未知";
-                        return ("同步用量 操作失败！" + " 通道 [" + statusVal + "]");
+                        return ("网络繁忙稍后重试！" + Rmap.get("Message").toString());
                     }
+                    Map<String, Object> newRmap = internalApiRequest.queryCardStatus(map, Route);
+                    String newcode = newRmap.get("code") != null ? newRmap.get("code").toString() : "500";
+                    if (newcode.equals("200")) {
+                        // 获取 卡状态 开卡日期 更新 card info
+                        if (newRmap.get("statusCode") != null && newRmap.get("statusCode") != ""
+                                && newRmap.get("statusCode").toString().trim().length() > 0) {
+                            String statusCode = newRmap.get("statusCode").toString().trim();
+                            if (!statusCode.equals("0")) {
+                                Map<String, Object> Upd_Map = new HashMap<>();
+                                Upd_Map.put("status_id", statusCode);
+                                Upd_Map.put("status_ShowId", getShowStatIdArr.GetShowStatId(statusCode));
+                                Upd_Map.put("iccid", map.get("iccid").toString());
+                                try {
+                                    yzCardMapper.updStatusId(Upd_Map);// 变更卡状态
+                                } catch (Exception e) {
+                                    return ("DB保存状态操作失败！" + e.getMessage().toString());
+                                }
+                            } else {
+                                return ("接口超频返回暂无数据返回，请稍后重试！");
+                            }
+                        }
+                    } else {
+                        return ("网络繁忙稍后重试！" + newRmap.get("Message").toString());
+                    }
+                    return "同步用量和状态 操作成功";
                 } else {
-                    return (" iccid [" + map.get("iccid") + "] 未划分 API通道 ！请划分通道后重试！");
+                    String statusVal = cd_status.equals("2") ? "已停用" : cd_status.equals("3") ? "已删除" : "状态未知";
+                    return ("同步用量 操作失败！" + " 通道 [" + statusVal + "]");
                 }
-            } catch (Exception e) {
-                String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-                System.out.println("<br/> yunze:card:SynFlow  " + " <br/> ip =  " + ip + " <br/> " + e.getCause().toString());
+            } else {
+                return (" iccid [" + map.get("iccid") + "] 未划分 API通道 ！请划分通道后重试！");
             }
-            return ("单卡同步用量和状态 操作失败！");
+        } catch (Exception e) {
+            String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
+            System.out
+                    .println("<br/> yunze:card:SynFlow  " + " <br/> ip =  " + ip + " <br/> " + e.getCause().toString());
+        }
+        return ("单卡同步用量和状态 操作失败！");
     }
-
-
-
 
     @Override
     public Map<String, Object> UpdateSingle(Map<String, Object> map) {
@@ -1441,12 +1755,11 @@ public class YzCardServiceImpl implements IYzCardService {
             }
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            System.out.println("<br/> yunze:card:singleUpd  " + " <br/> ip =  " + ip + " <br/> " + e.getCause().toString());
+            System.out.println(
+                    "<br/> yunze:card:singleUpd  " + " <br/> ip =  " + ip + " <br/> " + e.getCause().toString());
         }
         return UpdateSingleData;
     }
-
-
 
     @Override
     public Map<String, Object> singleState(Map<String, Object> map) {
@@ -1459,7 +1772,7 @@ public class YzCardServiceImpl implements IYzCardService {
             String iccid = Route.get("iccid").toString();
             Map<String, Object> Obj = new HashMap<>();
             Object ShowId = map.get("status_ShowId");
-            Obj.put("operType", ShowId);//API 状态
+            Obj.put("operType", ShowId);// API 状态
             Obj.put("iccid", iccid);
             if (cd_status != null && cd_status != "" && cd_status.equals("1")) {
                 Map<String, Object> CsFble = internalApiRequest.changeCardStatusFlexible(Obj, Route);
@@ -1471,7 +1784,7 @@ public class YzCardServiceImpl implements IYzCardService {
                     Upd_Map.put("status_ShowId", getShowStatIdArr.GetShowStatId(statusCode));
                     Upd_Map.put("iccid", map.get("iccid").toString());
                     try {
-                        yzCardMapper.updStatusId(Upd_Map);//变更卡状态
+                        yzCardMapper.updStatusId(Upd_Map);// 变更卡状态
                         bool = true;
                         message = "操作成功！";
                     } catch (Exception e) {
@@ -1490,8 +1803,8 @@ public class YzCardServiceImpl implements IYzCardService {
         } else {
             message = " iccid [" + map.get("iccid") + "] 未划分 API通道 ！请划分通道后重试！";
         }
-        rMap.put("bool",bool);
-        rMap.put("message",message);
+        rMap.put("bool", bool);
+        rMap.put("message", message);
         return rMap;
     }
 
@@ -1509,14 +1822,14 @@ public class YzCardServiceImpl implements IYzCardService {
 
     @Override
     public AjaxResult distinguishCardType(String query) {
-        //区分运营商类型 移动、电信
+        // 区分运营商类型 移动、电信
         JSONObject object1 = JSON.parseObject(query);
         List<String> objects = new ArrayList<>();
         Map<String, List> map = Maps.newHashMap();
         ArrayList<String> dates = Lists.newArrayList();
         ArrayList<Object> usage = Lists.newArrayList();
-        Double Use = 0d;//使用量  MB
-        //获取卡信息
+        Double Use = 0d;// 使用量 MB
+        // 获取卡信息
         Map<String, Object> route = yzCardMapper.findRoute(object1);
         if (StringUtils.isNull(route)) {
             return AjaxResult.error("未找到相关信息");
@@ -1540,14 +1853,15 @@ public class YzCardServiceImpl implements IYzCardService {
                 JSONObject day = JSONObject.parseObject(dayUsage.toString());
                 if (day.get("status").toString().equals("0")) {
                     Map<String, Object> result = ((List<Map<String, Object>>) day.get("result")).get(0);
-                    Map<String, Object> dataAmountList = ((List<Map<String, Object>>) result.get("dataAmountList")).get(0);
+                    Map<String, Object> dataAmountList = ((List<Map<String, Object>>) result.get("dataAmountList"))
+                            .get(0);
                     if (dataAmountList.get("dataAmount").toString().equals("")) {
                         Use = 0d;
                         usage.add(Use);
                         dates.add(date.toString().substring(5, 10));
                     } else {
                         double kb = Double.parseDouble(dataAmountList.get("dataAmount").toString());
-                        Use = Arith.formatToTwo(Arith.div(kb, 1024));//KB 转 MB
+                        Use = Arith.formatToTwo(Arith.div(kb, 1024));// KB 转 MB
                         usage.add(Use);
                         dates.add(date.toString().substring(5, 10));
                     }
@@ -1589,13 +1903,13 @@ public class YzCardServiceImpl implements IYzCardService {
 
     @Override
     public AjaxResult cardMonthUsage(String query) {
-        //区分运营商类型 移动、电信
+        // 区分运营商类型 移动、电信
         JSONObject object1 = JSON.parseObject(query);
         Map<String, List> map = Maps.newHashMap();
         ArrayList<String> dates = Lists.newArrayList();
         ArrayList<Object> usage = Lists.newArrayList();
-        Double Use = 0d;//使用量  MB
-        //获取卡信息
+        Double Use = 0d;// 使用量 MB
+        // 获取卡信息
         Map<String, Object> route = yzCardMapper.findRoute(object1);
         if (StringUtils.isNull(route)) {
             return AjaxResult.error("未找到相关信息");
@@ -1612,66 +1926,68 @@ public class YzCardServiceImpl implements IYzCardService {
                 LocalDate previousOrCurrentMonth = currentDate.minusMonths(i);
                 dates.add(previousOrCurrentMonth.format(formatter).toString());
                 // 打印格式化的月份和年份
-                Object resDates = quer.newDesignatedMonth(object1.get("iccid").toString(), previousOrCurrentMonth.format(formatter).toString().replace("-", ""));
+                Object resDates = quer.newDesignatedMonth(object1.get("iccid").toString(),
+                        previousOrCurrentMonth.format(formatter).toString().replace("-", ""));
                 JSONObject resDate = JSONObject.parseObject(resDates.toString());
                 Map<String, Object> dataAmountList = ((List<Map<String, Object>>) resDate.get("result")).get(0);
                 Map<String, Object> Obj = ((List<Map<String, Object>>) dataAmountList.get("dataAmountList")).get(0);
                 double kb = Double.parseDouble(Obj.get("dataAmount").toString());
-                Use = Arith.formatToTwo(Arith.div(kb, 1024));//KB 转 MB
+                Use = Arith.formatToTwo(Arith.div(kb, 1024));// KB 转 MB
                 usage.add(Use);
             }
             map.put("day", dates);
             map.put("usage", usage);
-        }else if (route.get("cd_code").toString().contains("DianXin")) {
+        } else if (route.get("cd_code").toString().contains("DianXin")) {
             return AjaxResult.error("暂未开放 !");
-//            Query_DX5G dx5G = new Query_DX5G(route);
-//            // 获取当前日期（但我们只关心月份和年份）
-//            LocalDate currentDate = LocalDate.now();
-//            // 设置日期格式器
-//            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMM");
-//            String stringObjectMap = dx5G.batchQryFlowByMonth(route.get("card_no").toString(), "202406");
-//            System.err.println(stringObjectMap);
-//            // 打印从当前月份开始，包括当前月份，并往前推六个月的每个月份
-//            for (int i = 0; i <= 6; i++) {
-//                // 减去相应的月份数（从0开始，所以包括当前月份）
-//                LocalDate previousOrCurrentMonth = currentDate.minusMonths(i);
-//                Object format = previousOrCurrentMonth.format(formatter);
-//                dates.add(format.toString());
-//            }
-//            map.put("day", dates);
-//            map.put("usage", usage);
+            // Query_DX5G dx5G = new Query_DX5G(route);
+            // // 获取当前日期（但我们只关心月份和年份）
+            // LocalDate currentDate = LocalDate.now();
+            // // 设置日期格式器
+            // DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMM");
+            // String stringObjectMap =
+            // dx5G.batchQryFlowByMonth(route.get("card_no").toString(), "202406");
+            // System.err.println(stringObjectMap);
+            // // 打印从当前月份开始，包括当前月份，并往前推六个月的每个月份
+            // for (int i = 0; i <= 6; i++) {
+            // // 减去相应的月份数（从0开始，所以包括当前月份）
+            // LocalDate previousOrCurrentMonth = currentDate.minusMonths(i);
+            // Object format = previousOrCurrentMonth.format(formatter);
+            // dates.add(format.toString());
+            // }
+            // map.put("day", dates);
+            // map.put("usage", usage);
         }
 
         return AjaxResult.success(map);
     }
 
-
-    private  void sendGetOpenDate(Map map){
-        //1.创建路由 绑定 生产队列 发送消息
-        String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_CardGetOpenDate_queue", addOrder_routingKey = "admin.CardGetOpenDate.queue";
+    private void sendGetOpenDate(Map map) {
+        // 1.创建路由 绑定 生产队列 发送消息
+        String addOrder_exchangeName = "admin_exchange", addOrder_queueName = "admin_CardGetOpenDate_queue",
+                addOrder_routingKey = "admin.CardGetOpenDate.queue";
         try {
             Map<String, Object> start_type = new HashMap<>();
-            start_type.putAll(map);//参数
-            rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(map), message -> {
-                // 设置消息过期时间 60 分钟 过期
-                message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
-                return message;
-            });
+            start_type.putAll(map);// 参数
+            rabbitTemplate.convertAndSend(addOrder_exchangeName, addOrder_routingKey, JSON.toJSONString(map),
+                    message -> {
+                        // 设置消息过期时间 60 分钟 过期
+                        message.getMessageProperties().setExpiration("" + (60 * 1000 * 60));
+                        return message;
+                    });
         } catch (Exception e) {
-            System.out.println("开放接口发送 ‘获取开卡日期’ 指令 发送  失败 " + e.getMessage().toString());
+            System.out.println("开放接口发送 '获取开卡日期' 指令 发送  失败 " + e.getMessage().toString());
         }
     }
-
 
     public String dividCardOne(HashMap<String, Object> map) {
         String bcvalue = map.get("Bcvalue").toString();
         String[] split = bcvalue.split(",");
         List<String> valueList = Arrays.asList(split);
-        map.put("valueList",valueList);
+        map.put("valueList", valueList);
         String Message = "";
         String polling_queueName = "admin_DistributeCardOne_queue";
         String polling_routingKey = "admin.DistributeCardOne.queue";
-        String polling_exchangeName = "admin_exchange";//路由
+        String polling_exchangeName = "admin_exchange";// 路由
         try {
             rabbitTemplate.convertAndSend(polling_exchangeName, polling_routingKey, JSON.toJSONString(map), message -> {
                 // 设置消息过期时间 30 分钟 过期
@@ -1695,12 +2011,12 @@ public class YzCardServiceImpl implements IYzCardService {
             File file2 = new File("");
             String filePath = file2.getCanonicalPath();
             File newFile = new File(filePath + ReadName);
-            File Url = new File(filePath + flieUrlRx + "1.txt");//tomcat 生成路径
+            File Url = new File(filePath + flieUrlRx + "1.txt");// tomcat 生成路径
             Upload.mkdirsmy(Url);
             file.transferTo(newFile);
             String path = filePath + ReadName;
             ExcelConfig excelConfig = new ExcelConfig();
-            String columns[] = {"iccid", "changeOther"};
+            String columns[] = { "iccid", "changeOther" };
             String maxVid = yzCardMapper.findMaxVid();
             maxVid = maxVid != null ? maxVid : "16800000000";
             Long maxVidInt = Long.parseLong(maxVid);
@@ -1719,6 +2035,151 @@ public class YzCardServiceImpl implements IYzCardService {
         return AjaxResult.error("添加成功 !");
     }
 
+    public AjaxResult uploadUpdatedExcel(MultipartFile file, String user, String optionalParam) {
+        String baseDir;
+        String filename;
+        String fullPath;
+
+        if (StringUtils.isNotEmpty(optionalParam)) {
+            try {
+                baseDir = "/mnt/file/flowCount/";
+
+                // 解析日期参数 (格式: yyyy-MM-dd)
+                String[] dateParts = optionalParam.split("-");
+                String year = dateParts[0];
+                String month = dateParts[1];
+
+                // 构建目录结构: /mnt/file/flowCount/user/月份/年份/
+                String monthDir = baseDir + month + "/";
+                String yearDir = monthDir + year + "/";
+
+                // 使用日期作为文件名
+                filename = optionalParam + ".xlsx";
+                fullPath = yearDir + filename;
+
+                // 创建月份和年份目录
+                // 获取项目根目录
+                String projectRoot = new File("").getCanonicalPath();
+                // 创建完整的目录路径
+                File monthFolder = new File(projectRoot + monthDir + "1.txt");
+                File yearFolder = new File(projectRoot + yearDir + "1.txt");
+                Upload.mkdirsmy(monthFolder);
+                Upload.mkdirsmy(yearFolder);
+
+            } catch (Exception e) {
+                log.error("创建目录失败", e);
+                return AjaxResult.error("日期格式错误: " + optionalParam);
+            }
+        } else {
+            // 原有逻辑
+            baseDir = "/mnt/file/export/" + user + '/';
+            filename = file.getOriginalFilename();
+            fullPath = baseDir + filename;
+        }
+
+        try {
+            File newFile = new File(new File("").getCanonicalPath() + fullPath);
+            File parentDir = newFile.getParentFile();
+
+            // 创建目录（如果不存在）
+            Upload.mkdirsmy(parentDir);
+
+            // 检查是否存在相同名称的文件，并删除它
+            if (newFile.exists()) {
+                if (!newFile.delete()) {
+                    return AjaxResult.error("无法删除已有的文件: " + newFile.getName());
+                }
+            }
+
+            // 将上传的文件保存到指定位置
+            if (StringUtils.isNotEmpty(optionalParam)) {
+                file.transferTo(newFile);
+                getBusinessStatistics(optionalParam + ".xlsx");
+            } else {
+                file.transferTo(newFile);
+            }
+
+            return AjaxResult.success("上传成功" + new File("").getCanonicalPath());
+        } catch (IOException e) {
+            e.printStackTrace();
+            return AjaxResult.error("上传失败: " + e.getMessage());
+        }
+    }
+
+    public AjaxResult updateCalculate(MultipartFile importFile, MultipartFile exportFile, String user) {
+        String filename = exportFile.getOriginalFilename();
+
+        String flieUrlRx = "/mnt/file/";
+
+        List<String> flieUrlRx0 = new ArrayList<>();
+
+        flieUrlRx0.add("export/");
+        flieUrlRx0.add("import/");
+
+        try {
+            for (int i = 0; i < flieUrlRx0.size(); i++) {
+                String ReadName = flieUrlRx + flieUrlRx0.get(i) + user + '/'
+                        + (i == 0 ? filename : filename.replace("导出", "导入"));
+
+                File file2 = new File("");
+                String filePath = file2.getCanonicalPath();
+                File newFile = new File(filePath + ReadName);
+                File Url = new File(filePath + flieUrlRx + flieUrlRx0.get(i) + user + '/' + "1.txt");// 生成路径
+                Upload.mkdirsmy(Url);
+
+                if (i == 0) {
+                    exportFile.transferTo(newFile);
+                } else {
+                    importFile.transferTo(newFile);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return AjaxResult.error("添加失败 !");
+        }
+        return AjaxResult.error("添加成功 !");
+    }
+
+    public Map<String, Object> calculateList(String deptName, String flowCount) {
+        Map<String, Object> rmap = new HashMap<>();
+        List<String> xlsxFiles = new ArrayList<>();
+        // 基础路径配置
+        final String BASE_PATH = System.getProperty("user.dir");
+        String pathName;
+
+        if (StringUtils.isNotEmpty(flowCount)) {
+            pathName = Paths.get(BASE_PATH, "mnt", "file", "flowCount").toString();
+        } else {
+            pathName = Paths.get(BASE_PATH, "mnt", "file", "export", deptName).toString();
+        }
+
+        try {
+            // 规范化路径
+            Path normalizedPath = Paths.get(pathName).normalize();
+            Files.walkFileTree(normalizedPath, new SimpleFileVisitor<Path>() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                    if (file.toString().toLowerCase().endsWith(".xlsx")) {
+                        xlsxFiles.add(file.getFileName().toString());
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+                    System.err.println("无法访问文件: " + file.toString() + ". 错误: " + exc.getMessage());
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+            rmap.put("code", "200");
+            rmap.put("names", xlsxFiles);
+        } catch (IOException e) {
+            rmap.put("code", "500");
+            System.err.println("发生错误: " + e.getMessage());
+        }
+        return rmap;
+    }
+
     public AjaxResult trafficImport(MultipartFile file, Map<String, Object> map) {
         String filename = file.getOriginalFilename();
         String ReadName = UUID.randomUUID().toString().replace("-", "") + filename;
@@ -1728,26 +2189,26 @@ public class YzCardServiceImpl implements IYzCardService {
             File file2 = new File("");
             String filePath = file2.getCanonicalPath();
             File newFile = new File(filePath + ReadName);
-            File Url = new File(filePath + flieUrlRx + "1.txt");//tomcat 生成路径
+            File Url = new File(filePath + flieUrlRx + "1.txt");// tomcat 生成路径
             Upload.mkdirsmy(Url);
             file.transferTo(newFile);
             String path = filePath + ReadName;
             ExcelConfig excelConfig = new ExcelConfig();
-            String columns[] = {"iccid", "changeOther"};
+            String columns[] = { "iccid", "changeOther" };
             List<Map<String, String>> list = excelConfig.getExcelListMap(path, columns, 0L);
             if (list.size() > 10000) {
                 return AjaxResult.error("订购卡总数大于10000张,请调整后重试 ！");
             }
             if (list.size() > 0) {
                 for (Map<String, String> stringMap : list) {
-                    //判断该卡是否订购过当月套餐
+                    // 判断该卡是否订购过当月套餐
                     int total = cardFlowMapper.selOneCardFlow(stringMap.get("iccid").toString());
                     if (total == 0) {
                         if (!stringMap.get("iccid").equals("")) {
-                            //1、根据iccid获取卡信息、资费信息
+                            // 1、根据iccid获取卡信息、资费信息
                             Map<String, Object> cardInfoMap = yzCardMapper.selOneCardInfo(stringMap);
                             Map<String, Object> packageInfo = packetMapper.findPackageInfo(map);
-                            //2、根据卡信息生成订单 变更执行类型
+                            // 2、根据卡信息生成订单 变更执行类型
                             this.saveOrderInfo(cardInfoMap, packageInfo);
                         }
                     }
@@ -1771,25 +2232,25 @@ public class YzCardServiceImpl implements IYzCardService {
             for (String s : idsArr) {
                 Map<String, String> stringMap = new HashMap<>();
                 stringMap.put("iccid", s);
-                //判断该卡是否订购过当月套餐
+                // 判断该卡是否订购过当月套餐
                 int total = cardFlowMapper.selOneCardFlow(stringMap.get("iccid").toString());
                 if (total == 0) {
-                    //获取卡信息
+                    // 获取卡信息
                     Map<String, Object> cardInfoMap = yzCardMapper.selOneCardInfo(stringMap);
                     Map<String, Object> packageInfo = packetMapper.findPackageInfo(map);
-                    //2、根据卡信息生成订单 变更执行类型
+                    // 2、根据卡信息生成订单 变更执行类型
                     this.saveOrderInfo(cardInfoMap, packageInfo);
                 }
             }
         } else {
-            //判断该卡是否订购过当月套餐
+            // 判断该卡是否订购过当月套餐
             int total = cardFlowMapper.selOneCardFlow(iccid);
             if (total == 0) {
                 Map<String, String> stringMap = new HashMap<>();
                 stringMap.put("iccid", iccid);
                 Map<String, Object> cardInfoMap = yzCardMapper.selOneCardInfo(stringMap);
                 Map<String, Object> packageInfo = packetMapper.findPackageInfo(map);
-                //2、根据卡信息生成订单 变更执行类型
+                // 2、根据卡信息生成订单 变更执行类型
                 this.saveOrderInfo(cardInfoMap, packageInfo);
             }
         }
@@ -1812,8 +2273,8 @@ public class YzCardServiceImpl implements IYzCardService {
         insertMap.put("status", status);
         String price = packageInfo.get("packet_price").toString();
         insertMap.put("price", price);
-//                        String account = map.get("num").toString();
-//                        insertMap.put("account", account);
+        // String account = map.get("num").toString();
+        // insertMap.put("account", account);
         String packet_id = packageInfo.get("packet_id").toString();
         insertMap.put("packet_id", packet_id);
         String pay_type = "s";
@@ -1835,22 +2296,23 @@ public class YzCardServiceImpl implements IYzCardService {
         insertMap.put("validate_type", "1");
         insertMap.put("add_parameter", null);
         yzOrderMapper.save(insertMap);
-        //3、添加信息至card——flow
+        // 3、添加信息至card——flow
         packageInfo.put("ord_no", ord_no);
         this.saveFlowInfo(cardInfoMap, packageInfo);
     }
 
     private void saveFlowInfo(Map<String, Object> cardInfoMap, Map<String, Object> packageInfo) {
-        //获取当月时间 2024-06-25
+        // 获取当月时间 2024-06-25
 
-        //判断是年还是月 packet_valid_name   packet_valid_time
+        // 判断是年还是月 packet_valid_name packet_valid_time
         if (packageInfo.get("packet_valid_name").toString().equals("月")) {
             LocalDate currentDate = LocalDate.now();
             int month = Integer.parseInt(packageInfo.get("packet_valid_time").toString());
             LocalDate dateAfter12Months = currentDate.plusMonths(month);
-            LocalDate lastDayOfPreviousMonth = dateAfter12Months.minusMonths(1).with(TemporalAdjusters.lastDayOfMonth());
+            LocalDate lastDayOfPreviousMonth = dateAfter12Months.minusMonths(1)
+                    .with(TemporalAdjusters.lastDayOfMonth());
             this.insertFlow(lastDayOfPreviousMonth, cardInfoMap, packageInfo);
-            //修改到期日期
+            // 修改到期日期
             this.updateCardEndTime(lastDayOfPreviousMonth, cardInfoMap, packageInfo);
         } else if (packageInfo.get("packet_valid_name").toString().equals("年")) {
             LocalDate currentDate = LocalDate.now();
@@ -1863,7 +2325,9 @@ public class YzCardServiceImpl implements IYzCardService {
             this.updateCardEndTime(lastDayOfPreviousMonth, cardInfoMap, packageInfo);
         }
     }
-    private void updateCardEndTime(LocalDate lastDayOfPreviousMonth, Map<String, Object> cardInfoMap, Map<String, Object> packageInfo) {
+
+    private void updateCardEndTime(LocalDate lastDayOfPreviousMonth, Map<String, Object> cardInfoMap,
+            Map<String, Object> packageInfo) {
         Map<String, Object> cardMap = new HashMap<>();
         cardMap.put("endTime", lastDayOfPreviousMonth);
         cardMap.put("iccid", cardInfoMap.get("iccid"));
@@ -1871,7 +2335,8 @@ public class YzCardServiceImpl implements IYzCardService {
         yzCardMapper.updateEndTime(cardMap);
     }
 
-    private void insertFlow(LocalDate lastDayOfPreviousMonth, Map<String, Object> cardInfoMap, Map<String, Object> packageInfo) {
+    private void insertFlow(LocalDate lastDayOfPreviousMonth, Map<String, Object> cardInfoMap,
+            Map<String, Object> packageInfo) {
         Map<String, Object> insertMap = new HashMap<>();
         insertMap.put("package_id", packageInfo.get("package_id").toString());
         insertMap.put("packet_id", packageInfo.get("packet_id"));
@@ -1896,45 +2361,43 @@ public class YzCardServiceImpl implements IYzCardService {
         // 匿名内部类 不用额外写一个DataListener
         // 这里需要指定读用哪个class去读，读取第一个sheet 文件流会自动关闭
         EasyExcel.read(file.getInputStream(), YzCard.class, new ReadListener<YzCard>() {
-                    //单次缓存的数据量
-                    //批量插入数据 单次最大值为2万条
-                    public static final int BATCH_COUNT = 20000;
-                    //临时存储
+            // 单次缓存的数据量
+            // 批量插入数据 单次最大值为2万条
+            public static final int BATCH_COUNT = 20000;
+            // 临时存储
 
-                    private List<YzCard> cachedDataList = ListUtils.newArrayListWithExpectedSize(BATCH_COUNT);
+            private List<YzCard> cachedDataList = ListUtils.newArrayListWithExpectedSize(BATCH_COUNT);
 
-                    @Override
-                    @Transactional(rollbackFor = Exception.class)
-                    public void invoke(YzCard data, AnalysisContext context) {
-                        cachedDataList.add(data);
-                        if (cachedDataList.size() >= BATCH_COUNT) {
-                            saveData();
-                            // 存储完成清理 list
-                            cachedDataList = ListUtils.newArrayListWithExpectedSize(BATCH_COUNT);
-                        }
-                    }
+            @Override
+            @Transactional(rollbackFor = Exception.class)
+            public void invoke(YzCard data, AnalysisContext context) {
+                cachedDataList.add(data);
+                if (cachedDataList.size() >= BATCH_COUNT) {
+                    saveData();
+                    // 存储完成清理 list
+                    cachedDataList = ListUtils.newArrayListWithExpectedSize(BATCH_COUNT);
+                }
+            }
 
-                    @Override
-                    public void doAfterAllAnalysed(AnalysisContext context) {
-                        saveData();
-                    }
+            @Override
+            public void doAfterAllAnalysed(AnalysisContext context) {
+                saveData();
+            }
 
-                    //存储数据库
-                    private void saveData() {
-                        //插入集合到数据库
-                        yzCardMapper.importCardInfoList(cachedDataList);
-                        log.info("{}条数据，开始存储数据库！", cachedDataList.size());
-                        log.info("存储数据库成功！");
-                    }
-                })
+            // 存储数据库
+            private void saveData() {
+                // 插入集合到数据库
+                yzCardMapper.importCardInfoList(cachedDataList);
+                log.info("{}条数据，开始存储数据库！", cachedDataList.size());
+                log.info("存储数据库成功！");
+            }
+        })
                 .sheet()
                 .doRead();
 
         return "Excel数据导入完成";
 
     }
-
-
 
     public void exportCardInfo(String Pstr, HttpServletResponse response) throws Exception {
 
@@ -1946,13 +2409,13 @@ public class YzCardServiceImpl implements IYzCardService {
             // 这里需要设置不关闭流
             HashMap<String, Object> Parammap = new HashMap<>();
             if (Pstr != null) {
-                //转义 /
+                // 转义 /
                 Pstr = Pstr.replace("%2F", "/");
             }
             try {
                 Pstr = AesEncryptUtil.desEncrypt(Pstr);
                 Parammap.putAll(JSON.parseObject(Pstr));
-                //这两个值前端可能并不会传 防止空指针异常
+                // 这两个值前端可能并不会传 防止空指针异常
                 String startValue;
                 String endValue;
                 if (Parammap.get("StartValue") == null) {
@@ -1965,33 +2428,34 @@ public class YzCardServiceImpl implements IYzCardService {
                 } else {
                     endValue = Parammap.get("EndValue").toString();
                 }
-                //设置内容样式
-                //内容样式策略
+                // 设置内容样式
+                // 内容样式策略
                 WriteCellStyle contentWriteCellStyle = new WriteCellStyle();
                 // 字体策略
                 WriteFont contentWriteFont = new WriteFont();
                 // 字体大小
                 contentWriteFont.setFontHeightInPoints((short) 11);
-                //字体格式
+                // 字体格式
                 contentWriteFont.setFontName("宋体");
                 contentWriteCellStyle.setWriteFont(contentWriteFont);
-                //头策略使用默认 设置字体大小
+                // 头策略使用默认 设置字体大小
                 WriteCellStyle headWriteCellStyle = new WriteCellStyle();
                 WriteFont headWriteFont = new WriteFont();
                 headWriteFont.setFontHeightInPoints((short) 11);
                 headWriteFont.setFontName("宋体");
-                //关闭加粗
+                // 关闭加粗
                 headWriteFont.setBold(false);
                 headWriteCellStyle.setWriteFont(headWriteFont);
-                //设置边框格式
+                // 设置边框格式
                 headWriteCellStyle.setBorderBottom(BorderStyle.NONE);
                 headWriteCellStyle.setBorderLeft(BorderStyle.NONE);
                 headWriteCellStyle.setBorderRight(BorderStyle.NONE);
-                //写入
+                // 写入
                 EasyExcel.write(response.getOutputStream(), YzCard.class)
-                        //设置工作表名称
+                        // 设置工作表名称
                         .sheet("卡板信息表")
-                        .registerWriteHandler(new HorizontalCellStyleStrategy(headWriteCellStyle, contentWriteCellStyle))
+                        .registerWriteHandler(
+                                new HorizontalCellStyleStrategy(headWriteCellStyle, contentWriteCellStyle))
                         .doWrite(() -> {
                             // 从数据库查询数据
                             return dataList(Parammap);
@@ -2010,6 +2474,7 @@ public class YzCardServiceImpl implements IYzCardService {
             response.getWriter().println(JSON.toJSONString(map));
         }
     }
+
     private List<YzCard> dataList(Map<String, Object> map) {
         String startValue = "";
         String endValue = "";
@@ -2021,7 +2486,7 @@ public class YzCardServiceImpl implements IYzCardService {
             Integer Status_ShowId = card.getStatus_ShowId();
             char cdOperatorType = card.getCd_operator_type();
             String networkType = card.getNetwork_type();
-            //状态映射
+            // 状态映射
             if (Status_ShowId == 1) {
                 card.setCard_status("库存");
             } else if (Status_ShowId == 2) {
@@ -2039,7 +2504,7 @@ public class YzCardServiceImpl implements IYzCardService {
             } else if (Status_ShowId == 8) {
                 card.setCard_status("未知");
             }
-            //网络类型映射
+            // 网络类型映射
             if ("1".equals(networkType)) {
                 card.setNetworkDes("NB");
             } else if ("2".equals(networkType)) {
@@ -2047,7 +2512,7 @@ public class YzCardServiceImpl implements IYzCardService {
             } else if ("3".equals(networkType)) {
                 card.setNetworkDes("5G SIM");
             }
-            //运营商类型映射
+            // 运营商类型映射
             if (cdOperatorType == '1') {
                 card.setOperatorType("移动");
             } else if (cdOperatorType == '2') {
@@ -2065,32 +2530,103 @@ public class YzCardServiceImpl implements IYzCardService {
     public int updBalance(HashMap<String, Object> paramMap) {
         return yzCardMapper.updBalance(paramMap);
     }
+
+    public AjaxResult uploadFlowExcel(MultipartFile file) {
+        // 构造文件存储路径
+        String filename = file.getOriginalFilename();
+        String baseDir = "/mnt/file/flowFile/";
+        String fullPath = baseDir + filename;
+
+        try {
+            // 创建目录（如果不存在）
+            File directory = new File(new File("").getCanonicalPath() + baseDir);
+            if (!directory.exists()) {
+                if (!directory.mkdirs()) {
+                    return AjaxResult.error("无法创建目录: " + baseDir);
+                }
+            }
+
+            // 构造完整的文件路径
+            File newFile = new File(new File("").getCanonicalPath() + fullPath);
+
+            // 检查是否存在相同名称的文件，并删除它
+            if (newFile.exists() && !newFile.delete()) {
+                return AjaxResult.error("无法删除已存在的文件: " + filename);
+            }
+
+            // 将上传的文件保存到指定位置
+            file.transferTo(newFile);
+
+            return AjaxResult.success("上传成功", fullPath);
+
+        } catch (IOException e) {
+            log.error("文件上传失败", e);
+            return AjaxResult.error("上传失败: " + e.getMessage());
+        }
+    }
+
+    public AjaxResult getBusinessVolume(String date) {
+        try {
+            // 解析年月
+            String[] dateParts = date.split("-");
+            int year = Integer.parseInt(dateParts[0]);
+            int month = Integer.parseInt(dateParts[1]);
+
+            // 获取该月的天数
+            YearMonth yearMonth = YearMonth.of(year, month);
+            int daysInMonth = yearMonth.lengthOfMonth();
+
+            List<Double> flowData = new ArrayList<>();
+            List<String> xAxis = new ArrayList<>();
+            List<Map<String, Object>> flowList = new ArrayList<>();
+
+            // 遍历该月每一天
+            for (int day = 1; day <= daysInMonth; day++) {
+                // 构建Redis键名，格式：yunze:card:getBusinessStatistics:mm:YYYY:DD
+                String cacheKey = String.format("%s%02d:%d:%02d",
+                        BUSINESS_STATS_PREFIX,
+                        month,
+                        year,
+                        day);
+
+                // 从Redis获取数据
+                @SuppressWarnings("unchecked")
+                Map<String, Object> dayStats = (Map<String, Object>) (Map<?, ?>) redisCache.getCacheMap(cacheKey);
+
+                // 获取当天流量
+                double dayFlow = 0.0;
+                if (dayStats != null && dayStats.containsKey("currentDay")) {
+                    dayFlow = Double.parseDouble(dayStats.get("currentDay").toString());
+                }
+
+                // 添加到数据列表
+                flowData.add(dayFlow);
+
+                // 格式化日期为"MM-dd"
+                String xAxisDate = String.format("%02d-%02d", month, day);
+                xAxis.add(xAxisDate);
+
+                // 构建完整日期格式的数据项
+                Map<String, Object> flowItem = new HashMap<>();
+                flowItem.put("date", String.format("%d-%02d-%02d", year, month, day));
+                flowItem.put("value", dayFlow);
+                flowList.add(flowItem);
+            }
+
+            // 构建返回数据结构
+            Map<String, Object> businessVolumeFlow = new HashMap<>();
+            businessVolumeFlow.put("flowData", flowData);
+            businessVolumeFlow.put("xAxis", xAxis);
+            businessVolumeFlow.put("flowList", flowList);
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("businessVolumeFlow", businessVolumeFlow);
+
+            return AjaxResult.success(data);
+
+        } catch (Exception e) {
+            log.error("获取业务量统计数据失败: {}", e.getMessage());
+            return AjaxResult.error("获取业务量统计数据失败");
+        }
+    }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -5,6 +5,7 @@ import com.yunze.apiCommon.utils.InternalApiRequest;
 import com.yunze.common.annotation.Log;
 import com.yunze.common.core.controller.BaseController;
 import com.yunze.common.core.domain.AjaxResult;
+import com.yunze.common.core.domain.entity.SysDept;
 import com.yunze.common.core.domain.entity.SysUser;
 import com.yunze.common.core.domain.entity.YzCard;
 import com.yunze.common.core.domain.model.LoginUser;
@@ -17,20 +18,31 @@ import com.yunze.common.utils.poi.ExcelUtil;
 import com.yunze.common.utils.spring.SpringUtils;
 import com.yunze.common.utils.yunze.*;
 import com.yunze.framework.web.service.TokenService;
+import com.yunze.system.service.ISysDeptService;
 import com.yunze.system.service.ISysUserService;
 import com.yunze.system.service.impl.yunze.YzCardServiceImpl;
 import com.yunze.web.core.config.MyBaseController;
 import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotBlank;
 
 /**
  * 卡信息
@@ -54,11 +66,14 @@ public class YzCardController extends MyBaseController {
     private InternalApiRequest internalApiRequest;
 
     @Resource
+    private ISysDeptService deptService;
+
+    @Resource
     private YzCardMapper yzCardMapper;
 
     @Log(title = "周期备注", businessType = BusinessType.IMPORT)
     @PreAuthorize("@ss.hasPermi('yunze:card:import')")
-    @PostMapping(value = "/otherImport", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/otherImport", produces = { "application/json;charset=utf-8" })
     public AjaxResult otherImport(MultipartFile file) {
         try {
             LoginUser loginUser = SpringUtils.getBean(TokenService.class).getLoginUser(ServletUtils.getRequest());
@@ -71,19 +86,237 @@ public class YzCardController extends MyBaseController {
         return AjaxResult.error("周期备注 操作失败！");
     }
 
+    @Log(title = "周期备注", businessType = BusinessType.IMPORT)
+    @PreAuthorize("@ss.hasPermi('yunze:card:upload-updated-excel')")
+    @PostMapping(value = "/upload-updated-excel", produces = { "application/json;charset=utf-8" })
+    public AjaxResult uploadUpdatedExcel(MultipartFile file, @RequestParam(required = false) String optionalParam) {
+        try {
+            LoginUser loginUser = SpringUtils.getBean(TokenService.class).getLoginUser(ServletUtils.getRequest());
+            SysUser User = loginUser.getUser();
+            return AjaxResult
+                    .success(yzCardServiceImpl.uploadUpdatedExcel(file, User.getDept().getDeptId().toString(),
+                            optionalParam));
+        } catch (Exception e) {
+            String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
+            logger.error("<br/> yunze:card:import  <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+        }
+        return AjaxResult.error("周期备注 操作失败！");
+    }
+
+    @Log(title = "周期备注", businessType = BusinessType.IMPORT)
+    @PreAuthorize("@ss.hasPermi('yunze:card:upCalculateFile')")
+    @PostMapping(value = "/upCalculateFile", produces = { "application/json;charset=utf-8" })
+    public AjaxResult upCalculateFile(
+            @RequestParam("dept_id") String deptId,
+            @RequestParam("importFile") MultipartFile importFile,
+            @RequestParam("exportFile") MultipartFile exportFile) {
+        try {
+            return AjaxResult.success(yzCardServiceImpl.updateCalculate(importFile, exportFile, deptId));
+        } catch (Exception e) {
+            String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
+            logger.error("<br/> yunze:card:import  <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+        }
+        return AjaxResult.error("周期备注 操作失败！");
+    }
+
+    @Log(title = "周期备注", businessType = BusinessType.IMPORT)
+    @PreAuthorize("@ss.hasPermi('yunze:card:calculateList')")
+    @GetMapping(value = "/calculateList", produces = { "application/json;charset=utf-8" })
+    public AjaxResult calculateList(@RequestParam("is_admin") boolean isAdmin,
+            @RequestParam("dept_id") String deptId,
+            @RequestParam(required = false, name = "flow_count") String flowCount) {
+        try {
+            String pathName;
+            if (!isAdmin) {
+                LoginUser loginUser = SpringUtils.getBean(TokenService.class).getLoginUser(ServletUtils.getRequest());
+                SysUser User = loginUser.getUser();
+                pathName = User.getDept().getDeptId().toString();
+            } else {
+                pathName = deptId;
+            }
+            return AjaxResult.success(yzCardServiceImpl.calculateList(pathName, flowCount));
+        } catch (Exception e) {
+            String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
+            logger.error("<br/> yunze:card:import  <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+        }
+        return AjaxResult.error("周期备注 操作失败！");
+    }
+
+    /**
+     * Excel相关接口
+     */
+    @GetMapping("/paged-content")
+    @ApiOperation("获取Excel分页内容")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "filePath", value = "Excel文件路径", required = true),
+            @ApiImplicitParam(name = "page", value = "页码(从1开始)", required = true),
+            @ApiImplicitParam(name = "size", value = "每页条数", required = true)
+    })
+    public AjaxResult getPagedContent(
+            @RequestParam @NotBlank String filePath,
+            @RequestParam @Min(1) int page,
+            @RequestParam @Min(1) int size) {
+        try {
+            return AjaxResult.success(yzCardServiceImpl.getPagedContentFromExcel(filePath, page, size));
+        } catch (IllegalArgumentException e) {
+            return AjaxResult.error(400, e.getMessage());
+        } catch (Exception e) {
+            return AjaxResult.error(500, "获取Excel内容失败：" + e.getMessage());
+        }
+    }
+
+    @GetMapping("/business-statistics")
+    @ApiOperation("获取Excel业务统计数据")
+    @ApiImplicitParam(name = "filePath", value = "Excel文件路径", required = true)
+    public AjaxResult getBusinessStatistics(
+            @RequestParam(required = false, name = "date") String date,
+            @RequestParam(required = false, name = "filePath") String filePath) {
+        try {
+            Map<String, Object> data = filePath != null ? yzCardServiceImpl.getBusinessStatistics(filePath)
+                    : yzCardServiceImpl.getBusinessVolume(date);
+            return AjaxResult.success(data);
+        } catch (Exception e) {
+            return AjaxResult.error(500, "获取统计数据失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 下载Excel文件
+     *
+     * @param path    Excel文件名
+     * @param isAdmin 是否为管理员
+     * @param deptId  部门ID
+     * @return ResponseEntity<FileSystemResource> 文件下载响应
+     */
+    @GetMapping("/download-excel")
+    public ResponseEntity<FileSystemResource> downloadExcel(@RequestParam("path") String path,
+            @RequestParam("is_admin") boolean isAdmin,
+            @RequestParam("dept_id") String deptId) {
+        try {
+            // 根据用户权限获取部门路径
+            String pathName;
+            if (!isAdmin) {
+                LoginUser loginUser = SpringUtils.getBean(TokenService.class).getLoginUser(ServletUtils.getRequest());
+                SysUser User = loginUser.getUser();
+                pathName = User.getDept().getDeptId().toString();
+            } else {
+                pathName = deptId;
+            }
+
+            // 构建Excel文件的完整路径
+            String filePath = "mnt/file/export/" + pathName + '/' + path;
+            File file = new File(filePath);
+
+            // 验证文件是否存在
+            if (!file.exists()) {
+                logger.warn("File not found: {}", filePath);
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+
+            // 设置响应头
+            HttpHeaders headers = new HttpHeaders();
+            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + file.getName());
+            headers.add("Cache-Control", "no-cache, no-store, must-revalidate");
+            headers.add("Pragma", "no-cache");
+            headers.add("Expires", "0");
+
+            // 返回文件下载响应
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .contentLength(file.length())
+                    .body(new FileSystemResource(file));
+        } catch (Exception e) {
+            String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
+            logger.error("Error downloading excel file. IP: {}, Path: {}", ip, path, e);
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * 删除Excel文件
+     *
+     * @param path    Excel文件名
+     * @param isAdmin 是否为管理员
+     * @param deptId  部门ID
+     * @return AjaxResult 操作结果
+     */
+    @GetMapping(value = "/remove-excel", produces = { "application/json;charset=utf-8" })
+    public AjaxResult remove(@RequestParam("path") String path,
+            @RequestParam("is_admin") boolean isAdmin,
+            @RequestParam("dept_id") String deptId) {
+        try {
+            // 根据用户权限获取部门路径
+            String pathName;
+            boolean isSuccess = false;
+            if (!isAdmin) {
+                LoginUser loginUser = SpringUtils.getBean(TokenService.class).getLoginUser(ServletUtils.getRequest());
+                SysUser User = loginUser.getUser();
+                pathName = User.getDept().getDeptId().toString();
+            } else {
+                pathName = deptId;
+            }
+
+            ArrayList<String> objects = new ArrayList<>(2);
+            objects.add("export");
+            objects.add("import");
+            for (String object : objects) {
+                // 构建完整的文件路径
+                String filePath = "mnt/file/" + object + "/" + pathName + '/'
+                        + (object.equals("import") ? path.replace("导出", "导入") : path);
+                File file = new File(filePath);
+
+                // 检查文件是否存在
+                if (!file.exists()) {
+                    logger.warn("File not found: {}", filePath);
+                    return AjaxResult.error("文件不存在");
+                }
+
+                // 执行文件删除操作
+                if (file.delete()) {
+                    isSuccess = true;
+                    logger.info("File successfully deleted: {}", filePath);
+                } else {
+                    isSuccess = false;
+                    logger.warn("Failed to delete file: {}", filePath);
+                }
+            }
+            if (isSuccess) {
+                return AjaxResult.success("文件删除成功");
+            } else {
+                return AjaxResult.error("文件删除失败");
+            }
+        } catch (Exception e) {
+            String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
+            logger.error("Error removing excel file. IP: {}, Path: {}", ip, path, e);
+            return AjaxResult.error("删除文件时发生错误：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取部门列表
+     */
+    /*
+     * @PreAuthorize("@ss.hasPermi('yunze:card:calculateList')")
+     */
+    @GetMapping("/dept/list")
+    public AjaxResult list() {
+        List<Map<String, Object>> depts = deptService.list();
+        return AjaxResult.success(depts);
+    }
+
     /**
      * 卡板信息列表
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:list')")
-    @PostMapping(value = "/list", produces = {"application/json;charset=UTF-8"})
+    @PostMapping(value = "/list", produces = { "application/json;charset=UTF-8" })
     public String list(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
-            //  System.out.println(map);
+            // System.out.println(map);
             Parammap.putAll(JSON.parseObject((String) Pstr));
             LoginUser loginUser = SpringUtils.getBean(TokenService.class).getLoginUser(ServletUtils.getRequest());
             SysUser currentUser = loginUser.getUser();
@@ -102,25 +335,25 @@ public class YzCardController extends MyBaseController {
             return MyRetunSuccess(stringObjectMap, null);
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> yunze:card:list  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error("<br/> yunze:card:list  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("获取卡板信息列表 操作失败！");
     }
-
 
     /**
      * 获取 所属代理下 卡分组
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:list')")
-    @PostMapping(value = "/getCardGrouping", produces = {"application/json;charset=UTF-8"})
+    @PostMapping(value = "/getCardGrouping", produces = { "application/json;charset=UTF-8" })
     public String getCardGrouping(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
-            //  System.out.println(map);
+            // System.out.println(map);
             Parammap.putAll(JSON.parseObject((String) Pstr));
             LoginUser loginUser = SpringUtils.getBean(TokenService.class).getLoginUser(ServletUtils.getRequest());
             SysUser currentUser = loginUser.getUser();
@@ -142,34 +375,34 @@ public class YzCardController extends MyBaseController {
             return MyRetunSuccess(yzCardServiceImpl.getCardGrouping(Parammap), null);
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> /yunze/card/getCardGrouping  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error("<br/> /yunze/card/getCardGrouping  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("获取 所属代理下 卡分组 操作失败！");
     }
-
 
     /**
      * 查询卡板详情
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:find')")
-    @PostMapping(value = "/find", produces = {"application/json;charset=utf-8"})//
+    @PostMapping(value = "/find", produces = { "application/json;charset=utf-8" }) //
     public String find(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
-            //  System.out.println(map);
+            // System.out.println(map);
             Parammap.putAll(JSON.parseObject((String) Pstr));
             return MyRetunSuccess(yzCardServiceImpl.find(Parammap), null);
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> yunze:card:find  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error("<br/> yunze:card:find  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("查询卡板详情 操作失败！");
     }
-
 
     /**
      * 导入
@@ -180,7 +413,7 @@ public class YzCardController extends MyBaseController {
      */
     @Log(title = "卡列表", businessType = BusinessType.IMPORT)
     @PreAuthorize("@ss.hasPermi('yunze:card:import')")
-    @PostMapping(value = "/importData", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/importData", produces = { "application/json;charset=utf-8" })
     public AjaxResult importData(MultipartFile file, boolean updateSupport) {
         try {
             LoginUser loginUser = SpringUtils.getBean(TokenService.class).getLoginUser(ServletUtils.getRequest());
@@ -193,7 +426,6 @@ public class YzCardController extends MyBaseController {
         return AjaxResult.error("导入卡列表 操作失败！");
     }
 
-
     /**
      * 下载导入模板
      *
@@ -205,14 +437,13 @@ public class YzCardController extends MyBaseController {
         return util.importTemplateExcel("卡列表数据");
     }
 
-
     /**
      * 连接管理获取部门名称
      *
      * @return
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:list')")
-    @PostMapping(value = "/getDeptName", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/getDeptName", produces = { "application/json;charset=utf-8" })
     public String getDeptName() {
         try {
             return MyRetunSuccess(yzCardServiceImpl.getDeptName(), null);
@@ -223,7 +454,6 @@ public class YzCardController extends MyBaseController {
         return Myerr("连接管理获取部门名称 操作失败！");
     }
 
-
     /**
      * 导出
      *
@@ -231,30 +461,29 @@ public class YzCardController extends MyBaseController {
      */
     @Log(title = "卡列表", businessType = BusinessType.EXPORT)
     @PreAuthorize("@ss.hasPermi('yunze:card:exportData')")
-    @PostMapping(value = "/exportData", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/exportData", produces = { "application/json;charset=utf-8" })
     public String exportData(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
 
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
-            //  System.out.println(map);
+            // System.out.println(map);
             Parammap.putAll(JSON.parseObject((String) Pstr));
 
             LoginUser loginUser = SpringUtils.getBean(TokenService.class).getLoginUser(ServletUtils.getRequest());
             SysUser currentUser = loginUser.getUser();
 
-
             return MyRetunSuccess(yzCardServiceImpl.exportData(Parammap, currentUser), null);
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> yunze:card:exportData  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error("<br/> yunze:card:exportData  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("导出卡列表 操作失败！");
     }
-
 
     /**
      * 查询 企业下所属人员
@@ -262,11 +491,11 @@ public class YzCardController extends MyBaseController {
      * @return
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:findDeptUser')")
-    @PostMapping(value = "/findDeptUser", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/findDeptUser", produces = { "application/json;charset=utf-8" })
     public String findDeptUser(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
@@ -284,7 +513,6 @@ public class YzCardController extends MyBaseController {
         return Myerr("查询 企业下所属人员 操作失败！");
     }
 
-
     /**
      * 划分卡信息
      *
@@ -292,11 +520,11 @@ public class YzCardController extends MyBaseController {
      */
     @Log(title = "划卡操作", businessType = BusinessType.UPDATE)
     @PreAuthorize("@ss.hasPermi('yunze:card:divide')")
-    @PostMapping(value = "/divide", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/divide", produces = { "application/json;charset=utf-8" })
     public String divide(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
@@ -305,13 +533,15 @@ public class YzCardController extends MyBaseController {
             Object set_user_id = Parammap.get("set_user_id");
             Object set_dept_name = Parammap.get("set_dept_name");
             Object set_user_name = Parammap.get("set_user_name");
-            if (set_dept_id != null && set_dept_id.toString() != "" && set_user_id != null && set_user_id.toString() != ""
-                    && set_dept_name != null && set_dept_name.toString() != "" && set_user_name != null && set_user_name.toString() != "") {
+            if (set_dept_id != null && set_dept_id.toString() != "" && set_user_id != null
+                    && set_user_id.toString() != ""
+                    && set_dept_name != null && set_dept_name.toString() != "" && set_user_name != null
+                    && set_user_name.toString() != "") {
                 LoginUser loginUser = SpringUtils.getBean(TokenService.class).getLoginUser(ServletUtils.getRequest());
                 SysUser currentUser = loginUser.getUser();
                 String agent_id = currentUser.getDeptId().toString();
                 // if(!set_dept_id.equals(agent_id)){
-                //权限 管理 操作必须传入当前操作人 id
+                // 权限 管理 操作必须传入当前操作人 id
                 List<Integer> agent_idArr = new ArrayList<>();
                 if (currentUser.getDeptId() != 100) {
                     if (Parammap.get("agent_id") != null) {
@@ -324,9 +554,11 @@ public class YzCardController extends MyBaseController {
                 }
                 Parammap.put("TaskAgent_id", agent_id);
                 return MyRetunSuccess(yzCardServiceImpl.dividCard(Parammap), null);
-                /*}else{
-                    return Myerr("不能操作！");
-                }*/
+                /*
+                 * }else{
+                 * return Myerr("不能操作！");
+                 * }
+                 */
             } else {
                 return Myerr("参数不全请核对后重试！");
             }
@@ -337,7 +569,6 @@ public class YzCardController extends MyBaseController {
         return Myerr("划分卡信息 操作失败！");
     }
 
-
     /**
      * 同步用量
      *
@@ -345,15 +576,15 @@ public class YzCardController extends MyBaseController {
      * @return
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:SynFlow')")
-    @PostMapping(value = "/SynFlow", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/SynFlow", produces = { "application/json;charset=utf-8" })
     public String SynFlow(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
-            //  System.out.println(map);
+            // System.out.println(map);
             Parammap.putAll(JSON.parseObject((String) Pstr));
             Map<String, Object> Route = yzCardServiceImpl.findRoute(Parammap);
             if (Route != null) {
@@ -363,14 +594,17 @@ public class YzCardController extends MyBaseController {
                     Map<String, Object> Rmap = internalApiRequest.queryFlow(Parammap, Route);
                     String code = Rmap.get("code") != null ? Rmap.get("code").toString() : "500";
                     if (code.equals("200")) {
-                        //获取 卡用量 开卡日期 更新 card info
-                        if (Rmap.get("Use") != null && Rmap.get("Use") != "" && Rmap.get("Use").toString().trim().length() > 0) {
+                        // 获取 卡用量 开卡日期 更新 card info
+                        if (Rmap.get("Use") != null && Rmap.get("Use") != ""
+                                && Rmap.get("Use").toString().trim().length() > 0) {
                             Double Use = Double.parseDouble(Rmap.get("Use").toString());
                             if (Use >= 0) {
                                 try {
-                                    Map<String, Object> RMap = cardFlowSyn.CalculationFlow(Parammap.get("iccid").toString(), Use, Route);
+                                    Map<String, Object> RMap = cardFlowSyn
+                                            .CalculationFlow(Parammap.get("iccid").toString(), Use, Route);
                                     int status_ShowId = (int) yzCardMapper.find(Parammap).get("status_ShowId");
-                                    if (Double.parseDouble(RMap.get("remaining").toString()) > 0.00 && status_ShowId == 5) {
+                                    if (Double.parseDouble(RMap.get("remaining").toString()) > 0.00
+                                            && status_ShowId == 5) {
                                         Map<String, Object> map = new HashMap<>();
                                         map.put("iccid", Parammap.get("iccid").toString());
                                         map.put("status_ShowId", "1");
@@ -401,7 +635,6 @@ public class YzCardController extends MyBaseController {
         return Myerr("同步用量 操作失败！");
     }
 
-
     /**
      * 同步卡状态
      *
@@ -409,15 +642,15 @@ public class YzCardController extends MyBaseController {
      * @return
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:SynStatus')")
-    @PostMapping(value = "/SynStatus", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/SynStatus", produces = { "application/json;charset=utf-8" })
     public String SynStatus(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
-            //  System.out.println(map);
+            // System.out.println(map);
             Parammap.putAll(JSON.parseObject((String) Pstr));
             Map<String, Object> Route = yzCardServiceImpl.findRoute(Parammap);
             if (Route != null) {
@@ -427,8 +660,9 @@ public class YzCardController extends MyBaseController {
 
                     String code = Rmap.get("code") != null ? Rmap.get("code").toString() : "500";
                     if (code.equals("200")) {
-                        //获取 卡状态 开卡日期 更新 card info
-                        if (Rmap.get("statusCode") != null && Rmap.get("statusCode") != "" && Rmap.get("statusCode").toString().trim().length() > 0) {
+                        // 获取 卡状态 开卡日期 更新 card info
+                        if (Rmap.get("statusCode") != null && Rmap.get("statusCode") != ""
+                                && Rmap.get("statusCode").toString().trim().length() > 0) {
                             String statusCode = Rmap.get("statusCode").toString().trim();
                             if (!statusCode.equals("0")) {
                                 Map<String, Object> Upd_Map = new HashMap<>();
@@ -436,7 +670,7 @@ public class YzCardController extends MyBaseController {
                                 Upd_Map.put("status_ShowId", getShowStatIdArr.GetShowStatId(statusCode));
                                 Upd_Map.put("iccid", Parammap.get("iccid").toString());
                                 try {
-                                    boolean bool = yzCardServiceImpl.updStatusId(Upd_Map);//变更卡状态
+                                    boolean bool = yzCardServiceImpl.updStatusId(Upd_Map);// 变更卡状态
                                     if (bool) {
                                         return MyRetunSuccess("", "已成功同步卡状态！");
                                     } else {
@@ -467,7 +701,6 @@ public class YzCardController extends MyBaseController {
         return Myerr("同步卡状态 操作失败！");
     }
 
-
     /**
      * 同步 激活时间
      *
@@ -475,12 +708,12 @@ public class YzCardController extends MyBaseController {
      * @return
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:SynActivateDate')")
-    @PostMapping(value = "/SynActivateDate", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/SynActivateDate", produces = { "application/json;charset=utf-8" })
     public String SynActivateDate(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         String opTypeName = "";
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
@@ -494,15 +727,21 @@ public class YzCardController extends MyBaseController {
                     Map<String, Object> Rmap = internalApiRequest.queryCardActiveTime(Parammap, Route);
                     String code = Rmap.get("code") != null ? Rmap.get("code").toString() : "500";
                     if (code.equals("200")) {
-                        //获取 激活时间
-                        if (Rmap.get("activateDate") != null && Rmap.get("activateDate") != "" && Rmap.get("activateDate").toString().trim().length() > 0 ||
-                                Rmap.get("openDate") != null && Rmap.get("openDate") != "" && Rmap.get("openDate").toString().trim().length() > 0) {
-                            Object activateDate_obj = Rmap.get("activateDate") != null && Rmap.get("activateDate") != "" && Rmap.get("activateDate").toString().trim().length() > 0 ?
-                                    Rmap.get("activateDate").toString().trim() : "";
+                        // 获取 激活时间
+                        if (Rmap.get("activateDate") != null && Rmap.get("activateDate") != ""
+                                && Rmap.get("activateDate").toString().trim().length() > 0 ||
+                                Rmap.get("openDate") != null && Rmap.get("openDate") != ""
+                                        && Rmap.get("openDate").toString().trim().length() > 0) {
+                            Object activateDate_obj = Rmap.get("activateDate") != null && Rmap.get("activateDate") != ""
+                                    && Rmap.get("activateDate").toString().trim().length() > 0
+                                            ? Rmap.get("activateDate").toString().trim()
+                                            : "";
                             String activateDate = activateDate_obj.toString().trim();
                             activateDate = activateDate.length() > 10 ? activateDate.substring(0, 10) : activateDate;
-                            Object openDate = Rmap.get("openDate") != null && Rmap.get("openDate") != "" && Rmap.get("openDate").toString().trim().length() > 0 ?
-                                    Rmap.get("openDate").toString().trim() : null;
+                            Object openDate = Rmap.get("openDate") != null && Rmap.get("openDate") != ""
+                                    && Rmap.get("openDate").toString().trim().length() > 0
+                                            ? Rmap.get("openDate").toString().trim()
+                                            : null;
                             Map<String, Object> Upd_Map = new HashMap<>();
                             if (activateDate != null && activateDate.length() > 0 && opType.equals("activate")) {
                                 Upd_Map.put("activate_date", activateDate);
@@ -512,7 +751,7 @@ public class YzCardController extends MyBaseController {
                             }
                             Upd_Map.put("iccid", Parammap.get("iccid").toString());
                             try {
-                                boolean bool = yzCardServiceImpl.updActivate(Upd_Map);//变更 激活时间 和 开卡日期
+                                boolean bool = yzCardServiceImpl.updActivate(Upd_Map);// 变更 激活时间 和 开卡日期
                                 if (bool) {
                                     return MyRetunSuccess("", "已成功同步" + opTypeName + "时间！");
                                 } else {
@@ -542,7 +781,6 @@ public class YzCardController extends MyBaseController {
         return Myerr("同步" + opTypeName + "时间 操作失败！");
     }
 
-
     /**
      * 查询在线信息
      *
@@ -550,15 +788,15 @@ public class YzCardController extends MyBaseController {
      * @return
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:queryOnlineStatus')")
-    @PostMapping(value = "/queryOnlineStatus", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/queryOnlineStatus", produces = { "application/json;charset=utf-8" })
     public String queryOnlineStatus(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
-            //  System.out.println(map);
+            // System.out.println(map);
             Parammap.putAll(JSON.parseObject((String) Pstr));
             Map<String, Object> Route = yzCardServiceImpl.findRoute(Parammap);
             if (Route != null) {
@@ -580,11 +818,11 @@ public class YzCardController extends MyBaseController {
             }
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> yunze:card:queryOnlineStatus  " + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error("<br/> yunze:card:queryOnlineStatus  " + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("查询在线信息 操作失败！");
     }
-
 
     /**
      * 机卡重绑
@@ -593,15 +831,15 @@ public class YzCardController extends MyBaseController {
      * @return
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:CardBinding')")
-    @PostMapping(value = "/CardBinding", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/CardBinding", produces = { "application/json;charset=utf-8" })
     public String CardBinding(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
-            //  System.out.println(map);
+            // System.out.println(map);
             Parammap.putAll(JSON.parseObject((String) Pstr));
             Map<String, Object> Route = yzCardServiceImpl.findRoute(Parammap);
             if (Route != null) {
@@ -629,7 +867,6 @@ public class YzCardController extends MyBaseController {
         return Myerr("机卡重绑 操作失败！");
     }
 
-
     /**
      * 连接管理设置
      *
@@ -638,11 +875,11 @@ public class YzCardController extends MyBaseController {
      */
     @Log(title = "连接管理设置", businessType = BusinessType.UPDATE)
     @PreAuthorize("@ss.hasPermi('yunze:card:importSet')")
-    @PostMapping(value = "/importSet", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/importSet", produces = { "application/json;charset=utf-8" })
     public AjaxResult importSet(MultipartFile file, @RequestParam Map<String, String> map) {
         String Pstr = map.get("Pstr").toString();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         try {
@@ -660,7 +897,6 @@ public class YzCardController extends MyBaseController {
         return AjaxResult.error("连接管理设置 操作失败！");
     }
 
-
     /**
      * 特殊操作查询IMEI
      *
@@ -669,7 +905,7 @@ public class YzCardController extends MyBaseController {
      */
     @Log(title = "特殊操作查询IMEI", businessType = BusinessType.IMPORT)
     @PreAuthorize("@ss.hasPermi('yunze:card:importSelImei')")
-    @PostMapping(value = "/importSelImei", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/importSelImei", produces = { "application/json;charset=utf-8" })
     public AjaxResult importSelImei(MultipartFile file) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         try {
@@ -685,7 +921,6 @@ public class YzCardController extends MyBaseController {
         return AjaxResult.error("特殊操作查询IMEI 操作失败！");
     }
 
-
     /**
      * 特殊操作 变更卡分组、备注
      *
@@ -694,7 +929,7 @@ public class YzCardController extends MyBaseController {
      */
     @Log(title = "特殊操作变更卡分组、备注", businessType = BusinessType.IMPORT)
     @PreAuthorize("@ss.hasPermi('yunze:card:importSetCardInfo')")
-    @PostMapping(value = "/importSetCardInfo", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/importSetCardInfo", produces = { "application/json;charset=utf-8" })
     public AjaxResult importSetCardInfo(MultipartFile file) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         try {
@@ -710,7 +945,6 @@ public class YzCardController extends MyBaseController {
         return AjaxResult.error("特殊操作 变更卡分组、备注 操作失败！");
     }
 
-
     /**
      * 导入查询、卡号类别
      *
@@ -719,12 +953,12 @@ public class YzCardController extends MyBaseController {
      */
     @Log(title = "卡号导入查询", businessType = BusinessType.IMPORT)
     @PreAuthorize("@ss.hasPermi('yunze:card:ImportQuery')")
-    @PostMapping(value = "/cardNumber", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/cardNumber", produces = { "application/json;charset=utf-8" })
     public AjaxResult CardNumberImport(MultipartFile file, @RequestParam Map<String, String> map) {
         String Pstr = map.get("Pstr").toString();
 
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         try {
@@ -744,7 +978,8 @@ public class YzCardController extends MyBaseController {
                 }
             }
             try {
-                return AjaxResult.success(AesEncryptUtil.encrypt(JSON.toJSONString(yzCardServiceImpl.CardNumberImport(file, Parammap))));
+                return AjaxResult.success(
+                        AesEncryptUtil.encrypt(JSON.toJSONString(yzCardServiceImpl.CardNumberImport(file, Parammap))));
             } catch (Exception e) {
                 return AjaxResult.error(AesEncryptUtil.encrypt(JSON.toJSONString("返回数据加密操作失败")));
             }
@@ -755,7 +990,6 @@ public class YzCardController extends MyBaseController {
         return AjaxResult.error("卡号导入查询 操作失败！");
     }
 
-
     /**
      * 批量停复机、断开网
      *
@@ -764,11 +998,11 @@ public class YzCardController extends MyBaseController {
      */
     @Log(title = "批量停复机、断开网 ", businessType = BusinessType.IMPORT)
     @PreAuthorize("@ss.hasPermi('yunze:card:ApiUpdBatch')")
-    @PostMapping(value = "/status", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/status", produces = { "application/json;charset=utf-8" })
     public AjaxResult importSelImei(MultipartFile file, @RequestParam Map<String, String> map) {
         String Pstr = map.get("Pstr").toString();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         try {
@@ -791,36 +1025,37 @@ public class YzCardController extends MyBaseController {
      * 修改 备注 分组
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:importSetCardInfo')")
-    @PostMapping(value = "/updatefill", produces = {"application/json;charset=UTF-8"})
+    @PostMapping(value = "/updatefill", produces = { "application/json;charset=UTF-8" })
     public String Update(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
-            //  System.out.println(map);
+            // System.out.println(map);
             Parammap.putAll(JSON.parseObject(Pstr));
             return MyRetunSuccess(yzCardServiceImpl.UpdateFill(Parammap), null);
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> yunze:card:importSetCardInfo  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error("<br/> yunze:card:importSetCardInfo  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("修改 备注 分组 操作失败！");
     }
 
     /**
      * 下面是 操作
-     * */
+     */
     /**
      * 停机
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:Stopped')")
-    @PostMapping(value = "/stopped", produces = {"application/json;charset=UTF-8"})
+    @PostMapping(value = "/stopped", produces = { "application/json;charset=UTF-8" })
     public String StoppedArr(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
@@ -831,7 +1066,8 @@ public class YzCardController extends MyBaseController {
             return MyRetunSuccess(yzCardServiceImpl.stoppedarr(Parammap), null);
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> yunze:card:Stopped  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error("<br/> yunze:card:Stopped  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("批量 【停机】 操作失败！");
     }
@@ -840,11 +1076,11 @@ public class YzCardController extends MyBaseController {
      * 复机
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:MachineArr')")
-    @PostMapping(value = "/machine", produces = {"application/json;charset=UTF-8"})
+    @PostMapping(value = "/machine", produces = { "application/json;charset=UTF-8" })
     public String MachineArr(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
@@ -855,7 +1091,8 @@ public class YzCardController extends MyBaseController {
             return MyRetunSuccess(yzCardServiceImpl.machinearr(Parammap), null);
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> yunze:card:machine  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error("<br/> yunze:card:machine  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("批量 【复机】 操作失败！");
     }
@@ -864,11 +1101,11 @@ public class YzCardController extends MyBaseController {
      * 断网
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:DisconnectNetworkArr')")
-    @PostMapping(value = "/disconnectNetwork", produces = {"application/json;charset=UTF-8"})
+    @PostMapping(value = "/disconnectNetwork", produces = { "application/json;charset=UTF-8" })
     public String DisconnectNetworkArr(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
@@ -879,7 +1116,8 @@ public class YzCardController extends MyBaseController {
             return MyRetunSuccess(yzCardServiceImpl.disconnectNetworkarr(Parammap), null);
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> yunze:card:disconnectNetwork  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error("<br/> yunze:card:disconnectNetwork  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("批量 【断网】 操作失败！");
     }
@@ -888,11 +1126,11 @@ public class YzCardController extends MyBaseController {
      * 开网
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:OpenNetworkArr')")
-    @PostMapping(value = "/openNetwork", produces = {"application/json;charset=UTF-8"})
+    @PostMapping(value = "/openNetwork", produces = { "application/json;charset=UTF-8" })
     public String OpenNetworkArr(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
@@ -903,7 +1141,8 @@ public class YzCardController extends MyBaseController {
             return MyRetunSuccess(yzCardServiceImpl.openNetworkarr(Parammap), null);
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> yunze:card:OpenNetworkArr  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error("<br/> yunze:card:OpenNetworkArr  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("批量 【开网】 操作失败！");
     }
@@ -912,11 +1151,11 @@ public class YzCardController extends MyBaseController {
      * 同步流量
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:ConsumptionArr')")
-    @PostMapping(value = "/consumption", produces = {"application/json;charset=UTF-8"})
+    @PostMapping(value = "/consumption", produces = { "application/json;charset=UTF-8" })
     public String ConsumptionArr(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
@@ -927,7 +1166,8 @@ public class YzCardController extends MyBaseController {
             return MyRetunSuccess(yzCardServiceImpl.consumptionarr(Parammap), null);
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> yunze:card:ConsumptionArr  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error("<br/> yunze:card:ConsumptionArr  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("批量 【同步流量】 操作失败！");
     }
@@ -936,11 +1176,11 @@ public class YzCardController extends MyBaseController {
      * 同步状态
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:PublicMethodArr')")
-    @PostMapping(value = "/publicmethod", produces = {"application/json;charset=UTF-8"})
+    @PostMapping(value = "/publicmethod", produces = { "application/json;charset=UTF-8" })
     public String PublicMethodArr(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
@@ -951,7 +1191,8 @@ public class YzCardController extends MyBaseController {
             return MyRetunSuccess(yzCardServiceImpl.publicmethodarr(Parammap), null);
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> yunze:card:PublicMethodArr  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error("<br/> yunze:card:PublicMethodArr  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("批量 【同步状态】 操作失败！");
     }
@@ -960,11 +1201,11 @@ public class YzCardController extends MyBaseController {
      * 同步状态和用量
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:ConsumptionAndStateArr')")
-    @PostMapping(value = "/consumptionandstate", produces = {"application/json;charset=UTF-8"})
+    @PostMapping(value = "/consumptionandstate", produces = { "application/json;charset=UTF-8" })
     public String ConsumptionAndStateArr(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
@@ -975,7 +1216,9 @@ public class YzCardController extends MyBaseController {
             return MyRetunSuccess(yzCardServiceImpl.consumptionandstatearr(Parammap), null);
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> yunze:card:ConsumptionAndStateArr  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error(
+                    "<br/> yunze:card:ConsumptionAndStateArr  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("批量 【同步状态和用量】 操作失败！");
     }
@@ -985,7 +1228,7 @@ public class YzCardController extends MyBaseController {
      */
     @Log(title = "修改余额操作", businessType = BusinessType.UPDATE)
     @PreAuthorize("@ss.hasPermi('yunze:card:updateBalance')")
-    @PostMapping(value = "/updBalance", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/updBalance", produces = { "application/json;charset=utf-8" })
     public String updateBalance(@RequestBody String Pstr) {
         logger.info("Received Str: {}", Pstr); // 添加日志记录
         if (Pstr != null) {
@@ -1016,16 +1259,15 @@ public class YzCardController extends MyBaseController {
      * @return
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:list')")
-    @PostMapping(value = "/getIccid", produces = {"application/json;charset=UTF-8"})
+    @PostMapping(value = "/getIccid", produces = { "application/json;charset=UTF-8" })
     public String getIccid(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
             Parammap.putAll(JSON.parseObject(Pstr));
-
 
             LoginUser loginUser = SpringUtils.getBean(TokenService.class).getLoginUser(ServletUtils.getRequest());
             SysUser currentUser = loginUser.getUser();
@@ -1047,11 +1289,11 @@ public class YzCardController extends MyBaseController {
             return Myerr("未匹配到相应的数据，请重新输入！");
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> yunze:card:getIccid  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error("<br/> yunze:card:getIccid  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("批量 【同步状态和用量】 操作失败！");
     }
-
 
     /**
      * 批量取消实名
@@ -1061,7 +1303,7 @@ public class YzCardController extends MyBaseController {
      */
     @Log(title = "批量取消实名", businessType = BusinessType.IMPORT)
     @PreAuthorize("@ss.hasPermi('yunze:card:cancelrealname')")
-    @PostMapping(value = "/cancelrealname", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/cancelrealname", produces = { "application/json;charset=utf-8" })
     public AjaxResult AjaxName(MultipartFile file) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         try {
@@ -1077,7 +1319,6 @@ public class YzCardController extends MyBaseController {
         return AjaxResult.error("批量取消实名 操作失败！");
     }
 
-
     /**
      * 智能匹对
      *
@@ -1085,11 +1326,11 @@ public class YzCardController extends MyBaseController {
      * @return
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:cardMatch')")
-    @PostMapping(value = "/cardMatch", produces = {"application/json;charset=UTF-8"})
+    @PostMapping(value = "/cardMatch", produces = { "application/json;charset=UTF-8" })
     public String cardMatch(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
@@ -1115,11 +1356,11 @@ public class YzCardController extends MyBaseController {
             return Myerr("未匹配到相应的数据，请重新输入！");
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> yunze/card/cardMatch  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error("<br/> yunze/card/cardMatch  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("智能匹对 操作失败！");
     }
-
 
     /**
      * 单卡停机原因查询
@@ -1128,11 +1369,11 @@ public class YzCardController extends MyBaseController {
      * @return
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:simStopReason')")
-    @PostMapping(value = "/simStopReason", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/simStopReason", produces = { "application/json;charset=utf-8" })
     public String simStopReason(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
@@ -1157,11 +1398,11 @@ public class YzCardController extends MyBaseController {
             }
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> yunze:card:simStopReason  " + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error("<br/> yunze:card:simStopReason  " + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("单卡停机原因查询 操作失败！");
     }
-
 
     /**
      * 单卡开关机状态实时查询
@@ -1170,11 +1411,11 @@ public class YzCardController extends MyBaseController {
      * @return
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:onOffStatus')")
-    @PostMapping(value = "/onOffStatus", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/onOffStatus", produces = { "application/json;charset=utf-8" })
     public String onOffStatus(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
@@ -1205,7 +1446,6 @@ public class YzCardController extends MyBaseController {
         return Myerr("单卡开关机状态实时查询 操作失败！");
     }
 
-
     /**
      * 单卡已开通APN信息查询
      *
@@ -1213,11 +1453,11 @@ public class YzCardController extends MyBaseController {
      * @return
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:apnInfo')")
-    @PostMapping(value = "/apnInfo", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/apnInfo", produces = { "application/json;charset=utf-8" })
     public String apnInfo(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
@@ -1248,7 +1488,6 @@ public class YzCardController extends MyBaseController {
         return Myerr("单卡已开通APN信息查询 操作失败！");
     }
 
-
     /**
      * 物联卡机卡分离状态查询
      *
@@ -1256,11 +1495,11 @@ public class YzCardController extends MyBaseController {
      * @return
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:cardBindStatus')")
-    @PostMapping(value = "/cardBindStatus", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/cardBindStatus", produces = { "application/json;charset=utf-8" })
     public String cardBindStatus(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
@@ -1275,7 +1514,9 @@ public class YzCardController extends MyBaseController {
                         return MyRetunSuccess(Rmap, "操作成功！");
                     } else {
                         System.out.println(Rmap);
-                        String msg = Rmap.get("Message") != null && Rmap.get("Message").toString().length() > 0 ? Rmap.get("Message").toString() : "暂未查询到 物联卡机卡分离状态！";
+                        String msg = Rmap.get("Message") != null && Rmap.get("Message").toString().length() > 0
+                                ? Rmap.get("Message").toString()
+                                : "暂未查询到 物联卡机卡分离状态！";
                         return Myerr(msg);
                     }
                 } else {
@@ -1287,11 +1528,11 @@ public class YzCardController extends MyBaseController {
             }
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> yunze:card:cardBindStatus  " + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error("<br/> yunze:card:cardBindStatus  " + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("物联卡机卡分离状态查询 操作失败！");
     }
-
 
     /**
      * 单卡状态变更历史查询
@@ -1300,11 +1541,11 @@ public class YzCardController extends MyBaseController {
      * @return
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:simChangeHistory')")
-    @PostMapping(value = "/simChangeHistory", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/simChangeHistory", produces = { "application/json;charset=utf-8" })
     public String simChangeHistory(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
@@ -1330,11 +1571,11 @@ public class YzCardController extends MyBaseController {
             }
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> yunze:card:simChangeHistory  " + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error("<br/> yunze:card:simChangeHistory  " + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("单卡状态变更历史查询 操作失败！");
     }
-
 
     /**
      * 批量更新卡信息
@@ -1344,11 +1585,11 @@ public class YzCardController extends MyBaseController {
      */
     @Log(title = "批量更新卡信息", businessType = BusinessType.IMPORT)
     @PreAuthorize("@ss.hasPermi('yunze:card:replace')")
-    @PostMapping(value = "/importCardReplace", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/importCardReplace", produces = { "application/json;charset=utf-8" })
     public AjaxResult importCardReplace(MultipartFile file, @RequestParam Map<String, String> map) {
         String Pstr = map.get("Pstr").toString();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         try {
@@ -1366,18 +1607,17 @@ public class YzCardController extends MyBaseController {
         return AjaxResult.error("批量更新卡信息 操作失败！");
     }
 
-
     /**
      * 灵活变更卡状态
      *
      * @return
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:fbestate')")
-    @PostMapping(value = "/fbestate", produces = {"application/json;charset=UTF-8"})
+    @PostMapping(value = "/fbestate", produces = { "application/json;charset=UTF-8" })
     public String importFle(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
@@ -1389,11 +1629,11 @@ public class YzCardController extends MyBaseController {
             return MyRetunSuccess(yzCardServiceImpl.ChangeF(Parammap, currentUser), null);
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> yunze:card:fbestate  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error("<br/> yunze:card:fbestate  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("灵活变更卡状态 操作失败！");
     }
-
 
     /**
      * 物联卡 公开查询简要信息
@@ -1401,13 +1641,13 @@ public class YzCardController extends MyBaseController {
      * @param Pstr
      * @return
      */
-    @PostMapping(value = "/selCardOpen", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/selCardOpen", produces = { "application/json;charset=utf-8" })
     public String selCardOpen(@RequestBody String Pstr) {
         String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         try {
             if (Pstr != null) {
-                Pstr = Pstr.replace("%2F", "/");//转义 /
+                Pstr = Pstr.replace("%2F", "/");// 转义 /
             }
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
             Parammap.putAll(JSON.parseObject((String) Pstr));
@@ -1420,11 +1660,11 @@ public class YzCardController extends MyBaseController {
 
     @Log(title = "划卡操作", businessType = BusinessType.UPDATE)
     @PreAuthorize("@ss.hasPermi('yunze:card:divide')")
-    @PostMapping(value = "/divideOne", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/divideOne", produces = { "application/json;charset=utf-8" })
     public String divideOne(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
@@ -1433,13 +1673,15 @@ public class YzCardController extends MyBaseController {
             Object set_user_id = Parammap.get("set_user_id");
             Object set_dept_name = Parammap.get("set_dept_name");
             Object set_user_name = Parammap.get("set_user_name");
-            if (set_dept_id != null && set_dept_id.toString() != "" && set_user_id != null && set_user_id.toString() != ""
-                    && set_dept_name != null && set_dept_name.toString() != "" && set_user_name != null && set_user_name.toString() != "") {
+            if (set_dept_id != null && set_dept_id.toString() != "" && set_user_id != null
+                    && set_user_id.toString() != ""
+                    && set_dept_name != null && set_dept_name.toString() != "" && set_user_name != null
+                    && set_user_name.toString() != "") {
                 LoginUser loginUser = SpringUtils.getBean(TokenService.class).getLoginUser(ServletUtils.getRequest());
                 SysUser currentUser = loginUser.getUser();
                 String agent_id = currentUser.getDeptId().toString();
                 // if(!set_dept_id.equals(agent_id)){
-                //权限 管理 操作必须传入当前操作人 id
+                // 权限 管理 操作必须传入当前操作人 id
                 List<Integer> agent_idArr = new ArrayList<>();
                 if (currentUser.getDeptId() != 100) {
                     if (Parammap.get("agent_id") != null) {
@@ -1452,9 +1694,11 @@ public class YzCardController extends MyBaseController {
                 }
                 Parammap.put("TaskAgent_id", agent_id);
                 return MyRetunSuccess(yzCardServiceImpl.dividCardOne(Parammap), null);
-                /*}else{
-                    return Myerr("不能操作！");
-                }*/
+                /*
+                 * }else{
+                 * return Myerr("不能操作！");
+                 * }
+                 */
             } else {
                 return Myerr("参数不全请核对后重试！");
             }
@@ -1470,21 +1714,21 @@ public class YzCardController extends MyBaseController {
      */
     @Log(title = "添加卡至自动轮询", businessType = BusinessType.UPDATE)
     @PreAuthorize("@ss.hasPermi('yunze:card:showhistoryUsed')")
-    @PostMapping(value = "/addAutoPolling", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/addAutoPolling", produces = { "application/json;charset=utf-8" })
     public String addAutoPolling(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
             Parammap.putAll(JSON.parseObject(Pstr));
             return MyRetunSuccess(null, yzCardServiceImpl.addAutoPolling(Parammap));
 
-
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> updPwd  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error("<br/> updPwd  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("添加卡至自动轮询 操作失败！");
     }
@@ -1494,11 +1738,11 @@ public class YzCardController extends MyBaseController {
      */
     @Log(title = "查询历史用量", businessType = BusinessType.UPDATE)
     @PreAuthorize("@ss.hasPermi('yunze:card:showhistoryUsed')")
-    @PostMapping(value = "/historyUsed", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/historyUsed", produces = { "application/json;charset=utf-8" })
     public String showHistoryUsed(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
@@ -1509,11 +1753,13 @@ public class YzCardController extends MyBaseController {
                 Map<String, Object> Rmap = internalApiRequest.queryHistoryFlow(Parammap, Route);
 
                 String code = Rmap.get("code") != null ? Rmap.get("code").toString() : "500";
-                if (code.equals("200")) return MyRetunSuccess(Rmap, "操作成功！");
+                if (code.equals("200"))
+                    return MyRetunSuccess(Rmap, "操作成功！");
             }
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> updPwd  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error("<br/> updPwd  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("查询历史用量 操作失败！");
     }
@@ -1525,20 +1771,21 @@ public class YzCardController extends MyBaseController {
      * @return
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:selUsage')")
-    @PostMapping(value = "/selUsage", produces = {"application/json;charset=UTF-8"})
+    @PostMapping(value = "/selUsage", produces = { "application/json;charset=UTF-8" })
     public String getListUsage(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
-            //  System.out.println(map);
+            // System.out.println(map);
             Parammap.putAll(JSON.parseObject(Pstr));
             return MyRetunSuccess(yzCardServiceImpl.getListUsage(Parammap), null);
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> yunze:card:selUsage  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error("<br/> yunze:card:selUsage  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("上游单卡订购套餐列表 操作失败！");
     }
@@ -1550,24 +1797,24 @@ public class YzCardController extends MyBaseController {
      * @return
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:reminder')")
-    @PostMapping(value = "/reminder", produces = {"application/json;charset=UTF-8"})
+    @PostMapping(value = "/reminder", produces = { "application/json;charset=UTF-8" })
     public String getListReminder(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
-            //  System.out.println(map);
+            // System.out.println(map);
             Parammap.putAll(JSON.parseObject(Pstr));
             return MyRetunSuccess(yzCardServiceImpl.getListReminder(Parammap), null);
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> yunze:card:reminder  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error("<br/> yunze:card:reminder  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("上游套餐记录列表 操作失败！");
     }
-
 
     /**
      * 单卡同步用量和状态
@@ -1576,34 +1823,34 @@ public class YzCardController extends MyBaseController {
      * @return
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:InfoFlow')")
-    @PostMapping(value = "/InfoFlow", produces = {"application/json;charset=UTF-8"})
+    @PostMapping(value = "/InfoFlow", produces = { "application/json;charset=UTF-8" })
     public String CardInfoFlow(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
-            //  System.out.println(map);
+            // System.out.println(map);
             Parammap.putAll(JSON.parseObject(Pstr));
             return MyRetunSuccess(yzCardServiceImpl.CardInfoFlow(Parammap), null);
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> yunze:card:InfoFlow  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error("<br/> yunze:card:InfoFlow  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("单卡同步用量和状态 操作失败！");
     }
-
 
     /**
      * 卡详情界面 获取 订单信息
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:find')")
-    @PostMapping(value = "/getOrderCard", produces = {"application/json;charset=utf-8"})//
+    @PostMapping(value = "/getOrderCard", produces = { "application/json;charset=utf-8" }) //
     public String getOrderCard(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
@@ -1611,11 +1858,11 @@ public class YzCardController extends MyBaseController {
             return MyRetunSuccess(yzCardServiceImpl.getOrderCard(Parammap), null);
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> getOrderCard  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error("<br/> getOrderCard  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("卡详情界面 获取 订单信息 操作失败！");
     }
-
 
     /**
      * 上游订购套餐查询
@@ -1624,11 +1871,11 @@ public class YzCardController extends MyBaseController {
      * @return
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:queryOffering')")
-    @PostMapping(value = "/queryOffering", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/queryOffering", produces = { "application/json;charset=utf-8" })
     public String queryOffering(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
@@ -1658,16 +1905,15 @@ public class YzCardController extends MyBaseController {
         return Myerr("上游订购套餐查询 操作失败！");
     }
 
-
     /**
      * 单卡 修改 备注 分组
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:singleUpd')")
-    @PostMapping(value = "/singleUpd", produces = {"application/json;charset=UTF-8"})
+    @PostMapping(value = "/singleUpd", produces = { "application/json;charset=UTF-8" })
     public String singleCardInfo(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
@@ -1688,44 +1934,46 @@ public class YzCardController extends MyBaseController {
             }
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> yunze:card:singleUpd  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error("<br/> yunze:card:singleUpd  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("单卡 修改 备注 分组 操作失败！");
     }
 
-    /*单卡 灵活变更状态*/
+    /* 单卡 灵活变更状态 */
     @PreAuthorize("@ss.hasPermi('yunze:card:singleState')")
-    @PostMapping(value = "/singleState", produces = {"application/json;charset=UTF-8"})
+    @PostMapping(value = "/singleState", produces = { "application/json;charset=UTF-8" })
     public String singFlexibleState(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
             Parammap.putAll(JSON.parseObject(Pstr));
             Map<String, Object> singleState = yzCardServiceImpl.singleState(Parammap);
             yzCardServiceImpl.CardInfoFlow(Parammap);
-            if ((boolean) singleState.get("bool")) return MyRetunSuccess(singleState, null);
+            if ((boolean) singleState.get("bool"))
+                return MyRetunSuccess(singleState, null);
             return Myerr(singleState.get("message").toString());
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> yunze:card:singleState  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error("<br/> yunze:card:singleState  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("单卡 灵活变更状态！");
     }
-
 
     /**
      * 查询用户手机号
      *
      * @return
      */
-    @PostMapping(value = "/userPhone", produces = {"application/json;charset=UTF-8"})
+    @PostMapping(value = "/userPhone", produces = { "application/json;charset=UTF-8" })
     public String UserPhone(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
@@ -1738,21 +1986,21 @@ public class YzCardController extends MyBaseController {
             }
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> system:user:userPhone  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error("<br/> system:user:userPhone  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("查询用户手机号 操作失败！");
     }
-
 
     /**
      * 验证所属卡号 是否在名下
      */
     @PreAuthorize("@ss.hasPermi('yunze:card:list')")
-    @PostMapping(value = "/verifyBelonging", produces = {"application/json;charset=UTF-8"})
+    @PostMapping(value = "/verifyBelonging", produces = { "application/json;charset=UTF-8" })
     public String verifyBelonging(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         try {
             Pstr = AesEncryptUtil.desEncrypt(Pstr);
@@ -1772,11 +2020,11 @@ public class YzCardController extends MyBaseController {
             return MyRetunSuccess(yzCardServiceImpl.outCardIccid(Parammap), null);
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
-            logger.error("<br/> verifyBelonging  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            logger.error("<br/> verifyBelonging  <br/> Pstr = " + Pstr + " <br/> ip =  " + ip + " <br/> ",
+                    e.getCause().toString());
         }
         return Myerr("验证所属卡号 是否在名下 操作失败！");
     }
-
 
     /**
      * 批量短信下发
@@ -1786,11 +2034,11 @@ public class YzCardController extends MyBaseController {
      */
     @Log(title = "批量短信下发", businessType = BusinessType.IMPORT)
     @PreAuthorize("@ss.hasPermi('yunze:card:smsCC')")
-    @PostMapping(value = "/SmsCC", produces = {"application/json;charset=utf-8"})
+    @PostMapping(value = "/SmsCC", produces = { "application/json;charset=utf-8" })
     public AjaxResult SmsCC(MultipartFile file, @RequestParam Map<String, String> map) {
         String Pstr = map.get("Pstr").toString();
         if (Pstr != null) {
-            Pstr = Pstr.replace("%2F", "/");//转义 /
+            Pstr = Pstr.replace("%2F", "/");// 转义 /
         }
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         try {
@@ -1808,6 +2056,10 @@ public class YzCardController extends MyBaseController {
         return AjaxResult.error("批量短信下发 操作失败！");
     }
 
-
+    @Log(title = "流量文件上传", businessType = BusinessType.IMPORT)
+    @PreAuthorize("@ss.hasPermi('yunze:card:upload-flow-excel')")
+    @PostMapping("/upload-flow-excel")
+    public AjaxResult uploadFlowExcel(@RequestParam("file") MultipartFile file) {
+        return yzCardServiceImpl.uploadFlowExcel(file);
+    }
 }
-
