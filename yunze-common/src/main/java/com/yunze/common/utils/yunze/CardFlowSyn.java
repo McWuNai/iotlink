@@ -365,7 +365,24 @@ public class CardFlowSyn {
         map.put("month", yes[1]);
         map.put("day", yes[2]);
         map.put("iccid", findMap.get("iccid"));
-        map.put("billingCycle", null);
+        Object billingCycle = redisCache.getCacheObject("billingCycle");
+        if (billingCycle != null) {
+            map.put("billingCycle", billingCycle.toString());
+        } else {
+            LocalDate today = LocalDate.now(); // 获取当前日期
+            int dayOfMonth = today.getDayOfMonth();
+            LocalDate targetDate;
+            if (dayOfMonth < 27) {
+                // 如果是27号之前，手动调整到上一个月的第一天
+                targetDate = today.minusMonths(1).withDayOfMonth(1);
+            } else {
+                // 如果是27号或之后，获取当月的第一天
+                targetDate = today.withDayOfMonth(1);
+            }
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMM");
+            map.put("billingCycle", targetDate.format(formatter));
+            redisCache.setCacheObject("billingCycle", map.get("billingCycle").toString());
+        }
 
         try {
             Integer exist = yzCardFlowHisMapper.isExist(map);
