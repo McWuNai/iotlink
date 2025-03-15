@@ -328,7 +328,9 @@ public class SysDeptServiceImpl implements ISysDeptService
         return omp;
     }
 
-
-
+    @Override
+    public List<Map<String, Object>> list() {
+        return sysDeptMapper.list();
+    }
 
 }

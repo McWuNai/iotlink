@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.apache.ibatis.annotations.Param;
 import com.yunze.common.core.domain.entity.SysDept;
+import org.apache.ibatis.annotations.Select;
 
 /**
  * 部门管理 数据层
@@ -142,4 +143,7 @@ public interface SysDeptMapper
      * @return
      */
     public Integer sel_Map_Count(Map<String, Object> map);
+
+    @Select("select dept_id, dept_name from sys_dept")
+    public List<Map<String, Object>> list();
 }
