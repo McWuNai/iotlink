@@ -73,8 +73,11 @@
             <artifactId>yunze-generator</artifactId>
         </dependency>
 
-
-
+        <!-- Validation -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
 
     </dependencies>
 
@@ -86,6 +89,9 @@
                 <version>2.1.1.RELEASE</version>
                 <configuration>
                     <fork>true</fork> <!-- 如果没有该配置，devtools不会生效 -->
+                    <jvmArguments>
+                        -Xms1024m -Xmx3072m
+                    </jvmArguments>
                 </configuration>
                 <executions>
                     <execution>
@@ -103,7 +109,7 @@
                     <failOnMissingWebXml>false</failOnMissingWebXml>
                     <warName>${project.artifactId}</warName>
                 </configuration>   
-           </plugin>   
+           </plugin>
         </plugins>
         <finalName>${project.artifactId}</finalName>
     </build>
