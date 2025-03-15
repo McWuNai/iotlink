@@ -14,6 +14,9 @@ yunze:
   addressEnabled: true
   # 验证码类型 math 数组计算 char 字符验证
   captchaType: math
+  # 文件存储根目录
+  storage:
+    root: /mnt/file
 
 # 开发环境配置
 server:
@@ -48,9 +51,9 @@ spring:
   servlet:
     multipart:
       # 单个文件大小
-      max-file-size:  30MB
+      max-file-size:  300MB
       # 设置总上传的文件大小
-      max-request-size:  100MB
+      max-request-size:  300MB
   # 服务模块
   devtools:
     restart:
