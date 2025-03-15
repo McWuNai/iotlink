@@ -3,6 +3,7 @@ package com.yunze.system.service.yunze;
 
 import com.yunze.common.core.domain.AjaxResult;
 import com.yunze.common.core.domain.entity.SysUser;
+import com.yunze.common.utils.poi.PageResult;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -313,4 +314,6 @@ public interface IYzCardService
     AjaxResult distinguishCardType(String query);
 
     AjaxResult cardMonthUsage(String query);
+
+    PageResult getPagedContentFromExcel(String filePath, int page, int size);
 }

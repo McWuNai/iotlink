@@ -119,4 +119,5 @@ public interface ISysDeptService
      */
     public Map<String, Object> selMap(Map<String, Object> map);
 
+    public List<Map<String, Object>> list();
 }
