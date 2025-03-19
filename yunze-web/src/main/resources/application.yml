@@ -86,3 +86,15 @@ mybatis:
   mapperLocations: classpath*:mapper/**/*Mapper.xml
   # 加载全局的配置文件
   configLocation: classpath:mybatis/mybatis-config.xml
+
+wx:
+  mp:
+#    useRedis: false
+#    redisConfig:
+#      host: 127.0.0.1
+#      port: 6379
+    configs:
+      - appId: wxe8338ad8db225d43 # 第一个公众号的appid
+        secret: ef2eb35470de83d181c3907486e504ae # 公众号的appsecret
+        token: shiyaniotlink # 接口配置里的Token值
+#        aesKey: 111 # 接口配置里的EncodingAESKey值

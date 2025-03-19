@@ -53,11 +53,32 @@ public class WeixinPayController {
                 return ResponseJson.Myerr(queryMap.get("Message").toString());
             }
         }catch (Exception e){
-            System.out.println("weixinPay - 异常 "+e.getMessage());
+            System.out.println("weixinPay - 异常 "+e);
         }
         return ResponseJson.Myerr("微信跳转 异常！请联系客服反馈！");
     }
+    /*@RequestMapping(value = "/weixinTo", produces = {"application/json;charset=UTF-8"})
+    @ResponseBody
+    @LogAnnotation(action = "操作微信跳转")
+    public String weixinTo(@RequestBody String map) {
 
+        Map<String, Object> ParamMap = new HashMap<String, Object>();
+        map = map.replace("%2F", "/");//转义 /
+        try {
+            map = AesEncryptUtil.desEncrypt(map);
+            ParamMap.putAll(JSON.parseObject((String) map));
+            Map<String,Object> queryMap = weixinPacketImpl.weixinTo(ParamMap);
+            String code = queryMap.get("code").toString();
+            if(code.equals("200")){
+                return ResponseJson.MyRetunSuccess(queryMap.get("Data"),null);
+            }else {
+                return ResponseJson.Myerr(queryMap.get("Message").toString());
+            }
+        }catch (Exception e){
+            System.out.println("weixinPay - 异常 "+e.getMessage());
+        }
+        return ResponseJson.Myerr("微信跳转 异常！请联系客服反馈！");
+    }*/
 
 
     /**

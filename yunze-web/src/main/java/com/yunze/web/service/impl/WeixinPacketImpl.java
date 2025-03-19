@@ -24,16 +24,21 @@ import com.yunze.cn.service.impl.YzCardServiceImpl;
 import com.yunze.web.utils.HttpUtil;
 import com.yunze.web.utils.QueryStringUtil;
 import lombok.extern.slf4j.Slf4j;
+import me.chanjar.weixin.common.bean.WxJsapiSignature;
+import me.chanjar.weixin.common.error.WxErrorException;
 import me.chanjar.weixin.mp.api.WxMpService;
 import me.chanjar.weixin.mp.bean.result.WxMpUser;
+import net.sf.json.util.JSONUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.InetAddress;
+import java.net.URLEncoder;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -307,10 +312,16 @@ public class WeixinPacketImpl implements IWeixinPacket {
         return Rmap;
     }
 
+    @Resource
+    WxMpService wxMpService;
+
     @Override
     public Map<String, Object> weixinTo(Map<String, Object> map) {
         Map<String, Object> resultMap = new HashMap<>();
         String appId = (String) map.get("appId");
+        String url = map.get("url").toString();
+        String timeStamp = createTimestamp();
+        String nonceStr = String.valueOf(System.currentTimeMillis());
         // 检查appId是否有效
         if (appId == null || appId.isEmpty()) {
             return errorResult(resultMap, "Invalid appId");
@@ -320,6 +331,25 @@ public class WeixinPacketImpl implements IWeixinPacket {
         Map<String, Object> dataMap = new HashMap<>();
         //预设值键名
         String key = "wechat:resultMap:" + appId;
+        /*try {
+            String encodedUrl  = URLEncoder.encode(url, "UTF-8");
+            url = "https://www.iotesim.cn/wechat?state=1";
+            WxJsapiSignature wxJsapiSignature = wxMpService.createJsapiSignature(url);
+            System.out.println(JSON.toJSONString(wxJsapiSignature));
+            dataMap.put("appId", appId);
+            dataMap.put("timeStamp", wxJsapiSignature.getTimestamp());
+            dataMap.put("nonceStr", wxJsapiSignature.getNonceStr());
+            dataMap.put("paySign", wxJsapiSignature.getSignature());
+            dataMap.put("signType", "MD5" );
+            dataMap.put("appIdTo", map.get("appIdTo"));
+            dataMap.put("path", map.get("path"));
+            dataMap.put("iccid", map.get("iccid"));
+
+            resultMap.put("Data", dataMap);
+            resultMap.put("code", "200");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }*/
 
         //判断是否存在并获取
         Map<Object, Object> obj = redisUtilYz.redisTemplate.opsForHash().entries(key);
@@ -329,7 +359,25 @@ public class WeixinPacketImpl implements IWeixinPacket {
                             entry -> entry.getKey().toString(), // 将键转换为 String
                             Map.Entry::getValue // 保持值不变
                     ));
-            resultMap.put("Data", dataMap);
+
+            Map<String, String> resultMapString = new HashMap<>();
+            for (Map.Entry<String, Object> entry : dataMap.entrySet()) {
+                // 将 Object 类型的值转换为 String 类型
+                String value = entry.getValue() != null ? entry.getValue().toString() : null;
+                resultMapString.put(entry.getKey(), value);
+            }
+            resultMapString.put("url", url);
+            String sign = QueryStringUtil.safeSha1(QueryStringUtil.mapToSortedQueryString(resultMapString));
+            if (sign == null || sign.isEmpty()) {
+                return errorResult(resultMap, "Failed to generate signature");
+            }
+            resultMapString.put("paySign", sign);
+            resultMapString.put("appIdTo", map.get("appIdTo").toString());
+            resultMapString.put("path", map.get("path").toString());
+            resultMapString.put("iccid", map.get("iccid").toString());
+            resultMapString.put("appId", appId);
+
+            resultMap.put("Data", resultMapString);
             resultMap.put("code", "200");
             return resultMap;
         }
@@ -350,7 +398,7 @@ public class WeixinPacketImpl implements IWeixinPacket {
         if (accessTokenResponse == null || !accessTokenResponse.containsKey("access_token")) {
             return errorResult(resultMap, "Failed to get access token");
         } else {
-            dataMap.put("access_token", accessTokenResponse.get("access_token"));
+            dataMap.put("access_token", accessTokenResponse.get("access_token").toString());
         }
 
         // 获取jsapi ticket
@@ -362,17 +410,17 @@ public class WeixinPacketImpl implements IWeixinPacket {
         if (!"ok".equals(jsApiTicketResponse.get("errmsg"))) {
             return errorResult(resultMap, "Failed to get jsapi ticket");
         } else {
-            dataMap.put("jsapi_ticket", jsApiTicketResponse.get("ticket"));
+            dataMap.put("jsapi_ticket", jsApiTicketResponse.get("ticket").toString());
         }
 
         // 组合参数构建签名
-        String timeStamp = createTimestamp();
-        String nonceStr = String.valueOf(System.currentTimeMillis());
+
         Map<String, String> signInfo = new HashMap<>(4);
-        signInfo.put("url", map.get("url").toString());
         signInfo.put("noncestr", nonceStr);
         signInfo.put("timestamp", timeStamp);
-        signInfo.put("jsapi_ticket", (String) jsApiTicketResponse.get("ticket"));
+        signInfo.put("jsapi_ticket", jsApiTicketResponse.get("ticket").toString());
+        setCacheWithTTL(key, signInfo);
+        signInfo.put("url", url);
 
         String sign = QueryStringUtil.safeSha1(QueryStringUtil.mapToSortedQueryString(signInfo));
         if (sign == null || sign.isEmpty()) {
@@ -383,15 +431,13 @@ public class WeixinPacketImpl implements IWeixinPacket {
         dataMap.put("timeStamp", timeStamp);
         dataMap.put("nonceStr", nonceStr);
         dataMap.put("paySign", sign);
-        dataMap.put("signType", "MD5");
-        dataMap.put("appIdTo", map.get("appIdTo"));
-        dataMap.put("path", map.get("path"));
-        dataMap.put("iccid", map.get("iccid"));
+        dataMap.put("appIdTo", map.get("appIdTo").toString());
+        dataMap.put("path", map.get("path").toString());
+        dataMap.put("iccid", map.get("iccid").toString());
 
         resultMap.put("Data", dataMap);
         resultMap.put("code", "200");
 
-        setCacheWithTTL(key, dataMap);
         return resultMap;
     }
 
@@ -401,10 +447,10 @@ public class WeixinPacketImpl implements IWeixinPacket {
         return resultMap;
     }
 
-    private void setCacheWithTTL(String key, Map<String, Object> dataMap) {
+    private void setCacheWithTTL(String key, Map<String, String> dataMap) {
 
         // 如果你想根据提供的timestamp来设置过期时间，则可以这样做：
-        long expireAt = Long.parseLong(dataMap.get("timeStamp").toString()) + 7200; // 得到过期的时间戳
+        long expireAt = Long.parseLong(dataMap.get("timestamp")) + 7200; // 得到过期的时间戳
 
         // 获取当前时间戳
         long currentTimestamp = System.currentTimeMillis() / 1000;
