@@ -946,20 +946,37 @@ public class VeDate {
  /**
   * 获取startDate日期后month月的日期
   * @param yyyy_MM_dd_HH_mm_ss 开始日期 yyyy-MM-dd HH:mm:ss
-  * @param month  几个月后
+  * @param dateParams  几 (月) 后
   * @return
   */
- public static String getMonthDate(String yyyy_MM_dd_HH_mm_ss,int month)  {
-  return  getMonthDate( yyyy_MM_dd_HH_mm_ss, month, "yyyy-MM-dd HH:mm:ss");
+ public static String getMonthDate(String yyyy_MM_dd_HH_mm_ss,int dateParams)  {
+  return  getDate( yyyy_MM_dd_HH_mm_ss, dateParams, "yyyy-MM-dd HH:mm:ss", true);
  }
 
- public static String getMonthDate(String yyyy_MM_dd_HH_mm_ss,int month,String format)  {
+ /**
+  * 获取startDate日期后day日的日期
+  * @param yyyy_MM_dd_HH_mm_ss 开始日期 yyyy-MM-dd HH:mm:ss
+  * @param dateParams  几 (天) 后
+  * @return
+  */
+ public static String getDayDate(String yyyy_MM_dd_HH_mm_ss,int dateParams)  {
+  return  getDate( yyyy_MM_dd_HH_mm_ss, dateParams, "yyyy-MM-dd HH:mm:ss", false);
+ }
+
+ public static String getDate(String yyyy_MM_dd_HH_mm_ss,int dateParams,String format, Boolean isMonth)  {
   try {
    SimpleDateFormat formatter = new SimpleDateFormat(format);
    Date date1 = formatter.parse(yyyy_MM_dd_HH_mm_ss);
-   LocalDateTime localDateTime = date1.toInstant()
-           .atZone(ZoneId.systemDefault() )
-           .toLocalDateTime().plusMonths(month);
+   LocalDateTime localDateTime;
+   if (isMonth) {
+    localDateTime = date1.toInstant()
+            .atZone(ZoneId.systemDefault() )
+            .toLocalDateTime().plusMonths(dateParams);
+   } else {
+    localDateTime = date1.toInstant()
+            .atZone(ZoneId.systemDefault() )
+            .toLocalDateTime().plusDays(dateParams);
+   }
    Date date = Date.from(localDateTime.atZone( ZoneId.systemDefault()).toInstant());
 
    String dateString = formatter.format(date);

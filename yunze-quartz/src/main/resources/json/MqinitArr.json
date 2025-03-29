@@ -717,17 +717,15 @@
   "card_exchangeName": "admin_exchange",
   "card_queueName": "admin_smsCCTextField_queue",
   "card_routingKey": "admin.smsCCTextField.queue"
-},
-
-  {
+},{
     "card_exchangeName": "admin_exchange",
     "card_queueName": "admin_applyUseSend_queue",
     "card_routingKey": "admin.applyUseSend.queue"
-  }, {
+},{
   "card_exchangeName": "admin_exchange",
   "card_queueName": "admin_applyCardReviewed_queue",
   "card_routingKey": "admin.applyCardReviewed.queue"
-}, {
+},{
   "card_exchangeName": "admin_exchange",
   "card_queueName": "admin_RetryCCApplyCardReviewed_queue",
   "card_routingKey": "admin.RetryCCApplyCardReviewed.queue"

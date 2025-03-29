@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 import javax.annotation.Resource;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -43,6 +44,30 @@ public class CardFlow {
 
     @Resource
     YzCardMapper yzCardMapper;
+
+    /*@RabbitHandler
+    @RabbitListener(queues = "api_pushApiCardData_queue",containerFactory = "customContainerFactory")
+    public void pushApiCardData_exchange(String msg) {
+
+    }*/
+
+    private Map<String, Object> extracted(Map<String, Object> map, String iccid, Map<String, Object> Parammap, double Use) {
+        Map<String, Object> RMap = cardFlowSyn.CalculationFlow(iccid, Use, map);
+        if (Double.parseDouble(RMap.get("remaining").toString()) <= 0.00) {
+            // 提前获取status_ShowId
+            Object statusShowIdObj = yzCardMapper.find(Parammap).get("status_ShowId");
+            Integer status_ShowId = statusShowIdObj instanceof Integer ? (Integer) statusShowIdObj : null;
+            if (status_ShowId != null && status_ShowId != 5) {
+                Map<String, Object> map1 = new HashMap<>();
+                map1.put("iccid", Parammap.get("iccid").toString());
+                map1.put("status_ShowId", "0");
+                singleState(map1, map);
+            }
+        }
+        return RMap;
+    }
+
+
     /**
      *
      * @param msg
@@ -57,6 +82,13 @@ public class CardFlow {
         }
     }
 
+    @RabbitHandler
+    @RabbitListener(queues = "polling_cardBatchCardFlow_queue",containerFactory = "customContainerFactory")
+    public void cardBatchCardFlow_exchange(String msg, Channel channel_1) {
+        if(msg!=null && msg.length()>0){
+            synBatchCardFlow(msg,true);
+        }
+    }
 
     /**
      * 死信队列
@@ -88,7 +120,107 @@ public class CardFlow {
         }
     }
 
+    /**
+     * 批量同步卡用量
+     *
+     * @param msg
+     * @throws IOException
+     */
+    public void synBatchCardFlow(String msg, boolean is_Record) {
+        try {
+            if (StringUtils.isEmpty(msg)) {
+                return;
+            }
+            Map<String, Object> map = JSON.parseObject(msg);
+            List<String> iccids = (List<String>) map.get("iccids");
+            String polling_id = "";
+            for (String iccid : iccids) {
+                if (is_Record) {
+                    polling_id = map.get("polling_id").toString();//轮询任务编号
+                    String prefix = "polling_cardBatchCardFlow_queue";
+                    //执行前判断 redis 是否存在 执行数据 存在时 不执行
+                    //Object isExecute = redisCache.getCacheObject(prefix + ":" + iccid);
+                    // if (isExecute == null) {
+                    //System.out.println("SUCCESS");
+                    // redisCache.setCacheObject(prefix + ":" + iccid, msg, 3, TimeUnit.MINUTES);//3 分钟缓存 避免 重复消费
+                    redisCache.setCacheObject(polling_id + ":" + iccid, msg, 1, TimeUnit.HOURS);//1 小时缓存 用来统计轮询进度
+                }
+            }
 
+
+            Map<String, Object> Parammap = new HashMap<>();
+            Parammap.put("iccids", iccids);
+            //批量查询
+            Map<String, Object> Rmap = internalApiRequest.autocompleteBatchCard(Parammap, map);
+            String code = Rmap.get("code") != null ? Rmap.get("code").toString() : "500";
+            if (code.equals("200")) {
+                //获取 卡用量 开卡日期 更新 card info
+                List<Map<String, Object>> cardInfo = (List<Map<String, Object>>) Rmap.get("card_info");
+                for (Map<String, Object> info: cardInfo) {
+                    if (info.get("used") != null && info.get("used") != "" && info.get("used").toString().trim().length() > 0) {
+                        double Use = Double.parseDouble(info.get("used").toString());
+                        if (Use >= 0) {
+                            try {
+                                yzCardMapper.updSingleCardData(info);
+                                Map<String, Object> RMap = cardFlowSyn.CalculationBatchFlow(info.get("iccid").toString(), Use, map, info.get("realNameStatus").toString());
+                                Object status_id = info.get("status_id").toString().trim();
+                                int status_ShowId = Integer.parseInt(getShowStatIdArr.GetShowStatId(status_id.toString()));
+                                info.put("status_ShowId",status_ShowId);
+                                yzCardMapper.updStatusId(info);
+                                if (Double.parseDouble(RMap.get("remaining").toString()) <= 0.00) {
+                                    if (status_ShowId != 5) {
+                                        Map<String, Object> map1 = new HashMap<>();
+                                        map1.put("iccid", Parammap.get("iccid").toString());
+                                        map1.put("status_ShowId", "0");
+                                        singleState(map1,map);
+                                    }
+                                }
+                                log.info(">>cardFlowSyn - 卡用量轮询消费者 同步卡用量返回:{} | {} | {} | {} <<", polling_id, info.get("iccid"), JSON.toJSON(RMap), JSON.toJSON(Rmap));
+                            } catch (Exception e) {
+                                log.error(">>cardFlowSyn - 卡用量轮询消费者 同步卡用量失败:{} | {} | {}  | {}<<", polling_id, info.get("iccid"), JSON.toJSON(Rmap) , e.getMessage().toString());
+                            }
+                        } else {
+                            log.info(">>API - 卡用量轮询消费者 未获取到卡用量 {} |  statusCode = 0 :{} | {}<<", polling_id, info.get("iccid"), Rmap);
+                        }
+                    }
+                }
+
+                /*if (Rmap.get("used") != null && Rmap.get("used") != "" && Rmap.get("used").toString().trim().length() > 0) {
+                    Double Use = Double.parseDouble(Rmap.get("used").toString());
+                    if (Use >= 0) {
+                        try {
+                            yzCardMapper.updSingleCardData(Rmap);
+                            Map<String, Object> RMap = cardFlowSyn.CalculationFlow(iccid, Use, map);
+                            if (Double.parseDouble(RMap.get("remaining").toString()) <= 0.00) {
+                                // 提前获取status_ShowId
+                                Object statusShowIdObj = yzCardMapper.find(Parammap).get("status_ShowId");
+                                Integer status_ShowId = statusShowIdObj instanceof Integer ? (Integer) statusShowIdObj : null;
+                                if (status_ShowId != null && status_ShowId != 5) {
+                                    Map<String, Object> map1 = new HashMap<>();
+                                    map1.put("iccid", Parammap.get("iccid").toString());
+                                    map1.put("status_ShowId", "0");
+                                    singleState(map1);
+                                }
+                            }
+                            log.info(">>cardFlowSyn - 卡用量轮询消费者 同步卡用量返回:{} | {} | {} | {} <<", polling_id, iccid, JSON.toJSON(RMap), JSON.toJSON(Rmap));
+                        } catch (Exception e) {
+                            log.error(">>cardFlowSyn - 卡用量轮询消费者 同步卡用量失败:{} | {} | {}  | {}<<", polling_id, iccid, JSON.toJSON(Rmap) , e.getMessage().toString());
+                        }
+                    } else {
+                        log.info(">>API - 卡用量轮询消费者 未获取到卡用量 {} |  statusCode = 0 :{} | {}<<", polling_id, iccid, Rmap);
+                    }
+                }*/
+            } else {
+                log.info(">>API - 卡用量轮询消费者 未获取到批量卡用量:{} | {}<<", polling_id, Rmap);
+                // System.out.println(map.get("iccid")+" 未获取到卡用量 ！");
+            }
+            // }
+        } catch (Exception e) {
+//            // 记录该消息日志形式  存放数据库db中、后期通过定时任务实现消息补偿、人工实现补偿
+            log.error(">>错误 - 卡用量轮询消费者:{}<<", e.getMessage());
+//            //将该消息存放到死信队列中，单独写一个死信消费者实现消费。
+        }
+    }
 
     /**
      * 同步卡用量
@@ -127,18 +259,7 @@ public class CardFlow {
                         if (Use >= 0) {
                             try {
                                 yzCardMapper.updSingleCardData(Rmap);
-                                Map<String, Object> RMap = cardFlowSyn.CalculationFlow(iccid, Use, map);
-                                if (Double.parseDouble(RMap.get("remaining").toString()) <= 0.00) {
-                                    // 提前获取status_ShowId
-                                    Object statusShowIdObj = yzCardMapper.find(Parammap).get("status_ShowId");
-                                    Integer status_ShowId = statusShowIdObj instanceof Integer ? (Integer) statusShowIdObj : null;
-                                    if (status_ShowId != null && status_ShowId != 5) {
-                                        Map<String, Object> map1 = new HashMap<>();
-                                        map1.put("iccid", Parammap.get("iccid").toString());
-                                        map1.put("status_ShowId", "0");
-                                        singleState(map1);
-                                    }
-                                }
+                                Map<String, Object> RMap = extracted(map, iccid, Parammap, Use);
                                 log.info(">>cardFlowSyn - 卡用量轮询消费者 同步卡用量返回:{} | {} | {} | {} <<", polling_id, iccid, JSON.toJSON(RMap), JSON.toJSON(Rmap));
                             } catch (Exception e) {
                                 log.error(">>cardFlowSyn - 卡用量轮询消费者 同步卡用量失败:{} | {} | {}  | {}<<", polling_id, iccid, JSON.toJSON(Rmap) , e.getMessage().toString());
@@ -159,11 +280,11 @@ public class CardFlow {
         }
     }
 
-    public Map<String, Object> singleState(Map<String, Object> map) {
+    public Map<String, Object> singleState(Map<String, Object> map,Map<String, Object> Route) {
         Map<String, Object> rMap = new HashMap<>();
         boolean bool = false;
         String message = "单卡灵活变更状态 操作失败";
-        Map<String, Object> Route = yzCardMapper.findRoute(map);
+        //Map<String, Object> Route = yzCardMapper.findRoute(map);
         if (Route != null) {
             String cd_status = Route.get("cd_status").toString();
             String iccid = Route.get("iccid").toString();
@@ -185,7 +306,7 @@ public class CardFlow {
                         bool = true;
                         message = "操作成功！";
                     } catch (Exception e) {
-                        message = "DB保存状态操作失败！" + e.getMessage().toString();
+                        message = "DB保存状态操作失败！" + e.getMessage();
                     }
                 } else {
                     if (CsFble.get("Message") == null) {

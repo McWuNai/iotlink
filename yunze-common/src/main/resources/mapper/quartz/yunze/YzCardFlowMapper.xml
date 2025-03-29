@@ -270,7 +270,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			id,
 			true_flow,
 			error_flow,
-			error_time
+			error_time,
+			ord_type,
+			use_true_flow
 		from
 			yz_card_flow
 		<where>

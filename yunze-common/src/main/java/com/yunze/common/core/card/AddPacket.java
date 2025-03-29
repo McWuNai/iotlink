@@ -85,7 +85,7 @@ public class AddPacket {
             }
         }else{
             code = "201";
-            message = "资费计划以存在";
+            message = "资费计划已存在";
         }
         R_Map.put("code",code);
         R_Map.put("message",message);
@@ -244,6 +244,9 @@ public class AddPacket {
         }else if(packet_valid_name.equals("年")){
             ord_type = "2";
             valid_time = packet_valid_time;
+        }else if(packet_valid_name.equals("日")){
+            ord_type = "3";
+            valid_time = packet_valid_time;
         }
         int month = 1;
         if(ord_type.equals("2")){//年包
@@ -255,8 +258,13 @@ public class AddPacket {
         }
             String sTime = start_time,eTime = null;
             for (int i = 0; i < Size; i++) {
-                eTime = VeDate.getMonthDate(sTime,month-1);// 如 周期 1 月 = 当前时间 至 本月月底 所以 -1
-                eTime = VeDate.getEndDateOfMonth_yyyy_MM_DD(eTime.split(" ")[0])+" 23:59:59";//获取月底 日
+                if(ord_type.equals("3")) {
+                    eTime = (VeDate.getDayDate(sTime,Size).split(" ")[0])+" 23:59:59";
+                    Size = 1;
+                } else  {
+                    eTime = VeDate.getMonthDate(sTime,month-1);// 如 周期 1 月 = 当前时间 至 本月月底 所以 -1
+                    eTime = VeDate.getEndDateOfMonth_yyyy_MM_DD(eTime.split(" ")[0])+" 23:59:59";//获取月底 日
+                }
                 Map<String,Object> FlowMap = new HashMap<>();
                 FlowMap.put("package_id",add_parameter.get("package_id"));
                 FlowMap.put("packet_id",add_parameter.get("packet_id"));

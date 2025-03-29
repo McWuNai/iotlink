@@ -419,7 +419,7 @@ public class PublicApiService {
         String quota = null;
         String action = null;
         if (function_name.equals("queryFlowHis")) {
-            dateTime = map.get("dateTime") != null ? map.get("dateTime").toString() : null;// 【查询历史流量月】
+            dateTime = map.get("billingCycle") != null ? map.get("billingCycle").toString() : null;// 【查询历史流量月】
         } else if (function_name.equals("changeCardStatus")) {
             Is_Stop = map.get("Is_Stop") != null ? map.get("Is_Stop").toString() : null;// 【是否停复机】  on 开机 off 停机
         } else if (function_name.equals("FunctionApnStatus")) {
@@ -580,6 +580,15 @@ public class PublicApiService {
                     Query_LT Qy = new Query_LT(find_card_route_map);
                     try {
                         rmap.put("Data", Qy.queryFlow(iccid));
+                    } catch (Exception e) {
+                        if (!e.toString().contains("429")) throw new RuntimeException(e.getMessage());
+                    }
+                } else if (function_name.equals("queryBatchFlow")) {
+                    //实例化 联通 CMP 查询 类
+                    Query_LT Qy = new Query_LT(find_card_route_map);
+                    try {
+                        List<String> iccids = (List<String>) map.get("iccids");
+                        rmap.put("Data", Qy.queryBatchFlow(iccids));
                     } catch (Exception e) {
                         if (!e.toString().contains("429")) throw new RuntimeException(e.getMessage());
                     }

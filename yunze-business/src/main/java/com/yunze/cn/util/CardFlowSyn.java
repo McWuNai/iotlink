@@ -4,7 +4,6 @@ import com.alibaba.fastjson.JSON;
 import com.yunze.apiCommon.utils.Arith;
 import com.yunze.apiCommon.utils.InternalApiRequest;
 import com.yunze.apiCommon.utils.VeDate;
-import com.yunze.cn.config.RabbitMQConfig;
 import com.yunze.cn.mapper.YzCardFlowHisMapper;
 import com.yunze.cn.mapper.YzCardFlowMapper;
 import com.yunze.cn.mapper.YzCardMapper;
@@ -41,8 +40,6 @@ public class CardFlowSyn {
     private YzCardFlowMapper yzCardFlowMapper;
     @Resource
     private YzCardFlowHisMapper yzCardFlowHisMapper;
-    @Resource
-    private RabbitMQConfig rabbitMQConfig;
     @Resource
     private RabbitTemplate rabbitTemplate;
 
@@ -218,7 +215,7 @@ public class CardFlowSyn {
             String[] yyyyAndMmShortYesterday = VeDate.getYyyyAndMmShortYesterday();
             Map<String, Object> yes = new HashMap<>();
             yes.put("year", yyyyAndMmShortYesterday[0]);
-            yes.put("mouth", yyyyAndMmShortYesterday[1]);
+            yes.put("month", yyyyAndMmShortYesterday[1]);
             yes.put("day", yyyyAndMmShortYesterday[2]);
             yes.put("iccid", iccid);
             Integer exist = yzCardFlowHisMapper.isExist(yes);
@@ -270,6 +267,12 @@ public class CardFlowSyn {
                 Double error_time = Double.parseDouble(Pobj.get("error_time").toString());
                 String id = Pobj.get("id").toString();
                 xiShu = error_time;//同步包系数
+
+                String ord_type = Pobj.get("ord_type").toString();
+                if ("3".equals(ord_type)) {
+                    Double use_ture_flow = Double.parseDouble(Pobj.get("use_true_flow").toString());
+                    cl_Used = Arith.add(cl_Used, use_ture_flow);
+                }
                 //   当前计算 用量 - 资费计划 用量 作比较 小等 0 用完了 否则未用完继续 作比较
                 UdF = Arith.sub(cl_Used,error_flow);
                 if(UdF<0){
@@ -380,7 +383,20 @@ public class CardFlowSyn {
             }
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMM");
             map.put("billingCycle", targetDate.format(formatter));
+            // 获取当前时间与今天的23:59:59
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime endOfDay = now.toLocalDate().atTime(23, 59, 59);
+
+            // 如果当前时间已经超过今天的23:59:59，则设置为明天的23:59:59
+            if (now.isAfter(endOfDay)) {
+                endOfDay = endOfDay.plusDays(1);
+            }
+
+            // 计算过期时间并设置
+            long ttlInSeconds = Duration.between(now, endOfDay).getSeconds();
+
             redisTemplate.opsForValue().set("billingCycle", map.get("billingCycle").toString());
+            redisTemplate.expire("billingCycle", ttlInSeconds, TimeUnit.SECONDS);
         }
 
         try {
@@ -435,7 +451,7 @@ public class CardFlowSyn {
     private Map<String, Object> getFlowCounting(String iccid, Double apiUsed) {
         double avgDayFlow = 0.00;
         int countingDate = 0;
-        double lastMouthLastDayFlow;
+        double lastMonthLastDayFlow;
         int stringDateShortStart;
         Map<String, Object> map = new HashMap<>();
         Integer exist = 0;
@@ -494,22 +510,22 @@ public class CardFlowSyn {
             exist = yzCardFlowHisMapper.isExist(map);
 
             if (exist > 0) {
-                lastMouthLastDayFlow = Double.parseDouble(yzCardFlowHisMapper.total_flow(map));
-                map.put("total_flow", lastMouthLastDayFlow);
+                lastMonthLastDayFlow = Double.parseDouble(yzCardFlowHisMapper.total_flow(map));
+                map.put("total_flow", lastMonthLastDayFlow);
                 yzCardFlowHisMapper.edit(map);
             } else {
 
                 Integer cacheObject = (Integer) redisTemplate.opsForValue().get(CardFlowSyn.stringDateShortStart);
                 if (cacheObject == null) {
                     stringDateShortStart = VeDate.getStringDateShortStart();
-                    lastMouthLastDayFlow = avgDayFlow * stringDateShortStart;
+                    lastMonthLastDayFlow = avgDayFlow * stringDateShortStart;
                     setDailyExpiryKey(CardFlowSyn.stringDateShortStart, stringDateShortStart);
                 } else {
                     stringDateShortStart = cacheObject;
-                    lastMouthLastDayFlow = avgDayFlow * stringDateShortStart;
+                    lastMonthLastDayFlow = avgDayFlow * stringDateShortStart;
                 }
 
-                map.put("total_flow", lastMouthLastDayFlow);
+                map.put("total_flow", lastMonthLastDayFlow);
 
                 yzCardFlowHisMapper.save(map);
             }

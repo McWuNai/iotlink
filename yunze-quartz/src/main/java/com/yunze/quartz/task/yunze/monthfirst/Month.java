@@ -1,4 +1,4 @@
-package com.yunze.quartz.task.yunze.mouthfirst;
+package com.yunze.quartz.task.yunze.monthfirst;
 
 import com.alibaba.fastjson.JSON;
 import com.rabbitmq.client.BuiltinExchangeType;

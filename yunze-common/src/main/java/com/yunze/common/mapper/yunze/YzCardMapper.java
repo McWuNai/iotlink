@@ -16,6 +16,7 @@ import java.util.Map;
 @Mapper
 public interface YzCardMapper
 {
+
     /**
      *查询
      * @param map

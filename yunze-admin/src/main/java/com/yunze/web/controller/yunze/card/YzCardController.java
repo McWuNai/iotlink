@@ -37,10 +37,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 
@@ -86,7 +83,7 @@ public class YzCardController extends MyBaseController {
         return AjaxResult.error("周期备注 操作失败！");
     }
 
-    @Log(title = "周期备注", businessType = BusinessType.IMPORT)
+    /*@Log(title = "周期备注", businessType = BusinessType.IMPORT)
     @PreAuthorize("@ss.hasPermi('yunze:card:upload-updated-excel')")
     @PostMapping(value = "/upload-updated-excel", produces = { "application/json;charset=utf-8" })
     public AjaxResult uploadUpdatedExcel(MultipartFile file, @RequestParam(required = false) String optionalParam) {
@@ -101,9 +98,36 @@ public class YzCardController extends MyBaseController {
             logger.error("<br/> yunze:card:import  <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
         }
         return AjaxResult.error("周期备注 操作失败！");
-    }
+    }*/
 
     @Log(title = "周期备注", businessType = BusinessType.IMPORT)
+    @PreAuthorize("@ss.hasPermi('yunze:card:upload-updated-excel')")
+    @PostMapping(value = "/upload-updated-excel", produces = { "application/json;charset=utf-8" })
+    public AjaxResult uploadUpdatedExcel(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("chunkIndex") int chunkIndex,
+            @RequestParam("totalChunks") int totalChunks,
+            @RequestParam("fileName") String fileName,
+            @RequestParam(required = false) String optionalParam) {
+        try {
+            LoginUser loginUser = SpringUtils.getBean(TokenService.class).getLoginUser(ServletUtils.getRequest());
+            SysUser user = loginUser.getUser();
+            return AjaxResult.success(yzCardServiceImpl.uploadChunk(
+                    file,
+                    user.getDept().getDeptId().toString(),
+                    chunkIndex,
+                    totalChunks,
+                    fileName,
+                    optionalParam
+            ));
+        } catch (Exception e) {
+            String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
+            logger.error("<br/> yunze:card:import  <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+            return AjaxResult.error("周期备注 操作失败！");
+        }
+    }
+
+    /*@Log(title = "周期备注", businessType = BusinessType.IMPORT)
     @PreAuthorize("@ss.hasPermi('yunze:card:upCalculateFile')")
     @PostMapping(value = "/upCalculateFile", produces = { "application/json;charset=utf-8" })
     public AjaxResult upCalculateFile(
@@ -117,6 +141,34 @@ public class YzCardController extends MyBaseController {
             logger.error("<br/> yunze:card:import  <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
         }
         return AjaxResult.error("周期备注 操作失败！");
+    }*/
+
+    @PostMapping("/upCalculateFile")
+    public AjaxResult upCalculateFile(@RequestParam("importFile") MultipartFile importFile,
+                                      @RequestParam("exportFile") MultipartFile exportFile,
+                                      @RequestParam("chunkIndex") int chunkIndex,
+                                      @RequestParam("totalChunks") int totalChunks,
+                                      @RequestParam("fileName") String fileName,
+                                      @RequestParam("dept_id") String deptId) {
+        try {
+            // 检查文件是否为空
+            if (importFile.isEmpty() || exportFile.isEmpty()) {
+                return AjaxResult.error("上传文件不能为空");
+            }
+
+            // 检查文件大小
+            /*long maxChunkSize = 5 * 1024 * 1024L; // 5MB per chunk，与前端一致
+            if (importFile.getSize() > maxChunkSize || exportFile.getSize() > maxChunkSize) {
+                return AjaxResult.error("分片大小不能超过5MB");
+            }*/
+
+            // 调用服务层方法处理文件上传
+            return yzCardServiceImpl.updateCalculate(importFile, exportFile, deptId, fileName, chunkIndex, totalChunks);
+
+        } catch (Exception e) {
+            System.out.println("文件上传失败: " + e);
+            return AjaxResult.error("文件上传失败：" + e.getMessage());
+        }
     }
 
     @Log(title = "周期备注", businessType = BusinessType.IMPORT)

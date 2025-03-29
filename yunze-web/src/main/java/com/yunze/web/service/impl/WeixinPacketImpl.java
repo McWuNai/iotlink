@@ -37,6 +37,7 @@ import org.springframework.stereotype.Component;
 import javax.annotation.Resource;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.InetAddress;
 import java.net.URLEncoder;
 import java.util.*;
@@ -679,7 +680,7 @@ public class WeixinPacketImpl implements IWeixinPacket {
                 OrderMap.put("open_id", openid);//openid 微信支付记录操作人
                 OrderMap.put("agent_id", agent_id);// 所属记录企业id
                 OrderMap.put("profit_type", "2");//分润类型 差价
-                OrderMap.put("info", null);//备注
+                OrderMap.put("info", map.get("selectedNet"));//备注
                 OrderMap.put("cre_type", "sys");//生成方式  系统 sys 人工 ai
                 OrderMap.put("iccid", iccid);
                 OrderMap.put("ord_no", ordNo);
@@ -1339,10 +1340,16 @@ public class WeixinPacketImpl implements IWeixinPacket {
     }
 
     /**
-     * 描述： 1元钱转为 100分
+     * 将人民币元转换为分。
+     *
+     * @param bigDecimal 输入的金额，单位是元
+     * @return 转换后的金额，单位是分
      */
     private int yuanToFee(BigDecimal bigDecimal) {
-        return bigDecimal.multiply(new BigDecimal(100)).intValue();
+        // 乘以100并四舍五入到最近的整数
+        BigDecimal result = bigDecimal.multiply(new BigDecimal(100))
+                .setScale(0, RoundingMode.HALF_UP);
+        return result.intValue();
     }
 
     /**
@@ -1351,7 +1358,7 @@ public class WeixinPacketImpl implements IWeixinPacket {
     public Map<String, Object> getBackUrl(Map<String, Object> map) {
         Map<String, Object> Rmap = new HashMap<>();
         if (CheckIsNull.isNull(map)) {
-            Rmap.put("back_url", "http://gtw.5iot.cn/web/weixin/pay/weixinPayNotify/wxb9c885c722d8cd36");
+            Rmap.put("back_url", "http://gtw.iotesim.cn/web/weixin/pay/weixinPayNotify/wxb9c885c722d8cd36");
             return Rmap;
         }
         return yzWxConfigMapper.find(map);

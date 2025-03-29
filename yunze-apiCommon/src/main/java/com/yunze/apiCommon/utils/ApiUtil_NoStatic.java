@@ -2885,4 +2885,53 @@ public class ApiUtil_NoStatic {
         }
         return Outdata;
     }
+
+    /**
+     * 补充完整信息
+     */
+    public Map<String, Object> autocompleteBatchCard(Map<String, Object> map, Map<String, Object> find_card_route_map) {
+        JSONObject Outdata = new JSONObject();
+        try {
+
+            //返回数据解析
+            Map<String, Object> queryBatchFlow = publicApiService.insideApi(map, "queryBatchFlow", find_card_route_map);
+            Map<String, Object> data = (Map<String, Object>) queryBatchFlow.get("Data");
+            Map<String, Object> Data = (Map<String, Object>) data.get("Data");
+
+            if (Data.get("resultCode").equals("0000")) {
+
+                Map<String, Object> terminals;
+                List<Map<String, Object>> cardInfoArr = new ArrayList<>();
+                List<Map<String, Object>> terminalsAll = (List<Map<String, Object>>) Data.get("terminals");
+                for (Map<String, Object> stringObjectMap : terminalsAll) {
+                    Map<String, Object> cardInfo = new HashMap<>();
+                    terminals = stringObjectMap;
+                    cardInfo.put("msisdn", terminals.get("msisdn").toString());
+                    cardInfo.put("iccid", terminals.get("iccid").toString());
+                    cardInfo.put("imsi", terminals.get("imsi").toString());
+                    cardInfo.put("imei", terminals.get("imei").toString());
+                    cardInfo.put("used", terminals.get("monthToDateUsage").toString());
+                    cardInfo.put("realNameStatus", terminals.get("realNameStatus"));
+                    int StatusCd = Integer.parseInt(terminals.get("simStatus").toString());
+                    cardInfo.put("simStatus", StatusCd);
+                    Map<String, Object> LianTong_CMP_CardStatusMap = cardStatusReplacementUtil.getLianTong_CMP_CardStatus(StatusCd);
+                    cardInfo.put("status_id", LianTong_CMP_CardStatusMap.get("statusCode").toString());
+                    cardInfo.put("statusMessage", LianTong_CMP_CardStatusMap.get("statusMessage").toString());
+                    cardInfoArr.add(cardInfo);
+                }
+                Outdata.put("card_info", cardInfoArr);
+                Outdata.put("cd_code", data.get("cd_code").toString());
+                Outdata.put("code", "200");
+                Outdata.put("Message", data.get("Message").toString());
+            } else {
+                Outdata.put("code", "500");
+                Outdata.put("Message", Data.get("resultDesc").toString());
+            }
+        } catch (Exception e) {
+            Outdata.put("code", "500");
+            Outdata.put("Message", "内部接收消息，解析数据异常！");
+            System.out.println(e);
+        }
+        return Outdata;
+    }
 }

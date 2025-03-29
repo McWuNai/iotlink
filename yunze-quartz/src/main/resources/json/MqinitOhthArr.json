@@ -38,5 +38,13 @@
     "card_del_routingKey": "polling.dlxcardCardFlow.routingKey",
     "card_exchangeName": "polling_cardCardFlow_exchange",
     "card_routingKey": "polling.cardCardFlow.routingKey"
+  },
+  {
+    "card_queueName": "polling_cardBatchCardFlow_queue",
+    "card_del_queueName": "polling_dlxcardBatchCardFlow_queue",
+    "card_del_exchangeName": "polling_dlxcardBatchCardFlow_exchange",
+    "card_del_routingKey": "polling.dlxcardBatchCardFlow.routingKey",
+    "card_exchangeName": "polling_cardBatchCardFlow_exchange",
+    "card_routingKey": "polling.cardBatchCardFlow.routingKey"
   }
 ]

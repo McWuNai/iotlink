@@ -1,7 +1,7 @@
 package com.yunze.web.controller.yunze.sysgl;
 import com.alibaba.fastjson.JSON;
 import com.yunze.common.utils.ServletUtils;
-import com.yunze.common.utils.ip.IpUtils;;
+import com.yunze.common.utils.ip.IpUtils;
 import com.yunze.common.utils.yunze.AesEncryptUtil;
 import com.yunze.system.service.yunze.IYzLogsService;
 import com.yunze.web.core.config.MyBaseController;

@@ -67,7 +67,6 @@ public class Query_LT extends LT_CMP_Api {
      *
      * @throws IOException
      */
-    @SuppressWarnings("unchecked")
     public static Map<String, Object> queryBatchFlow(List<String> iccids) {
         Map<String, Object> result = new HashMap<String, Object>();
         if (iccids.size() > 50 || iccids.size() == 0) {

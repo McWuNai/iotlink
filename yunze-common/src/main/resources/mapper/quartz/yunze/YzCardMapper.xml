@@ -1233,17 +1233,21 @@
 		</where>
 	</update>
 
-	<!-- 修改 卡状态-->
+	<!-- 修改 卡状态 -->
 	<update id="updStatusId" parameterType="java.util.HashMap">
 		update yz_card_info
 		<set>
 			status_id = #{status_id},
 			status_ShowId = #{status_ShowId},
-			syn_Time =now(),
-			stateTime =now()
+			syn_Time = now(),
+			stateTime = now()
 		</set>
 		<where>
-			iccid =#{iccid}
+			iccid = #{iccid}
+			AND (
+			status_id != #{status_id}
+			OR status_ShowId != #{status_ShowId}
+			)
 		</where>
 	</update>
 

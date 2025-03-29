@@ -41,35 +41,16 @@ import com.yunze.system.service.yunze.IYzCardService;
 import com.yunze.system.service.yunze.IYzUserService;
 import org.apache.commons.compress.utils.Lists;
 import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.AmqpException;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-import org.apache.poi.openxml4j.opc.OPCPackage;
-import org.apache.poi.xssf.eventusermodel.XSSFReader;
-import org.apache.poi.xssf.model.SharedStringsTable;
-import org.xml.sax.Attributes;
-import org.xml.sax.ContentHandler;
-import org.xml.sax.InputSource;
-import org.xml.sax.XMLReader;
-import org.xml.sax.helpers.DefaultHandler;
-import org.xml.sax.helpers.XMLReaderFactory;
-import org.apache.commons.codec.digest.DigestUtils;
-
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.math.BigDecimal;
+import java.io.*;
 import java.net.URLEncoder;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -2035,7 +2016,7 @@ public class YzCardServiceImpl implements IYzCardService {
         return AjaxResult.error("添加成功 !");
     }
 
-    public AjaxResult uploadUpdatedExcel(MultipartFile file, String user, String optionalParam) {
+    /*public AjaxResult uploadUpdatedExcel(MultipartFile file, String user, String optionalParam) {
         String baseDir;
         String filename;
         String fullPath;
@@ -2099,14 +2080,242 @@ public class YzCardServiceImpl implements IYzCardService {
                 file.transferTo(newFile);
             }
 
-            return AjaxResult.success("上传成功" + new File("").getCanonicalPath());
+            return AjaxResult.success("上传成功, {}", new File("").getCanonicalPath());
         } catch (IOException e) {
             e.printStackTrace();
             return AjaxResult.error("上传失败: " + e.getMessage());
         }
+    }*/
+
+    /**
+     * 通过创建1.txt文件来确保目录存在
+     * @param dirPath 需要创建的目录路径
+     * @return 是否失败创建目录
+     */
+    private boolean ensureDirectoryWithPlaceholder(String dirPath) {
+        try {
+            String projectRoot = new File("").getCanonicalPath();
+            File placeholderFile = new File(projectRoot + dirPath + "1.txt");
+            File parentDir = placeholderFile.getParentFile();
+
+            // 如果父目录不存在，先创建父目录
+            if (!parentDir.exists()) {
+                boolean created = parentDir.mkdirs();
+                if (!created) {
+                    log.error("无法创建目录: {}", dirPath);
+                    return true; // 返回true表示创建失败
+                }
+            }
+
+            // 创建或更新1.txt文件
+            if (!placeholderFile.exists()) {
+                try (FileOutputStream fos = new FileOutputStream(placeholderFile)) {
+                    fos.write(("placeholder " + System.currentTimeMillis()).getBytes());
+                }
+                log.info("已创建目录和占位文件: {}", dirPath);
+            }
+            return false; // 返回false表示创建成功
+        } catch (IOException e) {
+            log.error("创建目录失败: {}", dirPath, e);
+            return true; // 返回true表示创建失败
+        }
     }
 
-    public AjaxResult updateCalculate(MultipartFile importFile, MultipartFile exportFile, String user) {
+    public AjaxResult uploadChunk(MultipartFile chunk, String user, int chunkIndex, int totalChunks,
+                                  String fileName, String optionalParam) {
+        String baseDir;
+        String fullPath;
+        String tempDir;
+        String finalFileName;
+
+        try {
+            // 确定基础目录和最终文件名
+            if (StringUtils.isNotEmpty(optionalParam)) {
+                String[] dateParts = optionalParam.split("-");
+                String year = dateParts[0];
+                String month = dateParts[1];
+                baseDir = "/mnt/file/flowCount/" + month + "/" + year + "/";
+                finalFileName = optionalParam + ".xlsx"; // 使用日期作为文件名
+            } else {
+                baseDir = "/mnt/file/export/" + user + '/';
+                finalFileName = fileName; // 使用原始文件名
+            }
+
+            // 获取项目根目录
+            String projectRoot = new File("").getCanonicalPath();
+
+            // 创建临时目录
+            tempDir = baseDir + "temp/";
+            if (ensureDirectoryWithPlaceholder(tempDir)) {
+                return AjaxResult.error("无法创建临时目录");
+            }
+
+            // 保存分片
+            String chunkPath = tempDir + fileName + ".part" + chunkIndex;
+            File chunkFile = new File(projectRoot + chunkPath);
+            chunk.transferTo(chunkFile);
+            log.info("成功保存分片: {}", chunkFile.getAbsolutePath());
+
+            // 检查是否所有分片都已上传
+            boolean allChunksUploaded = true;
+            for (int i = 0; i < totalChunks; i++) {
+                File partFile = new File(projectRoot + tempDir + fileName + ".part" + i);
+                if (!partFile.exists()) {
+                    allChunksUploaded = false;
+                    break;
+                }
+            }
+
+            // 如果所有分片都已上传，合并文件
+            if (allChunksUploaded) {
+                fullPath = baseDir + finalFileName; // 使用确定的最终文件名
+
+                // 创建最终目录
+                if (ensureDirectoryWithPlaceholder(baseDir)) {
+                    return AjaxResult.error("无法创建最终目录");
+                }
+
+                File finalFile = new File(projectRoot + fullPath);
+
+                // 检查目标文件是否已存在，如果存在则删除
+                if (finalFile.exists()) {
+                    boolean deleted = finalFile.delete();
+                    if (!deleted) {
+                        log.error("无法删除已存在的文件: {}", fullPath);
+                        return AjaxResult.error("无法删除已存在的文件: " + finalFile.getName());
+                    }
+                }
+
+                // 合并文件
+                try (FileOutputStream fos = new FileOutputStream(finalFile)) {
+                    for (int i = 0; i < totalChunks; i++) {
+                        File partFile = new File(projectRoot + tempDir + fileName + ".part" + i);
+                        Files.copy(partFile.toPath(), fos);
+                    }
+                }
+                log.info("所有分片合并完成: {}", finalFile.getAbsolutePath());
+
+                // 删除临时文件
+                for (int i = 0; i < totalChunks; i++) {
+                    File partFile = new File(projectRoot + tempDir + fileName + ".part" + i);
+                    partFile.delete();
+                }
+
+                // 如果是带日期的上传，处理业务统计
+                if (StringUtils.isNotEmpty(optionalParam)) {
+                    try {
+                        getBusinessStatistics(finalFileName); // 使用最终文件名
+                    } catch (Exception e) {
+                        log.error("业务统计处理失败", e);
+                        return AjaxResult.error("业务统计处理失败: " + e.getMessage());
+                    }
+                }
+
+                return AjaxResult.success("文件上传成功");
+            }
+
+            return AjaxResult.success("分片上传成功");
+
+        } catch (IOException e) {
+            log.error("文件上传失败", e);
+            return AjaxResult.error("文件上传失败: " + e.getMessage());
+        }
+    }
+
+    public AjaxResult updateCalculate(MultipartFile importFile, MultipartFile exportFile, String deptId, String fileName, int chunkIndex, int totalChunks) {
+        // 基础路径配置
+        String baseDir = "/mnt/file/";
+        String[] directories = {"export/", "import/"};
+        MultipartFile[] files = {exportFile, importFile};
+        boolean[] fileCompleted = {false, false}; // 跟踪每个文件的完成状态
+
+        try {
+            String projectRoot = new File("").getCanonicalPath();
+
+            for (int i = 0; i < directories.length; i++) {
+                // 使用deptId替代user作为目录名
+                String fullPath = baseDir + directories[i] + deptId + "/";
+                String tempDir = fullPath + "temp/";
+
+                // 创建临时目录
+                if (ensureDirectoryWithPlaceholder(tempDir)) {
+                    return AjaxResult.error("无法创建临时目录：" + tempDir);
+                }
+
+                // 根据是否为导入文件设置不同的文件名
+                String currentFileName = i == 0 ? fileName : fileName.replace("导出", "导入");
+
+                // 保存分片，使用当前文件名
+                String chunkPath = tempDir + currentFileName + ".part" + chunkIndex;
+                File chunkFile = new File(projectRoot + chunkPath);
+                files[i].transferTo(chunkFile);
+                log.info("成功保存分片: {}", chunkFile.getAbsolutePath());
+
+                // 检查是否所有分片都已上传
+                boolean allChunksUploaded = true;
+                for (int j = 0; j < totalChunks; j++) {
+                    File partFile = new File(projectRoot + tempDir + currentFileName + ".part" + j);
+                    if (!partFile.exists()) {
+                        allChunksUploaded = false;
+                        break;
+                    }
+                }
+
+                // 如果所有分片都已上传，合并文件
+                if (allChunksUploaded) {
+                    // 创建最终目录
+                    if (ensureDirectoryWithPlaceholder(fullPath)) {
+                        return AjaxResult.error("无法创建最终目录：" + fullPath);
+                    }
+
+                    File finalFile = new File(projectRoot + fullPath + currentFileName);
+
+                    // 检查目标文件是否已存在，如果存在则删除
+                    if (finalFile.exists()) {
+                        boolean deleted = finalFile.delete();
+                        if (!deleted) {
+                            log.error("无法删除已存在的文件: {}", finalFile.getAbsolutePath());
+                            return AjaxResult.error("无法删除已存在的文件: " + currentFileName);
+                        }
+                    }
+
+                    // 合并文件
+                    try (FileOutputStream fos = new FileOutputStream(finalFile)) {
+                        for (int j = 0; j < totalChunks; j++) {
+                            File partFile = new File(projectRoot + tempDir + currentFileName + ".part" + j);
+                            Files.copy(partFile.toPath(), fos);
+                            // 删除分片文件
+                            partFile.delete();
+                        }
+                    }
+                    log.info("所有分片合并完成: {}", finalFile.getAbsolutePath());
+                    fileCompleted[i] = true; // 标记当前文件处理完成
+                }
+            }
+
+            // 检查两个文件的处理状态
+            if (fileCompleted[0] && fileCompleted[1]) {
+                // 两个文件都处理完成
+                return AjaxResult.success("文件上传完成!");
+            } else if (!fileCompleted[0] && !fileCompleted[1]) {
+                // 两个文件都还在处理中
+                return AjaxResult.success("分片上传成功");
+            } else {
+                // 只有一个文件处理完成
+                log.info("导出文件完成状态: {}, 导入文件完成状态: {}", fileCompleted[0], fileCompleted[1]);
+                return AjaxResult.success("分片上传成功，部分文件已完成合并");
+            }
+
+        } catch (IOException e) {
+            log.error("文件处理失败: {}", e.getMessage(), e);
+            return AjaxResult.error("文件处理失败：" + e.getMessage());
+        } catch (Exception e) {
+            log.error("未知错误: {}", e.getMessage(), e);
+            return AjaxResult.error("系统错误，请稍后重试");
+        }
+    }
+
+    /*public AjaxResult updateCalculate(MultipartFile importFile, MultipartFile exportFile, String user) {
         String filename = exportFile.getOriginalFilename();
 
         String flieUrlRx = "/mnt/file/";
@@ -2138,7 +2347,8 @@ public class YzCardServiceImpl implements IYzCardService {
             return AjaxResult.error("添加失败 !");
         }
         return AjaxResult.error("添加成功 !");
-    }
+    }*/
+
 
     public Map<String, Object> calculateList(String deptName, String flowCount) {
         Map<String, Object> rmap = new HashMap<>();

@@ -30,6 +30,7 @@ public class RateLimiterUtil {
         this.tokenCountMap.put("FunctionApnStatus", 1.0);
         this.tokenCountMap.put("MachineCardBinding", 0.0);
         this.tokenCountMap.put("realNameRemove", 0.0);
+        this.tokenCountMap.put("queryBatchFlow", 1.0);
 
         System.out.println("tokenCountMap 初始化完成");
     }

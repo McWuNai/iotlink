@@ -8,6 +8,7 @@ import com.yunze.common.mapper.yunze.YzCardFlowHisMapper;
 import com.yunze.common.mapper.yunze.YzCardFlowMapper;
 import com.yunze.common.mapper.yunze.YzCardMapper;
 import com.yunze.common.utils.Arith;
+import com.yunze.common.utils.StringUtils;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
@@ -60,7 +61,16 @@ public class CardFlowSyn {
      * @return
      */
     public Map<String,Object> CalculationFlow(String iccid,Double ApiUsed, Map<String,Object> map){
-        Map<String,Object> Rmap = CalculationFlowCommon(iccid, ApiUsed, map);
+        Map<String,Object> Rmap = CalculationFlowCommon(iccid, ApiUsed, map, null);
+        return CalculationFlowCommon(Rmap, iccid);
+    }
+
+    public Map<String,Object> CalculationBatchFlow(String iccid,Double ApiUsed, Map<String,Object> map, String realNameStatus){
+        Map<String,Object> Rmap = CalculationFlowCommon(iccid, ApiUsed, map, realNameStatus);
+        return CalculationFlowCommon(Rmap, iccid);
+    }
+
+    public Map<String,Object> CalculationFlowCommon(Map<String,Object> Rmap, String iccid){
         Double SumFlow = Double.parseDouble(Rmap.get("SumFlow").toString());
         Double total_show_flow = Double.parseDouble(Rmap.get("total_show_flow").toString());
         boolean bool_info;
@@ -77,8 +87,6 @@ public class CardFlowSyn {
         return  Rmap;
     }
 
-
-
     /**
      * 用量计算 [queue 队列同步 yzCardMapper ]
      * @param iccid
@@ -86,7 +94,7 @@ public class CardFlowSyn {
      * @return
      */
     public Map<String,Object> CalculationFlowQueue(String iccid,Double ApiUsed,boolean bool, Map<String,Object> map){
-        Map<String,Object> Rmap =  CalculationFlowCommon(iccid, ApiUsed, map);
+        Map<String,Object> Rmap =  CalculationFlowCommon(iccid, ApiUsed, map, null);
         Double SumFlow = Double.parseDouble(Rmap.get("SumFlow").toString());
         Double total_show_flow = Double.parseDouble(Rmap.get("total_show_flow").toString());
         String bool_info = "";
@@ -135,7 +143,7 @@ public class CardFlowSyn {
      * @param ApiUsed
      * @return
      */
-    public Map<String,Object> CalculationFlowCommon(String iccid,Double ApiUsed, Map<String,Object> map){
+    public Map<String,Object> CalculationFlowCommon(String iccid,Double ApiUsed, Map<String,Object> map, String realNameStatus){
         Map<String,Object> Rmap = new HashMap<>();
         boolean bool_info=false,bool_flow=false,bool_flowHis=false;
         Map<String,Object> findMap = new HashMap<>();
@@ -176,64 +184,64 @@ public class CardFlowSyn {
         Double total_show_flow_now = 0.00;
         int IDay = Integer.parseInt(now[2]);
 
-        if (IDay == 1) {
-            //判断 是否为当月1号
-            //是 调用 B方法
-            //是 截至当天的当月总流量 - 前月末总流量 = 新月当天总流量 = 新月当天流量
+            if (IDay == 1) {
+                //判断 是否为当月1号
+                //是 调用 B方法
+                //是 截至当天的当月总流量 - 前月末总流量 = 新月当天总流量 = 新月当天流量
 
-            Map<String, Object> flowCounting = getFlowCounting(iccid, ApiUsed);
-            total_flow_now = flowCounting != null ? Arith.sub(ApiUsed,Double.parseDouble(flowCounting.get("total_flow").toString())) : 0.00;
-            total_show_flow = total_flow_now;
-            total_show_flow_now = total_flow_now;
-        } else if (IDay == 27) {
-            //判断 是否为当月 27号
-            //是 调用 A方法
-            //是 获取 上月流量周期
-            //是 上月流量周期 + 截至当天的当月总流量 = 当月总流量
-            //是 截至当天的当月总流量 = 当天总流量
+                Map<String, Object> flowCounting = getFlowCounting(iccid, ApiUsed);
+                total_flow_now = flowCounting != null ? Arith.sub(ApiUsed, Double.parseDouble(flowCounting.get("total_flow").toString())) : 0.00;
+                total_show_flow = total_flow_now;
+                total_show_flow_now = total_flow_now;
+            } else if (IDay == 27) {
+                //判断 是否为当月 27号
+                //是 调用 A方法
+                //是 获取 上月流量周期
+                //是 上月流量周期 + 截至当天的当月总流量 = 当月总流量
+                //是 截至当天的当月总流量 = 当天总流量
 
-            String cycleTotalFlow = getCycleTotalFlow(findMap, map);
-            total_flow_now = ApiUsed;
-            total_show_flow = Arith.add(Double.parseDouble(cycleTotalFlow), ApiUsed);
-            total_show_flow_now = ApiUsed;
-        } else if (IDay > 1 && IDay < 27) {
-            //判断 当天号数 > 1 && 当天号数 < 27
-            //是 调用 B方法
-            //是 截至当天的当月总流量 - 前月末总流量 = 当月总流量
-            //是 截至当天的当月总流量 - 截至昨天的当月总流量 = 当天总流量
+                String cycleTotalFlow = getCycleTotalFlow(findMap, map, realNameStatus);
+                total_flow_now = ApiUsed;
+                total_show_flow = Arith.add(Double.parseDouble(cycleTotalFlow), ApiUsed);
+                total_show_flow_now = ApiUsed;
+            } else if (IDay > 1 && IDay < 27) {
+                //判断 当天号数 > 1 && 当天号数 < 27
+                //是 调用 B方法
+                //是 截至当天的当月总流量 - 前月末总流量 = 当月总流量
+                //是 截至当天的当月总流量 - 截至昨天的当月总流量 = 当天总流量
 
-            Map<String, Object> flowCounting = getFlowCounting(iccid, ApiUsed);
-            total_flow_now = flowCounting != null ? Arith.sub(ApiUsed, Double.parseDouble(flowCounting.get("total_flow_yesterday").toString())) : 0.00;
-            total_show_flow = flowCounting != null ? Arith.sub(ApiUsed, Double.parseDouble(flowCounting.get("total_flow").toString())) : 0.00;
-            total_show_flow_now = total_flow_now;
-        } else if (IDay > 27) {
-            //判断 当天号数 > 27
-            //是 调用 C方法
-            //是 调用 A方法
-            //是 获取上月流量周期
-            //是 上月流量周期 + 截至当天的当月总流量 = 当月总流量
-            //是 截至当天的当月总流量 - 截至昨天的当月总流量 = 当天总流量
-            String cycleTotalFlow = getCycleTotalFlow(findMap, map);
-            total_show_flow = Arith.add(ApiUsed, Double.parseDouble(cycleTotalFlow));
+                Map<String, Object> flowCounting = getFlowCounting(iccid, ApiUsed);
+                total_flow_now = flowCounting != null ? Arith.sub(ApiUsed, Double.parseDouble(flowCounting.get("total_flow_yesterday").toString())) : 0.00;
+                total_show_flow = flowCounting != null ? Arith.sub(ApiUsed, Double.parseDouble(flowCounting.get("total_flow").toString())) : 0.00;
+                total_show_flow_now = total_flow_now;
+            } else if (IDay > 27) {
+                //判断 当天号数 > 27
+                //是 调用 C方法
+                //是 调用 A方法
+                //是 获取上月流量周期
+                //是 上月流量周期 + 截至当天的当月总流量 = 当月总流量
+                //是 截至当天的当月总流量 - 截至昨天的当月总流量 = 当天总流量
+                String cycleTotalFlow = getCycleTotalFlow(findMap, map, realNameStatus);
+                total_show_flow = Arith.add(ApiUsed, Double.parseDouble(cycleTotalFlow));
 
-            String[] yyyyAndMmShortYesterday = VeDate.getYyyyAndMmShortYesterday();
-            Map<String, Object> yes = new HashMap<>();
-            yes.put("year", yyyyAndMmShortYesterday[0]);
-            yes.put("mouth", yyyyAndMmShortYesterday[1]);
-            yes.put("day", yyyyAndMmShortYesterday[2]);
-            yes.put("iccid", iccid);
-            Integer exist = yzCardFlowHisMapper.isExist(yes);
-            if (exist > 0) {
-                total_flow_now = Arith.sub(ApiUsed, Double.parseDouble(yzCardFlowHisMapper.total_flow(yes)));
-            } else {
-                int chickDate = isChickDate();
-                total_flow_now = Arith.div(ApiUsed, chickDate);
-                yes.put("total_flow_now", total_flow_now);
-                yes.put("total_flow", Arith.sub(ApiUsed, total_flow_now));
-                yzCardFlowHisMapper.save(yes);
+                String[] yyyyAndMmShortYesterday = VeDate.getYyyyAndMmShortYesterday();
+                Map<String, Object> yes = new HashMap<>();
+                yes.put("year", yyyyAndMmShortYesterday[0]);
+                yes.put("month", yyyyAndMmShortYesterday[1]);
+                yes.put("day", yyyyAndMmShortYesterday[2]);
+                yes.put("iccid", iccid);
+                Integer exist = yzCardFlowHisMapper.isExist(yes);
+                if (exist > 0) {
+                    total_flow_now = Arith.sub(ApiUsed, Double.parseDouble(yzCardFlowHisMapper.total_flow(yes)));
+                } else {
+                    int chickDate = isChickDate();
+                    total_flow_now = Arith.div(ApiUsed, chickDate);
+                    yes.put("total_flow_now", total_flow_now);
+                    yes.put("total_flow", Arith.sub(ApiUsed, total_flow_now));
+                    yzCardFlowHisMapper.save(yes);
+                }
+                total_show_flow_now = total_flow_now;
             }
-            total_show_flow_now = total_flow_now;
-        }
 
         //3.同步用量历史表
         total_show_flow = Arith.mul(total_show_flow,xiShu);
@@ -271,6 +279,12 @@ public class CardFlowSyn {
                 Double error_time = Double.parseDouble(Pobj.get("error_time").toString());
                 String id = Pobj.get("id").toString();
                 xiShu = error_time;//同步包系数
+
+                String ord_type = Pobj.get("ord_type").toString();
+                if ("3".equals(ord_type)) {
+                    Double use_ture_flow = Double.parseDouble(Pobj.get("use_true_flow").toString());
+                    cl_Used = Arith.add(cl_Used, use_ture_flow);
+                }
                 //   当前计算 用量 - 资费计划 用量 作比较 小等 0 用完了 否则未用完继续 作比较
                 UdF = Arith.sub(cl_Used,error_flow);
                 if(UdF<0){
@@ -358,7 +372,7 @@ public class CardFlowSyn {
      * 是 从MySQL获取数值
      * 返回总流量数值
      */
-    private String getCycleTotalFlow(Map<String, Object> findMap, Map<String, Object> fmap) {
+    private String getCycleTotalFlow(Map<String, Object> findMap, Map<String, Object> fmap, String realNameStatus) {
         String yes[] = VeDate.getYyyyAndMmCycle();
         Map<String, Object> map = new HashMap<>();
         map.put("year", yes[0]);
@@ -381,7 +395,21 @@ public class CardFlowSyn {
             }
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMM");
             map.put("billingCycle", targetDate.format(formatter));
+
+            // 获取当前时间与今天的23:59:59
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime endOfDay = now.toLocalDate().atTime(23, 59, 59);
+
+            // 如果当前时间已经超过今天的23:59:59，则设置为明天的23:59:59
+            if (now.isAfter(endOfDay)) {
+                endOfDay = endOfDay.plusDays(1);
+            }
+
+            // 计算过期时间并设置
+            long ttlInSeconds = Duration.between(now, endOfDay).getSeconds();
+
             redisCache.setCacheObject("billingCycle", map.get("billingCycle").toString());
+            redisCache.expire("billingCycle", ttlInSeconds, TimeUnit.SECONDS);
         }
 
         try {
@@ -392,11 +420,17 @@ public class CardFlowSyn {
             }
 
             if (total_flow == null || "0.00".equals(total_flow)) {
-                Map<String, Object> Rmap = internalApiRequest.queryFlowHis(map, fmap);
-                if (Rmap.get("Use") == null || "-1".equals(Rmap.get("Use").toString())) {
+                String use = null;
+
+                if (StringUtils.isEmpty(realNameStatus) || !"1".equals(realNameStatus)) {
+                    Map<String, Object> Rmap = internalApiRequest.queryFlowHis(map, fmap);
+                    use = Rmap.get("Use").toString();
+                }
+
+                if (use == null || "-1".equals(use)) {
                     total_flow = "0.00";
                 } else {
-                    total_flow = Rmap.get("Use").toString();
+                    total_flow = use;
                 }
                 map.put("total_flow", total_flow);
 
@@ -436,7 +470,7 @@ public class CardFlowSyn {
     private Map<String, Object> getFlowCounting(String iccid, Double apiUsed) {
         double avgDayFlow = 0.00;
         int countingDate = 0;
-        double lastMouthLastDayFlow;
+        double lastMonthLastDayFlow;
         int stringDateShortStart;
         Map<String, Object> map = new HashMap<>();
         Integer exist = 0;
@@ -495,22 +529,22 @@ public class CardFlowSyn {
             exist = yzCardFlowHisMapper.isExist(map);
 
             if (exist > 0) {
-                lastMouthLastDayFlow = Double.parseDouble(yzCardFlowHisMapper.total_flow(map));
-                map.put("total_flow", lastMouthLastDayFlow);
+                lastMonthLastDayFlow = Double.parseDouble(yzCardFlowHisMapper.total_flow(map));
+                map.put("total_flow", lastMonthLastDayFlow);
                 yzCardFlowHisMapper.edit(map);
             } else {
 
                 Integer cacheObject = redisCache.getCacheObject(CardFlowSyn.stringDateShortStart);
                 if (cacheObject == null) {
                     stringDateShortStart = VeDate.getStringDateShortStart();
-                    lastMouthLastDayFlow = avgDayFlow * stringDateShortStart;
+                    lastMonthLastDayFlow = avgDayFlow * stringDateShortStart;
                     setDailyExpiryKey(CardFlowSyn.stringDateShortStart, stringDateShortStart);
                 } else {
                     stringDateShortStart = cacheObject;
-                    lastMouthLastDayFlow = avgDayFlow * stringDateShortStart;
+                    lastMonthLastDayFlow = avgDayFlow * stringDateShortStart;
                 }
 
-                map.put("total_flow", lastMouthLastDayFlow);
+                map.put("total_flow", lastMonthLastDayFlow);
 
                 yzCardFlowHisMapper.save(map);
             }
