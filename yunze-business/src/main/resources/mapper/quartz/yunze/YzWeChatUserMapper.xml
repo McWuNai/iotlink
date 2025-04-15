@@ -112,8 +112,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 		from
 			yz_wechat_user
 		<where>
-			openid = #{openid}
+			iccid = #{iccid}
+			and openid = #{openid}
 			and status = 1
+			and bind_status = 1
 		</where>
 		order by create_time desc limit 1
 	</select>

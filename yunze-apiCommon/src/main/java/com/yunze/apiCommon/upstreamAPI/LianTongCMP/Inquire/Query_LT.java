@@ -18,6 +18,35 @@ public class Query_LT extends LT_CMP_Api {
         super(init_map);
     }
 
+    /**
+     * @Author: WuNai
+     * @Return: 返回账户id
+     * @Description: 通过账户名查账户id
+     * @accountName: 账户名
+     */
+    public static Map<String, Object> wsQueryIdByName(String accountName) {
+        Map<String, Object> result = new HashMap<String, Object>();
+        try {
+            CommonJsonRequest request = new CommonJsonRequest();
+            //完整的url： https://gwapi.10646.cn/api/wsQueryIdByName/V1/1Main/vV1.1
+            request.setApiName("wsQueryIdByName/V1/1Main/vV1.1");
+            request.setApiVer("V1.1");
+            /**
+             * 业务参数，需要发给能力提供者
+             */
+            Map<String, Object> params = new HashMap<String, Object>();
+            params.put("accountName", accountName);
+            params.put("messageId", gettrans_id());
+            params.put("openId", openId);
+            params.put("version", version);
+            request.setParams(params);
+            CommonJsonResponse response = client.execute(request);
+            result = response.getData();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return result;
+    }
 
     /**
      * 获取单个卡的流量
@@ -109,7 +138,7 @@ public class Query_LT extends LT_CMP_Api {
         Map<String, Object> result = new HashMap<String, Object>();
         try {
             CommonJsonRequest request = new CommonJsonRequest();
-            //完整的url： https://gwapi.10646.cn/api/wsGetTerminalDetails/V1/1Main/vV1.1
+            //完整的url： https://gwapi.10646.cn/api/wsGetTerminalUsage/V1/1Main/vV1.1
             request.setApiName("wsGetTerminalUsage/V1/1Main");
             request.setApiVer("V1.1");
             /**

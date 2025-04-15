@@ -862,6 +862,11 @@ public class YzCardServiceImpl implements IYzCardService {
         return "连接设置 指令 已发送，连接设置详细信息请在 【执行日志管理】查询！";
     }
 
+    public String AddRatePlan(HashMap<String, Object> map, Map<String, Object> fmap) {
+        Map<String, Object> stringObjectMap = internalApiRequest.addRatePlan(map, fmap);
+        return "追包请求已受理     " + stringObjectMap;
+    }
+
     @Override
     public String importSelImei(MultipartFile file, Map<String, Object> map) throws IOException {
         String filename = file.getOriginalFilename();
@@ -2245,6 +2250,191 @@ public class YzCardServiceImpl implements IYzCardService {
                 // 根据是否为导入文件设置不同的文件名
                 String currentFileName = i == 0 ? fileName : fileName.replace("导出", "导入");
 
+                // 检查文件是否为空（空文件情况下MultipartFile可能非null但内容为空）
+                /*if (files[i] == null || files[i].isEmpty()) {
+                    log.info("文件为空，跳过处理: {}", currentFileName);
+                    continue; // 跳过此文件的处理
+                }*/
+
+                // 保存分片，使用当前文件名
+                String chunkPath = tempDir + currentFileName + ".part" + chunkIndex;
+                File chunkFile = new File(projectRoot + chunkPath);
+                files[i].transferTo(chunkFile);
+                log.info("成功保存分片: {}", chunkFile.getAbsolutePath());
+
+                // 检查是否所有分片都已上传（添加更严格的检查）
+                boolean allChunksUploaded = true;
+                long totalSize = 0;
+                File[] existingChunks = new File[totalChunks];
+
+                for (int j = 0; j < totalChunks; j++) {
+                    File partFile = new File(projectRoot + tempDir + currentFileName + ".part" + j);
+                    existingChunks[j] = partFile;
+
+                    if (!partFile.exists()) {
+                        log.info("分片{}不存在: {}", j, partFile.getAbsolutePath());
+                        allChunksUploaded = false;
+                        break;
+                    }
+                    totalSize += partFile.length();
+                }
+
+                log.info("文件 {} 分片检查结果: 全部上传={}, 总大小={}字节", currentFileName, allChunksUploaded, totalSize);
+
+                // 如果所有分片都已上传，合并文件
+                if (allChunksUploaded && totalSize > 0) {
+                    // 创建最终目录
+                    if (ensureDirectoryWithPlaceholder(fullPath)) {
+                        return AjaxResult.error("无法创建最终目录：" + fullPath);
+                    }
+
+                    File finalFile = new File(projectRoot + fullPath + currentFileName);
+
+                    // 检查目标文件是否已存在，如果存在则删除
+                    if (finalFile.exists()) {
+                        boolean deleted = finalFile.delete();
+                        if (!deleted) {
+                            log.error("无法删除已存在的文件: {}", finalFile.getAbsolutePath());
+                            return AjaxResult.error("无法删除已存在的文件: " + currentFileName);
+                        }
+                    }
+
+                    // 合并文件
+                    try (FileOutputStream fos = new FileOutputStream(finalFile)) {
+                        byte[] buffer = new byte[1024 * 1024]; // 1MB buffer
+                        int bytesRead;
+
+                        for (int j = 0; j < totalChunks; j++) {
+                            File partFile = existingChunks[j];
+                            try (FileInputStream fis = new FileInputStream(partFile)) {
+                                while ((bytesRead = fis.read(buffer)) != -1) {
+                                    fos.write(buffer, 0, bytesRead);
+                                }
+                            }
+                        }
+                        fos.flush();
+                    }
+
+                    log.info("文件 {} 合并完成，大小: {} 字节", finalFile.getAbsolutePath(), finalFile.length());
+
+                    // 验证合并后的文件大小与分片总大小是否一致
+                    if (finalFile.length() != totalSize) {
+                        log.error("文件合并验证失败: 合并后大小={}, 预期大小={}", finalFile.length(), totalSize);
+                        return AjaxResult.error("文件合并失败：合并后文件大小不一致");
+                    }
+
+                    // 合并完成后，确保删除所有分片文件
+                    for (int j = 0; j < totalChunks; j++) {
+                        File partFile = existingChunks[j];
+                        if (partFile.exists()) {
+                            boolean deleted = partFile.delete();
+                            if (!deleted) {
+                                log.warn("无法删除分片文件: {}", partFile.getAbsolutePath());
+                            } else {
+                                log.info("成功删除分片文件: {}", partFile.getAbsolutePath());
+                            }
+                        }
+                    }
+
+                    log.info("所有分片合并完成并清理: {}", finalFile.getAbsolutePath());
+                    fileCompleted[i] = true; // 标记当前文件处理完成
+                }
+            }
+
+            // 检查两个文件的处理状态
+            if (fileCompleted[0] && fileCompleted[1]) {
+                // 两个文件都处理完成
+                // 检查并删除可能遗留的临时分片文件
+                cleanupAllTemporaryFiles(projectRoot, baseDir, directories, deptId, fileName);
+                return AjaxResult.success("文件上传完成!");
+            } else if (fileCompleted[0] || fileCompleted[1]) {
+                // 只有一个文件处理完成
+                log.info("导出文件完成状态: {}, 导入文件完成状态: {}", fileCompleted[0], fileCompleted[1]);
+                return AjaxResult.success("分片上传成功，部分文件已完成合并");
+            } else {
+                // 两个文件都还在处理中
+                return AjaxResult.success("分片上传成功");
+            }
+
+        } catch (IOException e) {
+            log.error("文件处理失败: {}", e.getMessage(), e);
+            return AjaxResult.error("文件处理失败：" + e.getMessage());
+        } catch (Exception e) {
+            log.error("未知错误: {}", e.getMessage(), e);
+            return AjaxResult.error("系统错误，请稍后重试");
+        }
+    }
+
+    /**
+     * 清理所有临时分片文件
+     */
+    private void cleanupAllTemporaryFiles(String projectRoot, String baseDir, String[] directories, String deptId, String fileName) {
+        try {
+            for (String directory : directories) {
+                String tempDir = baseDir + directory + deptId + "/temp/";
+                File tempDirFile = new File(projectRoot + tempDir);
+
+                if (tempDirFile.exists() && tempDirFile.isDirectory()) {
+                    String exportFileName = fileName;
+                    String importFileName = fileName.replace("导出", "导入");
+
+                    // 删除与当前导出文件相关的所有分片
+                    File[] exportPartFiles = tempDirFile.listFiles((dir, name) ->
+                            name.startsWith(exportFileName) && name.contains(".part"));
+
+                    if (exportPartFiles != null) {
+                        for (File file : exportPartFiles) {
+                            if (file.delete()) {
+                                log.info("清理成功: {}", file.getAbsolutePath());
+                            } else {
+                                log.warn("清理失败: {}", file.getAbsolutePath());
+                            }
+                        }
+                    }
+
+                    // 删除与当前导入文件相关的所有分片
+                    File[] importPartFiles = tempDirFile.listFiles((dir, name) ->
+                            name.startsWith(importFileName) && name.contains(".part"));
+
+                    if (importPartFiles != null) {
+                        for (File file : importPartFiles) {
+                            if (file.delete()) {
+                                log.info("清理成功: {}", file.getAbsolutePath());
+                            } else {
+                                log.warn("清理失败: {}", file.getAbsolutePath());
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("清理临时文件失败: {}", e.getMessage(), e);
+        }
+    }
+
+    /*public AjaxResult updateCalculate(MultipartFile importFile, MultipartFile exportFile, String deptId, String fileName, int chunkIndex, int totalChunks) {
+        // 基础路径配置
+        String baseDir = "/mnt/file/";
+        String[] directories = {"export/", "import/"};
+        MultipartFile[] files = {exportFile, importFile};
+        boolean[] fileCompleted = {false, false}; // 跟踪每个文件的完成状态
+
+        try {
+            String projectRoot = new File("").getCanonicalPath();
+
+            for (int i = 0; i < directories.length; i++) {
+                // 使用deptId替代user作为目录名
+                String fullPath = baseDir + directories[i] + deptId + "/";
+                String tempDir = fullPath + "temp/";
+
+                // 创建临时目录
+                if (ensureDirectoryWithPlaceholder(tempDir)) {
+                    return AjaxResult.error("无法创建临时目录：" + tempDir);
+                }
+
+                // 根据是否为导入文件设置不同的文件名
+                String currentFileName = i == 0 ? fileName : fileName.replace("导出", "导入");
+
                 // 保存分片，使用当前文件名
                 String chunkPath = tempDir + currentFileName + ".part" + chunkIndex;
                 File chunkFile = new File(projectRoot + chunkPath);
@@ -2313,7 +2503,7 @@ public class YzCardServiceImpl implements IYzCardService {
             log.error("未知错误: {}", e.getMessage(), e);
             return AjaxResult.error("系统错误，请稍后重试");
         }
-    }
+    }*/
 
     /*public AjaxResult updateCalculate(MultipartFile importFile, MultipartFile exportFile, String user) {
         String filename = exportFile.getOriginalFilename();

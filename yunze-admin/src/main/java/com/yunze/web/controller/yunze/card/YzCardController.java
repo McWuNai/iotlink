@@ -152,9 +152,9 @@ public class YzCardController extends MyBaseController {
                                       @RequestParam("dept_id") String deptId) {
         try {
             // 检查文件是否为空
-            if (importFile.isEmpty() || exportFile.isEmpty()) {
+            /*if (importFile.isEmpty() || exportFile.isEmpty()) {
                 return AjaxResult.error("上传文件不能为空");
-            }
+            }*/
 
             // 检查文件大小
             /*long maxChunkSize = 5 * 1024 * 1024L; // 5MB per chunk，与前端一致
@@ -619,6 +619,21 @@ public class YzCardController extends MyBaseController {
             logger.error("<br/> yunze:card:divide  " + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
         }
         return Myerr("划分卡信息 操作失败！");
+    }
+
+    @PreAuthorize("@ss.hasPermi('yunze:card:AddRatePlan')")
+    @PostMapping(value = "/AddRatePlan", produces = { "application/json;charset=utf-8" })
+    public String AddRatePlan(@RequestBody String Pstr) {
+        try {
+            HashMap<String, Object> Parammap = new HashMap<>(JSON.parseObject(Pstr));
+            Parammap.put("iccid", "89860624730044898137");
+            Map<String, Object> Route = yzCardServiceImpl.findRoute(Parammap);
+            return MyRetunSuccess(yzCardServiceImpl.AddRatePlan(Parammap, Route), null);
+        } catch (Exception e) {
+            String ip = IpUtils.getIpAddr(ServletUtils.getRequest());
+            logger.error("<br/> yunze:card:AddRatePlan  " + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());
+        }
+        return Myerr("追加资费 操作失败！");
     }
 
     /**

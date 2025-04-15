@@ -83,6 +83,40 @@ public class InternalApiRequest {
      * @param fmap
      * @return
      */
+    public Map<String, Object> wsQueryIdByName(Map<String, Object> map, Map<String, Object> fmap) {
+        Map<String, Object> Rmap = new HashMap<>();
+        try {
+            Rmap = apiUtil_NoStatic.wsQueryIdByName(map, fmap);
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+        return Rmap;
+    }
+
+    /**
+     * 内部请求
+     *
+     * @param map
+     * @param fmap
+     * @return
+     */
+    public Map<String, Object> addRatePlan(Map<String, Object> map, Map<String, Object> fmap) {
+        Map<String, Object> Rmap = new HashMap<>();
+        try {
+            Rmap = apiUtil_NoStatic.addRatePlan(map, fmap);
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+        return Rmap;
+    }
+
+    /**
+     * 内部请求
+     *
+     * @param map
+     * @param fmap
+     * @return
+     */
     public Map<String, Object> queryFlowHis(Map<String, Object> map, Map<String, Object> fmap) {
         Map<String, Object> Rmap = new HashMap<>();
         try {

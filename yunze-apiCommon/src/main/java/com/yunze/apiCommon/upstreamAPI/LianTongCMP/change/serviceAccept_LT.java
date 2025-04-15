@@ -23,6 +23,40 @@ public class serviceAccept_LT extends LT_CMP_Api {
     }
 
     /**
+     * 项目描述:  为账户追加资费计划
+     * @param accountId 账户ID
+     * @param basicPlanName 基础资费名称
+     * @param addPlanName 追加资费名称
+     * @param addQuantity 追加资费数量
+     */
+    public Map<String,Object> addRatePlan(String accountId,String basicPlanName, String addPlanName, String addQuantity){
+        Map<String,Object> result = new HashMap<String,Object>();
+        try{
+            CommonJsonRequest request = new CommonJsonRequest();
+            //完整的url：https://gwapi.10646.cn/api/addRatePlan/V1/1Main/vV1.1
+            request.setApiName("addRatePlan/V1/1Main/vV1.1");
+            request.setApiVer("V1.1");
+
+            Map<String, Object> params = new HashMap<String, Object>();
+            params.put("accountId", accountId);
+            params.put("basicPlanName", basicPlanName);
+            params.put("addPlanName", addPlanName);
+            params.put("addQuantity", addQuantity);
+            params.put("messageId", gettrans_id());
+            params.put("openId", openId);
+            params.put("version", version);
+            request.setParams(params);
+            CommonJsonResponse response = client.execute(request);
+            result = response.getData();
+
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+        ////System.out.println(result);
+        return result;
+    }
+
+    /**
      *
      * 项目描述
      * SIM卡状态:
@@ -38,7 +72,7 @@ public class serviceAccept_LT extends LT_CMP_Api {
 
      * @throws IOException
      */
-    public static Map<String,Object> changeCardStatus(String iccid,String type){
+    public Map<String,Object> changeCardStatus(String iccid,String type){
         Map<String,Object> result = new HashMap<String,Object>();
         try{
             CommonJsonRequest request = new CommonJsonRequest();

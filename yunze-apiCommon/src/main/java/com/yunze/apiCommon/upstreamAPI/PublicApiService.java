@@ -583,6 +583,26 @@ public class PublicApiService {
                     } catch (Exception e) {
                         if (!e.toString().contains("429")) throw new RuntimeException(e.getMessage());
                     }
+                } else if (function_name.equals("wsQueryIdByName")) {
+                    Query_LT Qy = new Query_LT(find_card_route_map);
+                    try {
+                        rmap.put("Data", Qy.wsQueryIdByName(map.get("accountName").toString()));
+                    } catch (Exception e) {
+                        if (!e.toString().contains("429")) throw new RuntimeException(e.getMessage());
+                    }
+                } else if (function_name.equals("addRatePlan")) {
+                    serviceAccept_LT Ser = new serviceAccept_LT(find_card_route_map);
+                    try {
+                        rmap.put("Data", Ser.addRatePlan(
+                                map.get("accountID").toString(),
+                                map.get("baseRatePlan").toString(),
+                                map.get("additionalRatePlan").toString(),
+                                map.get("addCount").toString()
+                                )
+                        );
+                    } catch (Exception e) {
+                        if (!e.toString().contains("429")) throw new RuntimeException(e.getMessage());
+                    }
                 } else if (function_name.equals("queryBatchFlow")) {
                     //实例化 联通 CMP 查询 类
                     Query_LT Qy = new Query_LT(find_card_route_map);

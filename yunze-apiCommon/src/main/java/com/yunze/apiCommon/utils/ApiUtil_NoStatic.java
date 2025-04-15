@@ -521,6 +521,88 @@ public class ApiUtil_NoStatic {
         return Outdata;
     }
 
+    public Map<String, Object> addRatePlan(Map<String, Object> map, Map<String, Object> find_card_route_map) {
+        JSONObject Outdata = new JSONObject();
+        String cd_code;
+        String codeOn = "500";
+        String rtMessage = "";
+        Map<String, Object> Rdata = null;
+        try {
+            //返回数据解析
+            Rdata = publicApiService.insideApi(map, "addRatePlan", find_card_route_map);
+
+            Map<String, Object> data = (Map<String, Object>) Rdata.get("Data");
+
+            cd_code = data.get("cd_code").toString();
+            try {
+                if (cd_code.equals("LianTong_CMP")) {
+                    //联通 CMP 解析
+                    Map<String, Object> JsonData = (Map<String, Object>) data.get("Data");
+                    try {
+                        codeOn = JsonData.get("resultCode").toString();
+                        rtMessage = JsonData.get("resultDesc").toString();
+                    } catch (Exception e) {
+                        System.out.println(e.getMessage());
+                    }
+                }
+                Outdata.put("code", "200");
+                Outdata.put("Message", data.get("Message"));
+                Outdata.put("resultCode", codeOn);
+            } catch (Exception e) {
+                Outdata.put("code", "500");
+                Outdata.put("Message", "内部接收消息，解析数据异常！");
+                System.out.println(e.getMessage());
+            }
+
+        } catch (Exception e) {
+            Outdata.put("code", "500");
+        }
+        return Outdata;
+    }
+
+    public Map<String, Object> wsQueryIdByName(Map<String, Object> map, Map<String, Object> find_card_route_map) {
+        JSONObject Outdata = new JSONObject();
+        String cd_code;
+        String codeOn = "500";
+        String rtMessage = "";
+        Map<String, Object> Rdata = null;
+        try {
+            //返回数据解析
+            Rdata = publicApiService.insideApi(map, "wsQueryIdByName", find_card_route_map);
+
+            Map<String, Object> data = (Map<String, Object>) Rdata.get("Data");
+
+            cd_code = data.get("cd_code").toString();
+            try {
+                if (cd_code.equals("LianTong_CMP")) {
+                    //联通 CMP 解析
+                    Map<String, Object> JsonData = (Map<String, Object>) data.get("Data");
+                    try {
+                        codeOn = JsonData.get("resultCode").toString();
+                        rtMessage = JsonData.get("resultDesc").toString();
+                    } catch (Exception e) {
+                        System.out.println(e.getMessage());
+                    }
+                    if (codeOn.equals("0000")) {
+                        String accountId = JsonData.get("accountId").toString();
+                        // 将结果放入OutData
+                        Outdata.put("accountId", accountId);
+                    }
+                }
+                Outdata.put("code", "200");
+                Outdata.put("Message", data.get("Message"));
+            } catch (Exception e) {
+                Outdata.put("code", "500");
+                Outdata.put("Message", "内部接收消息，解析数据异常！");
+                System.out.println(e.getMessage());
+            }
+
+        } catch (Exception e) {
+            Outdata.put("code", "500");
+        }
+        return Outdata;
+    }
+
     /**
      * @param map
      * @return
