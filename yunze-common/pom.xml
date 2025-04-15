@@ -216,11 +216,6 @@
             <artifactId>pinyin4j</artifactId>
             <version>2.5.1</version>
         </dependency>
-
-        <dependency>
-            <groupId>com.sdk</groupId>
-            <artifactId>jvshuitan</artifactId>
-        </dependency>
     </dependencies>
 
 

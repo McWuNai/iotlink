@@ -79,6 +79,11 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.api.sdk</groupId>
+            <artifactId>jushuitan</artifactId>
+        </dependency>
+
     </dependencies>
 
     <build>
