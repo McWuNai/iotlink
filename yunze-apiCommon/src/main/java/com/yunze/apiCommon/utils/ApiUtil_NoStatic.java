@@ -1393,7 +1393,12 @@ public class ApiUtil_NoStatic {
                     //return MyRetunSuccess(Outdata,null);
                     return null;
                 }
-                JSONObject Data = JSONObject.parseObject(data.get("Data").toString());
+                JSONObject Data;
+                if (data.get("Data") instanceof HashMap) {
+                    Data = JSONObject.parseObject(JSONObject.toJSONString(data.get("Data")));
+                } else {
+                    Data = JSONObject.parseObject(data.get("Data").toString());
+                }
 
                 //Map<String,Object> Data = (Map<String, Object>) data.get("Data");
                 //System.out.println(Data);
@@ -2994,6 +2999,8 @@ public class ApiUtil_NoStatic {
                     cardInfo.put("imei", terminals.get("imei").toString());
                     cardInfo.put("used", terminals.get("monthToDateUsage").toString());
                     cardInfo.put("realNameStatus", terminals.get("realNameStatus"));
+                    cardInfo.put("dateActivated", terminals.get("dateActivated"));
+                    cardInfo.put("deliver_date", terminals.get("dateShipped"));
                     int StatusCd = Integer.parseInt(terminals.get("simStatus").toString());
                     cardInfo.put("simStatus", StatusCd);
                     Map<String, Object> LianTong_CMP_CardStatusMap = cardStatusReplacementUtil.getLianTong_CMP_CardStatus(StatusCd);
