@@ -1,16 +1,22 @@
 package com.yunze.web.controller.system;
 
+import java.awt.image.BufferedImage;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.google.code.kaptcha.Producer;
 import com.yunze.common.core.redis.RedisCache;
 import com.yunze.common.mapper.yunze.YzUserMapper;
+import com.yunze.common.utils.uuid.IdUtils;
+import com.yunze.common.utils.uuid.UUID;
 import com.yunze.common.utils.yunze.AesEncryptUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -53,6 +59,72 @@ public class SysLoginController
     private YzUserMapper yzUserMapper;
     @Resource
     private RedisCache redisCache;
+
+    @Resource(name = "captchaProducer")
+    private Producer captchaProducer;
+
+    // 验证码类型
+    @Value("${yunze.captchaType}")
+    private String captchaType;
+
+
+    @Resource(name = "captchaProducerMath")
+    private Producer captchaProducerMath;
+
+    /**
+     * 登录方法
+     *
+     * @param  临时登录信息
+     * @return 结果
+     */
+    @PostMapping("/loginDemo")
+    public AjaxResult loginDemo(@RequestBody  String Pstr)
+    {
+        AjaxResult ajax = AjaxResult.success();
+        LoginBody loginBody = null;
+        if(Pstr!=null){
+            Pstr = Pstr.replace("%2F", "/");//转义 /
+        }
+        try {
+
+            // 保存验证码信息
+            String uuid = IdUtils.simpleUUID();
+            String verifyKey = Constants.CAPTCHA_CODE_KEY + uuid;
+            String code = null;
+
+            // 生成验证码
+            if ("math".equals(captchaType))
+            {
+                String capText = captchaProducerMath.createText();
+                code = capText.substring(capText.lastIndexOf("@") + 1);
+            }
+            else if ("char".equals(captchaType))
+            {
+                code = captchaProducer.createText();
+            }
+
+            redisCache.setCacheObject(verifyKey, code, Constants.CAPTCHA_EXPIRATION, TimeUnit.MINUTES);
+
+            Pstr =  AesEncryptUtil.desEncrypt(Pstr);
+            loginBody = new LoginBody();
+            JSONObject Parammap = JSON.parseObject(Pstr);
+            loginBody.setCode(code);
+            loginBody.setUsername(Parammap.get("username").toString());
+            loginBody.setUuid(uuid);
+            loginBody.setPassword(Parammap.get("password").toString());
+
+        }catch (Exception e){
+            System.out.println("登录异常");
+        }
+
+
+        String username = loginBody.getUsername();
+        // 生成令牌
+        String token = loginService.login(username, loginBody.getPassword(), loginBody.getCode(),
+                loginBody.getUuid());
+        ajax.put(Constants.TOKEN, token);
+        return ajax;
+    }
 
     /**
      * 登录方法

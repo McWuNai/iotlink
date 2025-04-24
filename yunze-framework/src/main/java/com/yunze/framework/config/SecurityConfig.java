@@ -107,7 +107,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter
                 // 过滤请求
                 .authorizeRequests()
                 // 对于登录login 验证码captchaImage 允许匿名访问
-                .antMatchers("/login", "/captchaImage").anonymous()
+                .antMatchers("/login", "/captchaImage", "/loginDemo").anonymous()
                 .antMatchers("/apiPush/**").anonymous()
                 .antMatchers("/yunze/ExecutionTask/download","/yunze/ExecutionTask/downloadConversion").anonymous()//放行下载
                 .antMatchers("/yunze/card/selCardOpen").anonymous()//放行 公共查询卡信息
