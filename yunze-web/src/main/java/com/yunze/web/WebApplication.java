@@ -19,6 +19,7 @@ import uk.org.lidalia.sysoutslf4j.context.SysOutOverSLF4J;
 @MapperScan("com.yunze.business.dao")
 @MapperScan("com.yunze.cn.mapper")
 @MapperScan("com.yunze.apiCommon.mapper")
+@MapperScan("com.yunze.cn.config.RabbitMQConfig")
 public class  WebApplication {
 
     private static final Logger LOG =LoggerFactory.getLogger(WebApplication.class);
