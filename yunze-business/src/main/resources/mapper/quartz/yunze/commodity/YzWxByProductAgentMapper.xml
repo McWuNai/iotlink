@@ -21,6 +21,16 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 		ORDER BY b.order_num
 	</select>
 
+	<!--查询系统配置-->
+	<select id="findConfig"  resultType="java.lang.String" parameterType="java.util.HashMap"  >
+		SELECT
+		config_value
+		FROM
+		sys_config
+		<where>
+			config_key = #{config_key}
+		</where>
+	</select>
 
 	<!--查询运费配置-->
 	<select id="findByCardFare"  resultType="java.lang.String">

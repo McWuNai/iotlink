@@ -89,7 +89,12 @@ public interface YzCardMapper
      */
     public Map<String, Object> findRoute(Map<String, Object> map);
 
-
+    /**
+     * 查询 通道 状态
+     * @param map
+     * @return
+     */
+    public Map<String, Object> findRouteInfo(Map<String, Object> map);
 
     /**
      *按当前赛选条件获取导出数据

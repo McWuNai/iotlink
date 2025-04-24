@@ -579,6 +579,11 @@ public class YzCardServiceImpl implements IYzCardService {
     }
 
     @Override
+    public Map<String, Object> findRouteInfo(Map<String, Object> map) {
+        return yzCardMapper.findRouteInfo(map);
+    }
+
+    @Override
     public List<Map<String, Object>> getDeptName() {
         return deptMapper.getDeptName();
     }
@@ -2558,15 +2563,15 @@ public class YzCardServiceImpl implements IYzCardService {
             Path normalizedPath = Paths.get(pathName).normalize();
             Files.walkFileTree(normalizedPath, new SimpleFileVisitor<Path>() {
                 @Override
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                    if (file.toString().toLowerCase().endsWith(".xlsx")) {
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                    if (file.toString().toLowerCase().endsWith(".zip") || file.toString().toLowerCase().endsWith(".xlsx")) {
                         xlsxFiles.add(file.getFileName().toString());
                     }
                     return FileVisitResult.CONTINUE;
                 }
 
                 @Override
-                public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+                public FileVisitResult visitFileFailed(Path file, IOException exc) {
                     System.err.println("无法访问文件: " + file.toString() + ". 错误: " + exc.getMessage());
                     return FileVisitResult.CONTINUE;
                 }

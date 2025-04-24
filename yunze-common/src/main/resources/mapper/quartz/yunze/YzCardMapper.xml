@@ -960,6 +960,22 @@
 		</where>
 	</select>
 
+	<!--查询 通道 状态  -->
+	<select id="findRouteInfo" resultType="java.util.HashMap">
+		SELECT
+		cd_status,
+		cd_code,
+		cd_username,
+		cd_pwd,
+		cd_key,
+		cd_control_type
+		FROM
+		yz_card_route
+		<where>
+			cd_id = #{cd_id}
+		</where>
+	</select>
+
 
 	<!--查询 卡号 分配 通道   -->
 	<select id="findRouteArr" resultType="java.util.HashMap">
@@ -2162,34 +2178,42 @@
 	<update id="updSingleCardData" parameterType="java.util.HashMap">
 		UPDATE yz_card_info
 		<set>
-			<!-- 动态字段更新 -->
 			<if test="msisdn != null">
-				msisdn = #{msisdn},
+				<![CDATA[msisdn = #{msisdn},]]>
 			</if>
 			<if test="imsi != null">
-				imsi = #{imsi},
+				<![CDATA[imsi = #{imsi},]]>
 			</if>
 			<if test="imei != null">
-				imei = #{imei},
+				<![CDATA[imei = #{imei},]]>
+			</if>
+			<if test="dateActivated != null">
+				<![CDATA[activate_date = DATE_FORMAT(#{dateActivated}, '%Y-%m-%d'),]]>
+			</if>
+			<if test="dateShipped != null">
+				<![CDATA[deliver_date = DATE_FORMAT(#{dateShipped}, '%Y-%m-%d')]]>
 			</if>
 		</set>
-		<where>
-			iccid = #{iccid}
-			<!-- 动态条件：至少有一个字段的值发生变化 -->
-			<trim prefix="AND (" suffix=")" prefixOverrides="OR">
-				<!-- MySQL NULL安全比较写法 -->
-				<if test="msisdn != null">
-					OR NOT (msisdn &lt;=&gt; #{msisdn})
-				</if>
-				<if test="imsi != null">
-					OR NOT (imsi &lt;=&gt; #{imsi})
-				</if>
-				<if test="imei != null">
-					OR NOT (imei &lt;=&gt; #{imei})
-				</if>
-			</trim>
-		</where>
+		WHERE iccid = #{iccid}
+		AND (
+		<if test="msisdn != null">
+			<![CDATA[(msisdn IS NULL OR msisdn <> #{msisdn})]]>
+		</if>
+		<if test="imsi != null">
+			<![CDATA[ OR (imsi IS NULL OR imsi <> #{imsi})]]>
+		</if>
+		<if test="imei != null">
+			<![CDATA[ OR (imei IS NULL OR imei <> #{imei})]]>
+		</if>
+		<if test="dateActivated != null">
+			<![CDATA[ OR (activate_date IS NULL OR activate_date <> DATE_FORMAT(#{dateActivated}, '%Y-%m-%d'))]]>
+		</if>
+		<if test="dateShipped != null">
+			<![CDATA[ OR (deliver_date IS NULL OR deliver_date <> DATE_FORMAT(#{dateShipped}, '%Y-%m-%d'))]]>
+		</if>
+		)
 	</update>
+
 
 
 	<select id="selectDictDataByType" parameterType="java.util.HashMap" resultType="java.util.HashMap">

@@ -626,8 +626,8 @@ public class YzCardController extends MyBaseController {
     public String AddRatePlan(@RequestBody String Pstr) {
         try {
             HashMap<String, Object> Parammap = new HashMap<>(JSON.parseObject(Pstr));
-            Parammap.put("iccid", "89860624730044898137");
-            Map<String, Object> Route = yzCardServiceImpl.findRoute(Parammap);
+            Parammap.put("cd_id", "55");
+            Map<String, Object> Route = yzCardServiceImpl.findRouteInfo(Parammap);
             return MyRetunSuccess(yzCardServiceImpl.AddRatePlan(Parammap, Route), null);
         } catch (Exception e) {
             String ip = IpUtils.getIpAddr(ServletUtils.getRequest());

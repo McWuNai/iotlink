@@ -23,6 +23,6 @@ public interface YzWxByProductAgentMapper {
      */
     public String findByCardFare();
 
-
+    public String findConfig(Map<String, Object> map);
 
 }
