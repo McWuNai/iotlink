@@ -52,6 +52,13 @@ public interface IYzCardService
     public Map<String,Object> findRoute(Map<String, Object> map);
 
     /**
+     * 查询 通道 状态
+     * @param map
+     * @return
+     */
+    public Map<String,Object> findRouteInfo(Map<String, Object> map);
+
+    /**
      * 获取部门名称
      * @return
      */
