@@ -7,8 +7,8 @@ import com.yunze.apiCommon.utils.VeDate;
 import com.yunze.cn.mapper.YzCardFlowHisMapper;
 import com.yunze.cn.mapper.YzCardFlowMapper;
 import com.yunze.cn.mapper.YzCardMapper;
+import com.yunze.cn.util.redis.RedisCache;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -19,6 +19,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 public class CardFlowSyn {
     final private static String isChickDateValue = "isChickDateValue";
     final private static String stringDateShortStart = "stringDateShortStart";
+    final private static String RedisNetWorkKeyName = "yunze:card:NetWork:LimitSpeed";
     @Resource
     private YzCardMapper yzCardMapper;
     @Resource
@@ -47,7 +49,7 @@ public class CardFlowSyn {
     private InternalApiRequest internalApiRequest;
 
     @Resource
-    private RedisTemplate redisTemplate;
+    private RedisCache redisCache;
 
     /**
      * 用量计算 [直接同步 yzCardMapper ]
@@ -70,10 +72,49 @@ public class CardFlowSyn {
         Rmap.put("used",total_show_flow);
         Rmap.put("remaining",remaining);
         Rmap.put("bool_info",bool_info);
-        return  Rmap;
+        //判断是否限速
+        setNetWork(iccid, (!(total_show_flow <= 0.0) && (total_show_flow + remaining * 0.8) <= total_show_flow), fmap);
+        return Rmap;
     }
 
 
+    private void setNetWork(String iccid,boolean bool, Map<String,Object> map){
+        //获取 redis 对应iccid是否存在
+        boolean equalsMap = Boolean.TRUE.equals(redisCache.getCacheMap(RedisNetWorkKeyName).containsKey(iccid));
+        Map<String,Object> Rmap = new HashMap<>();
+        Rmap.put("iccid",iccid);
+        // 存在
+        if (equalsMap) {
+            // 获取当前布尔值并比对Redis布尔值是否一致
+            boolean b = redisCache.getCacheMapValue(RedisNetWorkKeyName, iccid);
+            if (!(bool == b)) {
+                // 不一致 删除Redis中的记录
+                Rmap.put("speedValue", 0);
+                Map<String, Object> stringObjectMap = internalApiRequest.SpeedLimit(Rmap, map);
+                if (stringObjectMap.get("code").equals("200")) {
+                    redisCache.getCacheMap(RedisNetWorkKeyName).remove(iccid);
+                    System.out.println("卡号>>> " + iccid + " <<<  解除流量通信限速 ");
+                } else {
+                    System.out.println("卡号>>> " + iccid + " <<<  解除流量通信限速失败 ");
+                }
+            }
+            // 一致 不更改
+        } else {
+            // 不存在
+            if (bool) {
+                // 布尔值为true 创建redis
+                Rmap.put("speedValue", 1);
+                Map<String, Object> stringObjectMap = internalApiRequest.SpeedLimit(Rmap, map);
+                if (stringObjectMap.get("code").equals("200") && stringObjectMap.get("status").equals("200")) {
+                    redisCache.setCacheMap(RedisNetWorkKeyName, Collections.singletonMap(iccid, true));
+                    System.out.println("卡号>>> " + iccid + " <<<  已达套餐80%用量  >>> 触发流量通信限速 <<< ");
+                } else {
+                    System.out.println("卡号>>> " + iccid + " <<<  已达套餐80%用量  >>> 触发流量通信限速失败 <<< ");
+                }
+            }
+            // 布尔值为false 不更改
+        }
+    }
 
     /**
      * 用量计算 [queue 队列同步 yzCardMapper ]
@@ -367,7 +408,7 @@ public class CardFlowSyn {
         map.put("month", yes[1]);
         map.put("day", yes[2]);
         map.put("iccid", findMap.get("iccid"));
-        Object billingCycle = redisTemplate.opsForValue().get("billingCycle");
+        Object billingCycle = redisCache.getCacheObject("billingCycle");
         if (billingCycle != null) {
             map.put("billingCycle", billingCycle.toString());
         } else {
@@ -394,9 +435,8 @@ public class CardFlowSyn {
 
             // 计算过期时间并设置
             long ttlInSeconds = Duration.between(now, endOfDay).getSeconds();
-
-            redisTemplate.opsForValue().set("billingCycle", map.get("billingCycle").toString());
-            redisTemplate.expire("billingCycle", ttlInSeconds, TimeUnit.SECONDS);
+            redisCache.setCacheObject("billingCycle", map.get("billingCycle").toString());
+            redisCache.expire("billingCycle", ttlInSeconds, TimeUnit.SECONDS);
         }
 
         try {
@@ -515,7 +555,7 @@ public class CardFlowSyn {
                 yzCardFlowHisMapper.edit(map);
             } else {
 
-                Integer cacheObject = (Integer) redisTemplate.opsForValue().get(CardFlowSyn.stringDateShortStart);
+                Integer cacheObject = redisCache.getCacheObject(CardFlowSyn.stringDateShortStart);
                 if (cacheObject == null) {
                     stringDateShortStart = VeDate.getStringDateShortStart();
                     lastMonthLastDayFlow = avgDayFlow * stringDateShortStart;
@@ -550,7 +590,7 @@ public class CardFlowSyn {
      */
     private int isChickDate() {
         try {
-            Object cacheObject = redisTemplate.opsForValue().get(CardFlowSyn.isChickDateValue);
+            Object cacheObject = redisCache.getCacheObject(CardFlowSyn.isChickDateValue);
             if (cacheObject != null) return (int) cacheObject;
 
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -587,7 +627,7 @@ public class CardFlowSyn {
             int ttlInSeconds = (int) duration.getSeconds();
 
             // 存储结果到Redis，并设置TTL
-            redisTemplate.opsForValue().set(key, value, ttlInSeconds, TimeUnit.SECONDS);
+            redisCache.setCacheObject(key, value, ttlInSeconds, TimeUnit.SECONDS);
         } catch (DateTimeException e) {
             // 处理日期时间相关的异常
             throw new RuntimeException("setDailyExpiryKey方法抛出 日期时间计算异常", e);
