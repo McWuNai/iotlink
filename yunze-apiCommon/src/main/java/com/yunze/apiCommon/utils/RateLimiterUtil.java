@@ -26,7 +26,7 @@ public class RateLimiterUtil {
         this.tokenCountMap.put("changeCardStatusFlexible", 10.0);
         this.tokenCountMap.put("queryRealNameStatus", 5.0);
         this.tokenCountMap.put("queryAPNInfo", 5.0);
-        this.tokenCountMap.put("SpeedLimit", 1.0);
+        this.tokenCountMap.put("SpeedLimit", 5.0);
         this.tokenCountMap.put("FunctionApnStatus", 5.0);
         this.tokenCountMap.put("MachineCardBinding", 5.0);
         this.tokenCountMap.put("realNameRemove", 5.0);
@@ -46,7 +46,12 @@ public class RateLimiterUtil {
     public RateLimiter getSpecificMethodRateLimiter(String cd_userName, String methodName) {
         // 使用用户名和方法名作为复合键
         String compositeKey = buildCompositeKey(cd_userName, methodName);
-        return specificMethodRateLimiters.computeIfAbsent(compositeKey, k -> RateLimiter.create(tokenCountMap.get(methodName)));
+        boolean isMethodName = tokenCountMap.containsKey(methodName);
+        if (isMethodName) {
+            return specificMethodRateLimiters.computeIfAbsent(compositeKey, k -> RateLimiter.create(tokenCountMap.get(methodName)));
+        } else {
+            throw new RuntimeException("错误: 未配置方法对应的限流器");
+        }
     }
 
     private String buildCompositeKey(String cd_userName, String methodName) {

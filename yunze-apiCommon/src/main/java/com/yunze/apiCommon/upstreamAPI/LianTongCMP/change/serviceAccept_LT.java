@@ -142,23 +142,23 @@ public class serviceAccept_LT extends LT_CMP_Api {
      * @return bool = true 在标准中
      */
     public Map<String,Object> speedValue_set(String speedValue){
-        boolean bool = false;
+        boolean bool;
         Map<String,Object> map = new HashMap<String,Object>();
         List<String> rule = new ArrayList<String>();
-        rule.add("21997854");rule.add("21997289");rule.add("21997290");rule.add("21997291");
-        if(speedValue.length()>2){
+        rule.add("26090663");rule.add("26091603");/*rule.add("21997290");rule.add("21997291");*/
+        if(speedValue.length()>0){
             if(speedValue.equals("0")){
-                speedValue = "21997854";//不限制
+                speedValue = "26090663";//不限制
             }else if(speedValue.equals("1")){
-                speedValue = "21997289";//1Mbps
-            }else if(speedValue.equals("2")){
+                speedValue = "26091603";//上下20Mbps
+            }/*else if(speedValue.equals("2")){
                 speedValue = "21997290";//2Mbps
             }else if(speedValue.equals("4")){
                 speedValue = "21997291";//4Mbps
-            }
-        }else{//适配多联通账户匹配
+            }*/
+        }/*else{//适配多联通账户匹配
             bool = true;
-        }
+        }*/
         bool = CommonlyUsed.Val_Is_Arr(rule,speedValue);//判断 传入 类型是否在 已有 标准中
         map.put("speedValue",speedValue);
         map.put("bool",bool);

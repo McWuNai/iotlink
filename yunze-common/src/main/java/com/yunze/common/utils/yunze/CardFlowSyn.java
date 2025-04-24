@@ -54,6 +54,7 @@ public class CardFlowSyn {
 
     final private static String isChickDateValue = "isChickDateValue";
     final private static String stringDateShortStart = "stringDateShortStart";
+    final private static String RedisNetWorkKeyName = "yunze:card:NetWork:LimitSpeed";
     /**
      * 用量计算 [直接同步 yzCardMapper ]
      * @param iccid
@@ -62,15 +63,15 @@ public class CardFlowSyn {
      */
     public Map<String,Object> CalculationFlow(String iccid,Double ApiUsed, Map<String,Object> map){
         Map<String,Object> Rmap = CalculationFlowCommon(iccid, ApiUsed, map, null);
-        return CalculationFlowCommon(Rmap, iccid);
+        return CalculationFlowCommon(Rmap, iccid, map);
     }
 
     public Map<String,Object> CalculationBatchFlow(String iccid,Double ApiUsed, Map<String,Object> map, String realNameStatus){
         Map<String,Object> Rmap = CalculationFlowCommon(iccid, ApiUsed, map, realNameStatus);
-        return CalculationFlowCommon(Rmap, iccid);
+        return CalculationFlowCommon(Rmap, iccid, map);
     }
 
-    public Map<String,Object> CalculationFlowCommon(Map<String,Object> Rmap, String iccid){
+    public Map<String,Object> CalculationFlowCommon(Map<String,Object> Rmap, String iccid, Map<String,Object> map){
         Double SumFlow = Double.parseDouble(Rmap.get("SumFlow").toString());
         Double total_show_flow = Double.parseDouble(Rmap.get("total_show_flow").toString());
         boolean bool_info;
@@ -84,7 +85,52 @@ public class CardFlowSyn {
         Rmap.put("used",total_show_flow);
         Rmap.put("remaining",remaining);
         Rmap.put("bool_info",bool_info);
-        return  Rmap;
+        //判断是否限速
+        setNetWork(iccid, (!(total_show_flow <= 0.0) && (total_show_flow + remaining * 0.8) <= total_show_flow), map, total_show_flow/1024);
+        return Rmap;
+    }
+
+    private void setNetWork(String iccid,boolean bool, Map<String,Object> map, double total_show_flow){
+        //获取 redis 对应iccid是否存在
+        boolean equalsMap = Boolean.TRUE.equals(redisCache.getCacheMap(RedisNetWorkKeyName).containsKey(iccid));
+        Map<String,Object> Rmap = new HashMap<>();
+        Rmap.put("iccid",iccid);
+        // 存在
+        if (equalsMap) {
+            // 获取当前布尔值并比对Redis布尔值是否一致
+            boolean b = redisCache.getCacheMapValue(RedisNetWorkKeyName, iccid);
+            if (!(bool == b)) {
+                if (total_show_flow < 500) {
+                    // 不一致 删除Redis中的记录
+                    Rmap.put("speedValue", 0);
+                    Map<String, Object> stringObjectMap = internalApiRequest.SpeedLimit(Rmap, map);
+                    if (stringObjectMap.get("code").equals("200") && stringObjectMap.get("status").equals("200")) {
+                        redisCache.getCacheMap(RedisNetWorkKeyName).remove(iccid);
+                        System.out.println("卡号>>> " + iccid + " <<<  解除流量通信限速 ");
+                    } else {
+                        System.out.println("卡号>>> " + iccid + " <<<  解除流量通信限速失败 (状态码异常)");
+                    }
+                } else {
+                    System.out.println("卡号>>> " + iccid + " <<<  解除流量通信限速失败 (月用量超出500GB) ");
+                }
+
+            }
+            // 一致 不更改
+        } else {
+            // 不存在
+            if (bool) {
+                // 布尔值为true 创建redis
+                Rmap.put("speedValue", 1);
+                Map<String, Object> stringObjectMap = internalApiRequest.SpeedLimit(Rmap, map);
+                if (stringObjectMap.get("code").equals("200") && stringObjectMap.get("status").equals("200")) {
+                    redisCache.setCacheMap(RedisNetWorkKeyName, Collections.singletonMap(iccid, true));
+                    System.out.println("卡号>>> " + iccid + " <<<  已达套餐80%用量  >>> 触发流量通信限速 <<< ");
+                } else {
+                    System.out.println("卡号>>> " + iccid + " <<<  已达套餐80%用量  >>> 触发流量通信限速失败 <<< ");
+                }
+            }
+            // 布尔值为false 不更改
+        }
     }
 
     /**
@@ -282,8 +328,10 @@ public class CardFlowSyn {
 
                 String ord_type = Pobj.get("ord_type").toString();
                 if ("3".equals(ord_type)) {
-                    Double use_ture_flow = Double.parseDouble(Pobj.get("use_true_flow").toString());
-                    cl_Used = Arith.add(cl_Used, use_ture_flow);
+                    if (Boolean.TRUE.equals(!(Pobj.get("use_true_flow") == null))) {
+                        Double use_ture_flow = Double.parseDouble(Pobj.get("use_true_flow").toString());
+                        cl_Used = Arith.add(cl_Used, use_ture_flow);
+                    }
                 }
                 //   当前计算 用量 - 资费计划 用量 作比较 小等 0 用完了 否则未用完继续 作比较
                 UdF = Arith.sub(cl_Used,error_flow);
