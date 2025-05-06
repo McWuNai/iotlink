@@ -98,13 +98,13 @@ public class PushApiController {
         outData.put("iccid", data.get("iccid"));
         outData.put("currentState", data.get("currentState"));
         outData.put("api_type", 2);
-        yzCardServiceImpl.pushApi(outData);*/
+        yzCardServiceImpl.pushApi(outData);
 
-        String status_id = data.get("currentState").toString();
+        String status_id = data.get("currentState").toString();*/
         Map<String, Object> Upd_Map = new HashMap<>();
         Upd_Map.put("iccid",data.get("iccid"));
         Upd_Map.put("status_id", "1");
-        Upd_Map.put("status_ShowId",getShowStatIdArr.GetShowStatId(status_id));
+        Upd_Map.put("status_ShowId",getShowStatIdArr.GetShowStatId("1"));
         yzCardMapper.updStatusId(Upd_Map);
     }
 
@@ -115,13 +115,13 @@ public class PushApiController {
         outData.put("iccid", data.get("iccid"));
         outData.put("currentState", data.get("currentState"));
         outData.put("api_type", 2);
-        yzCardServiceImpl.pushApi(outData);*/
+        yzCardServiceImpl.pushApi(outData);
 
-        String status_id = data.get("currentState").toString();
+        String status_id = data.get("currentState").toString();*/
         Map<String, Object> Upd_Map = new HashMap<>();
         Upd_Map.put("iccid",data.get("iccid"));
         Upd_Map.put("status_id", "2");
-        Upd_Map.put("status_ShowId",getShowStatIdArr.GetShowStatId(status_id));
+        Upd_Map.put("status_ShowId",getShowStatIdArr.GetShowStatId("2"));
         yzCardMapper.updStatusId(Upd_Map);
     }
 
