@@ -86,7 +86,7 @@ public class CardFlowSyn {
         Rmap.put("remaining",remaining);
         Rmap.put("bool_info",bool_info);
         //判断是否限速
-        setNetWork(iccid, (!(total_show_flow <= 0.0) && (total_show_flow + remaining * 0.8) <= total_show_flow), map, total_show_flow/1024);
+        if(remaining>=0) setNetWork(iccid, (!(total_show_flow <= 0.0) && (total_show_flow + remaining * 0.8) <= total_show_flow), map, total_show_flow/1024);
         return Rmap;
     }
 
@@ -122,7 +122,7 @@ public class CardFlowSyn {
                 // 布尔值为true 创建redis
                 Rmap.put("speedValue", 1);
                 Map<String, Object> stringObjectMap = internalApiRequest.SpeedLimit(Rmap, map);
-                if (stringObjectMap.get("code").equals("200") && stringObjectMap.get("status").equals("200")) {
+                if (stringObjectMap.get("code").toString().equals("200") && stringObjectMap.get("status").toString().equals("200")) {
                     redisCache.setCacheMap(RedisNetWorkKeyName, Collections.singletonMap(iccid, true));
                     System.out.println("卡号>>> " + iccid + " <<<  已达套餐80%用量  >>> 触发流量通信限速 <<< ");
                 } else {
