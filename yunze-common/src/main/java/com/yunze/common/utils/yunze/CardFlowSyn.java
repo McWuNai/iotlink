@@ -326,13 +326,13 @@ public class CardFlowSyn {
                 String id = Pobj.get("id").toString();
                 xiShu = error_time;//同步包系数
 
-                String ord_type = Pobj.get("ord_type").toString();
+                /*String ord_type = Pobj.get("ord_type").toString();
                 if ("3".equals(ord_type)) {
                     if (Boolean.TRUE.equals(!(Pobj.get("use_true_flow") == null))) {
                         Double use_ture_flow = Double.parseDouble(Pobj.get("use_true_flow").toString());
                         cl_Used = Arith.add(cl_Used, use_ture_flow);
                     }
-                }
+                }*/
                 //   当前计算 用量 - 资费计划 用量 作比较 小等 0 用完了 否则未用完继续 作比较
                 UdF = Arith.sub(cl_Used,error_flow);
                 if(UdF<0){
