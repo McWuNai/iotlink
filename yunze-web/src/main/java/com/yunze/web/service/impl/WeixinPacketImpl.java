@@ -114,6 +114,7 @@ public class WeixinPacketImpl implements IWeixinPacket {
                 Rmap.put("EndTime", obj.get("EndTime") != null ? obj.get("EndTime") : "--");
                 Rmap.put("packetName", obj.get("packetName") != null ? obj.get("packetName") : "--");
                 Rmap.put("activateDate", obj.get("activateDate") != null ? obj.get("activateDate") : "--");
+                Rmap.put("realNameStatus", obj.get("realNameStatus") != null ? obj.get("realNameStatus") : "--");
                 if (used == -1.00) {
                     Rmap.put("total", 0.00);
                 } else {
@@ -133,6 +134,7 @@ public class WeixinPacketImpl implements IWeixinPacket {
                 Double R_used = 0.0;
                 Double R_remain = 0.0;
                 Double total = 0.0;
+                String realNameStatus = "";
                 Object channel_id = IccidMap.get("channel_id");
                 if (channel_id != null && channel_id.toString().length() > 0) {
                     Map<String, Object> Route = yzCardRouteMapper.find_route(Rmap);
@@ -156,6 +158,9 @@ public class WeixinPacketImpl implements IWeixinPacket {
                                 }
                                 if (synMap.get("SumFlow") != null) {
                                     total = Double.parseDouble(synMap.get("SumFlow").toString());
+                                }
+                                if (synMap.get("realNameStatus") != null) {
+                                    realNameStatus = synMap.get("realNameStatus").toString();
                                 }
                                 if (R_remain > 0.00) {
                                     Map<String, Object> stringObjectMap = yzCardMapper.find(IccidMap);
@@ -192,6 +197,7 @@ public class WeixinPacketImpl implements IWeixinPacket {
                 Rmap.put("used", R_used);
                 Rmap.put("remain", R_remain);
                 Rmap.put("total", total);
+                Rmap.put("realNameStatus", realNameStatus);
                 Rmap.put("imsi", IccidMap.get("vid") != null ? IccidMap.get("vid") : "--");
                 Rmap.put("code", "200");
                 Rmap.put("activateDate", IccidMap.get("activate_date") != null ? IccidMap.get("activate_date") : "--");
@@ -1185,7 +1191,25 @@ public class WeixinPacketImpl implements IWeixinPacket {
                     if (Use >= 0) {
                         try {
                             Map<String, Object> RMap = cardFlowSyn.CalculationFlow(iccid, Use, find_card_route_map);
-                            //Map<String,Object> RMap = cardFlowSyn.CalculationFlowQueue(iccid,Use,find_card_route_map);
+
+                            RMap.put("realNameStatus", Rmap.get("realNameStatus").toString());
+
+                            int status_ShowId = (int) yzCardMapper.find(Parammap).get("status_ShowId");
+                            if (Double.parseDouble(RMap.get("remaining").toString()) > 0.00) {
+                                if (status_ShowId == 5) {
+                                Map<String, Object> map = new HashMap<>();
+                                map.put("iccid", Parammap.get("iccid").toString());
+                                map.put("status_ShowId", "1");
+                                yzCardServiceImpl.singleState(map);
+                                }
+                            } else if (Double.parseDouble(RMap.get("remaining").toString()) <= 0.00) {
+                                if (status_ShowId != 5) {
+                                    Map<String, Object> map1 = new HashMap<>();
+                                    map1.put("iccid", Parammap.get("iccid").toString());
+                                    map1.put("status_ShowId", "0");
+                                    yzCardServiceImpl.singleState(map1);
+                                }
+                            }
                             return RMap;
                         } catch (Exception e) {
                             System.out.println(">>cardFlowSyn -  同步卡用量失败:{" + iccid + "} | {" + e.getMessage() + "}<<");

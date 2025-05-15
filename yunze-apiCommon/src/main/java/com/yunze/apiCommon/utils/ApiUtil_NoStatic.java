@@ -244,8 +244,9 @@ public class ApiUtil_NoStatic {
                         rtMessage = JsonData.get("resultDesc").toString();
                     } catch (Exception e) {
                     }
+                    Map<String, Object> Data = ((List<Map<String, Object>>) JsonData.get("terminals")).get(0);
+                    Outdata.put("realNameStatus", Data.get("realNameStatus").toString());
                     if (codeOn.equals("0000")) {
-                        Map<String, Object> Data = ((List<Map<String, Object>>) JsonData.get("terminals")).get(0);
                         Use = Double.parseDouble(Data.get("monthToDateUsage").toString());
                     } else {
                         Use = 0.00;
