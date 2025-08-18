@@ -127,7 +127,7 @@ public class YzCardServiceImpl implements IYzCardService {
         LocalDate fileDate = LocalDate.of(
                 Integer.parseInt(dateParts[0]), // 年
                 Integer.parseInt(dateParts[1]), // 月
-                1); // 日（用1即可，因为我们只比较年月）
+                Integer.parseInt(dateParts[2])); // 日（修正：使用完整的日期）
 
         // 构建新的缓存key格式：yunze:card:getBusinessStatistics:mm:YYYY:DD
         String cacheKey = String.format("%s%s:%s:%s",
@@ -164,7 +164,7 @@ public class YzCardServiceImpl implements IYzCardService {
 
             // 获取标题行并查找关键列索引
             List<String> headerRow = allData.get(0);
-            int flowIndex = -1, statusIndex = -1, activateTimeIndex = -1;
+            int flowIndex = -1, statusIndex = -1, activateTimeIndex = -1, realNameIndex = -1, subAccountIndex = -1;
 
             for (int i = 0; i < headerRow.size(); i++) {
                 String header = headerRow.get(i);
@@ -176,6 +176,13 @@ public class YzCardServiceImpl implements IYzCardService {
                 }
                 if (header.contains("激活时间")) {
                     activateTimeIndex = i;
+                }
+                if (header.contains("实名")) {
+                    realNameIndex = i;
+                }
+                // 新增：查找子账户列
+                if (header.contains("子账户") || header.contains("子账号") || header.contains("子账户名称")) {
+                    subAccountIndex = i;
                 }
             }
 
@@ -230,7 +237,7 @@ public class YzCardServiceImpl implements IYzCardService {
                                 activateDate.getMonthValue() == fileDate.getMonthValue()) {
                             simCardNewCount++;
 
-                            // 检查是否是当天激活
+                            // 修正：检查是否是当天激活（比较完整日期）
                             if (activateDate.equals(fileDate)) {
                                 todayActivatedCount++;
                             }
@@ -283,6 +290,9 @@ public class YzCardServiceImpl implements IYzCardService {
             // 确保当天用量不为负数
             currentDay = Math.max(0, currentDay);
 
+            // 计算计费统计信息
+            BillingStatistics billingStats = calculateBillingStatistics(allData, headerRow, fileDate);
+
             // 封装返回数据
             statistics.put("simCardCount", simCardCount);
             statistics.put("downCount", downCount);
@@ -294,6 +304,19 @@ public class YzCardServiceImpl implements IYzCardService {
             statistics.put("simActivity", simActivity); // 保留两位小数
             statistics.put("update_date", LocalDateTime.now().toString());
             statistics.put("record_date", LocalDate.now().toString());
+
+            // 添加计费统计信息（仅当有有效的计费配置时）
+            if (billingStats.hasData()) {
+                // 将计费统计对象转换为JSON字符串存储
+                String billingJson = JSON.toJSONString(billingStats);
+                statistics.put("billing", billingJson);
+            } else {
+                // 计费配置无效或为空时，存储disabled标识
+                Map<String, Object> billingInfo = new HashMap<>();
+                billingInfo.put("enabled", false); // 标识计费功能未启用
+                billingInfo.put("message", "计费配置无效或companyConfigs数组为空");
+                statistics.put("billing", JSON.toJSONString(billingInfo));
+            }
 
             // 生命周期分布（保持原有格式）
             List<Map<String, Object>> cycleData = new ArrayList<>();
@@ -2026,79 +2049,83 @@ public class YzCardServiceImpl implements IYzCardService {
         return AjaxResult.error("添加成功 !");
     }
 
-    /*public AjaxResult uploadUpdatedExcel(MultipartFile file, String user, String optionalParam) {
-        String baseDir;
-        String filename;
-        String fullPath;
-
-        if (StringUtils.isNotEmpty(optionalParam)) {
-            try {
-                baseDir = "/mnt/file/flowCount/";
-
-                // 解析日期参数 (格式: yyyy-MM-dd)
-                String[] dateParts = optionalParam.split("-");
-                String year = dateParts[0];
-                String month = dateParts[1];
-
-                // 构建目录结构: /mnt/file/flowCount/user/月份/年份/
-                String monthDir = baseDir + month + "/";
-                String yearDir = monthDir + year + "/";
-
-                // 使用日期作为文件名
-                filename = optionalParam + ".xlsx";
-                fullPath = yearDir + filename;
-
-                // 创建月份和年份目录
-                // 获取项目根目录
-                String projectRoot = new File("").getCanonicalPath();
-                // 创建完整的目录路径
-                File monthFolder = new File(projectRoot + monthDir + "1.txt");
-                File yearFolder = new File(projectRoot + yearDir + "1.txt");
-                Upload.mkdirsmy(monthFolder);
-                Upload.mkdirsmy(yearFolder);
-
-            } catch (Exception e) {
-                log.error("创建目录失败", e);
-                return AjaxResult.error("日期格式错误: " + optionalParam);
-            }
-        } else {
-            // 原有逻辑
-            baseDir = "/mnt/file/export/" + user + '/';
-            filename = file.getOriginalFilename();
-            fullPath = baseDir + filename;
-        }
-
-        try {
-            File newFile = new File(new File("").getCanonicalPath() + fullPath);
-            File parentDir = newFile.getParentFile();
-
-            // 创建目录（如果不存在）
-            Upload.mkdirsmy(parentDir);
-
-            // 检查是否存在相同名称的文件，并删除它
-            if (newFile.exists()) {
-                if (!newFile.delete()) {
-                    return AjaxResult.error("无法删除已有的文件: " + newFile.getName());
-                }
-            }
-
-            // 将上传的文件保存到指定位置
-            if (StringUtils.isNotEmpty(optionalParam)) {
-                file.transferTo(newFile);
-                getBusinessStatistics(optionalParam + ".xlsx");
-            } else {
-                file.transferTo(newFile);
-            }
-
-            return AjaxResult.success("上传成功, {}", new File("").getCanonicalPath());
-        } catch (IOException e) {
-            e.printStackTrace();
-            return AjaxResult.error("上传失败: " + e.getMessage());
-        }
-    }*/
+    /*
+     * public AjaxResult uploadUpdatedExcel(MultipartFile file, String user, String
+     * optionalParam) {
+     * String baseDir;
+     * String filename;
+     * String fullPath;
+     * 
+     * if (StringUtils.isNotEmpty(optionalParam)) {
+     * try {
+     * baseDir = "/mnt/file/flowCount/";
+     * 
+     * // 解析日期参数 (格式: yyyy-MM-dd)
+     * String[] dateParts = optionalParam.split("-");
+     * String year = dateParts[0];
+     * String month = dateParts[1];
+     * 
+     * // 构建目录结构: /mnt/file/flowCount/user/月份/年份/
+     * String monthDir = baseDir + month + "/";
+     * String yearDir = monthDir + year + "/";
+     * 
+     * // 使用日期作为文件名
+     * filename = optionalParam + ".xlsx";
+     * fullPath = yearDir + filename;
+     * 
+     * // 创建月份和年份目录
+     * // 获取项目根目录
+     * String projectRoot = new File("").getCanonicalPath();
+     * // 创建完整的目录路径
+     * File monthFolder = new File(projectRoot + monthDir + "1.txt");
+     * File yearFolder = new File(projectRoot + yearDir + "1.txt");
+     * Upload.mkdirsmy(monthFolder);
+     * Upload.mkdirsmy(yearFolder);
+     * 
+     * } catch (Exception e) {
+     * log.error("创建目录失败", e);
+     * return AjaxResult.error("日期格式错误: " + optionalParam);
+     * }
+     * } else {
+     * // 原有逻辑
+     * baseDir = "/mnt/file/export/" + user + '/';
+     * filename = file.getOriginalFilename();
+     * fullPath = baseDir + filename;
+     * }
+     * 
+     * try {
+     * File newFile = new File(new File("").getCanonicalPath() + fullPath);
+     * File parentDir = newFile.getParentFile();
+     * 
+     * // 创建目录（如果不存在）
+     * Upload.mkdirsmy(parentDir);
+     * 
+     * // 检查是否存在相同名称的文件，并删除它
+     * if (newFile.exists()) {
+     * if (!newFile.delete()) {
+     * return AjaxResult.error("无法删除已有的文件: " + newFile.getName());
+     * }
+     * }
+     * 
+     * // 将上传的文件保存到指定位置
+     * if (StringUtils.isNotEmpty(optionalParam)) {
+     * file.transferTo(newFile);
+     * getBusinessStatistics(optionalParam + ".xlsx");
+     * } else {
+     * file.transferTo(newFile);
+     * }
+     * 
+     * return AjaxResult.success("上传成功, {}", new File("").getCanonicalPath());
+     * } catch (IOException e) {
+     * e.printStackTrace();
+     * return AjaxResult.error("上传失败: " + e.getMessage());
+     * }
+     * }
+     */
 
     /**
      * 通过创建1.txt文件来确保目录存在
+     * 
      * @param dirPath 需要创建的目录路径
      * @return 是否失败创建目录
      */
@@ -2132,7 +2159,7 @@ public class YzCardServiceImpl implements IYzCardService {
     }
 
     public AjaxResult uploadChunk(MultipartFile chunk, String user, int chunkIndex, int totalChunks,
-                                  String fileName, String optionalParam) {
+            String fileName, String optionalParam) {
         String baseDir;
         String fullPath;
         String tempDir;
@@ -2232,12 +2259,13 @@ public class YzCardServiceImpl implements IYzCardService {
         }
     }
 
-    public AjaxResult updateCalculate(MultipartFile importFile, MultipartFile exportFile, String deptId, String fileName, int chunkIndex, int totalChunks) {
+    public AjaxResult updateCalculate(MultipartFile importFile, MultipartFile exportFile, String deptId,
+            String fileName, int chunkIndex, int totalChunks) {
         // 基础路径配置
         String baseDir = "/mnt/file/";
-        String[] directories = {"export/", "import/"};
-        MultipartFile[] files = {exportFile, importFile};
-        boolean[] fileCompleted = {false, false}; // 跟踪每个文件的完成状态
+        String[] directories = { "export/", "import/" };
+        MultipartFile[] files = { exportFile, importFile };
+        boolean[] fileCompleted = { false, false }; // 跟踪每个文件的完成状态
 
         try {
             String projectRoot = new File("").getCanonicalPath();
@@ -2256,10 +2284,12 @@ public class YzCardServiceImpl implements IYzCardService {
                 String currentFileName = i == 0 ? fileName : fileName.replace("导出", "导入");
 
                 // 检查文件是否为空（空文件情况下MultipartFile可能非null但内容为空）
-                /*if (files[i] == null || files[i].isEmpty()) {
-                    log.info("文件为空，跳过处理: {}", currentFileName);
-                    continue; // 跳过此文件的处理
-                }*/
+                /*
+                 * if (files[i] == null || files[i].isEmpty()) {
+                 * log.info("文件为空，跳过处理: {}", currentFileName);
+                 * continue; // 跳过此文件的处理
+                 * }
+                 */
 
                 // 保存分片，使用当前文件名
                 String chunkPath = tempDir + currentFileName + ".part" + chunkIndex;
@@ -2373,7 +2403,8 @@ public class YzCardServiceImpl implements IYzCardService {
     /**
      * 清理所有临时分片文件
      */
-    private void cleanupAllTemporaryFiles(String projectRoot, String baseDir, String[] directories, String deptId, String fileName) {
+    private void cleanupAllTemporaryFiles(String projectRoot, String baseDir, String[] directories, String deptId,
+            String fileName) {
         try {
             for (String directory : directories) {
                 String tempDir = baseDir + directory + deptId + "/temp/";
@@ -2384,8 +2415,8 @@ public class YzCardServiceImpl implements IYzCardService {
                     String importFileName = fileName.replace("导出", "导入");
 
                     // 删除与当前导出文件相关的所有分片
-                    File[] exportPartFiles = tempDirFile.listFiles((dir, name) ->
-                            name.startsWith(exportFileName) && name.contains(".part"));
+                    File[] exportPartFiles = tempDirFile
+                            .listFiles((dir, name) -> name.startsWith(exportFileName) && name.contains(".part"));
 
                     if (exportPartFiles != null) {
                         for (File file : exportPartFiles) {
@@ -2398,8 +2429,8 @@ public class YzCardServiceImpl implements IYzCardService {
                     }
 
                     // 删除与当前导入文件相关的所有分片
-                    File[] importPartFiles = tempDirFile.listFiles((dir, name) ->
-                            name.startsWith(importFileName) && name.contains(".part"));
+                    File[] importPartFiles = tempDirFile
+                            .listFiles((dir, name) -> name.startsWith(importFileName) && name.contains(".part"));
 
                     if (importPartFiles != null) {
                         for (File file : importPartFiles) {
@@ -2417,133 +2448,142 @@ public class YzCardServiceImpl implements IYzCardService {
         }
     }
 
-    /*public AjaxResult updateCalculate(MultipartFile importFile, MultipartFile exportFile, String deptId, String fileName, int chunkIndex, int totalChunks) {
-        // 基础路径配置
-        String baseDir = "/mnt/file/";
-        String[] directories = {"export/", "import/"};
-        MultipartFile[] files = {exportFile, importFile};
-        boolean[] fileCompleted = {false, false}; // 跟踪每个文件的完成状态
+    /*
+     * public AjaxResult updateCalculate(MultipartFile importFile, MultipartFile
+     * exportFile, String deptId, String fileName, int chunkIndex, int totalChunks)
+     * {
+     * // 基础路径配置
+     * String baseDir = "/mnt/file/";
+     * String[] directories = {"export/", "import/"};
+     * MultipartFile[] files = {exportFile, importFile};
+     * boolean[] fileCompleted = {false, false}; // 跟踪每个文件的完成状态
+     * 
+     * try {
+     * String projectRoot = new File("").getCanonicalPath();
+     * 
+     * for (int i = 0; i < directories.length; i++) {
+     * // 使用deptId替代user作为目录名
+     * String fullPath = baseDir + directories[i] + deptId + "/";
+     * String tempDir = fullPath + "temp/";
+     * 
+     * // 创建临时目录
+     * if (ensureDirectoryWithPlaceholder(tempDir)) {
+     * return AjaxResult.error("无法创建临时目录：" + tempDir);
+     * }
+     * 
+     * // 根据是否为导入文件设置不同的文件名
+     * String currentFileName = i == 0 ? fileName : fileName.replace("导出", "导入");
+     * 
+     * // 保存分片，使用当前文件名
+     * String chunkPath = tempDir + currentFileName + ".part" + chunkIndex;
+     * File chunkFile = new File(projectRoot + chunkPath);
+     * files[i].transferTo(chunkFile);
+     * log.info("成功保存分片: {}", chunkFile.getAbsolutePath());
+     * 
+     * // 检查是否所有分片都已上传
+     * boolean allChunksUploaded = true;
+     * for (int j = 0; j < totalChunks; j++) {
+     * File partFile = new File(projectRoot + tempDir + currentFileName + ".part" +
+     * j);
+     * if (!partFile.exists()) {
+     * allChunksUploaded = false;
+     * break;
+     * }
+     * }
+     * 
+     * // 如果所有分片都已上传，合并文件
+     * if (allChunksUploaded) {
+     * // 创建最终目录
+     * if (ensureDirectoryWithPlaceholder(fullPath)) {
+     * return AjaxResult.error("无法创建最终目录：" + fullPath);
+     * }
+     * 
+     * File finalFile = new File(projectRoot + fullPath + currentFileName);
+     * 
+     * // 检查目标文件是否已存在，如果存在则删除
+     * if (finalFile.exists()) {
+     * boolean deleted = finalFile.delete();
+     * if (!deleted) {
+     * log.error("无法删除已存在的文件: {}", finalFile.getAbsolutePath());
+     * return AjaxResult.error("无法删除已存在的文件: " + currentFileName);
+     * }
+     * }
+     * 
+     * // 合并文件
+     * try (FileOutputStream fos = new FileOutputStream(finalFile)) {
+     * for (int j = 0; j < totalChunks; j++) {
+     * File partFile = new File(projectRoot + tempDir + currentFileName + ".part" +
+     * j);
+     * Files.copy(partFile.toPath(), fos);
+     * // 删除分片文件
+     * partFile.delete();
+     * }
+     * }
+     * log.info("所有分片合并完成: {}", finalFile.getAbsolutePath());
+     * fileCompleted[i] = true; // 标记当前文件处理完成
+     * }
+     * }
+     * 
+     * // 检查两个文件的处理状态
+     * if (fileCompleted[0] && fileCompleted[1]) {
+     * // 两个文件都处理完成
+     * return AjaxResult.success("文件上传完成!");
+     * } else if (!fileCompleted[0] && !fileCompleted[1]) {
+     * // 两个文件都还在处理中
+     * return AjaxResult.success("分片上传成功");
+     * } else {
+     * // 只有一个文件处理完成
+     * log.info("导出文件完成状态: {}, 导入文件完成状态: {}", fileCompleted[0], fileCompleted[1]);
+     * return AjaxResult.success("分片上传成功，部分文件已完成合并");
+     * }
+     * 
+     * } catch (IOException e) {
+     * log.error("文件处理失败: {}", e.getMessage(), e);
+     * return AjaxResult.error("文件处理失败：" + e.getMessage());
+     * } catch (Exception e) {
+     * log.error("未知错误: {}", e.getMessage(), e);
+     * return AjaxResult.error("系统错误，请稍后重试");
+     * }
+     * }
+     */
 
-        try {
-            String projectRoot = new File("").getCanonicalPath();
-
-            for (int i = 0; i < directories.length; i++) {
-                // 使用deptId替代user作为目录名
-                String fullPath = baseDir + directories[i] + deptId + "/";
-                String tempDir = fullPath + "temp/";
-
-                // 创建临时目录
-                if (ensureDirectoryWithPlaceholder(tempDir)) {
-                    return AjaxResult.error("无法创建临时目录：" + tempDir);
-                }
-
-                // 根据是否为导入文件设置不同的文件名
-                String currentFileName = i == 0 ? fileName : fileName.replace("导出", "导入");
-
-                // 保存分片，使用当前文件名
-                String chunkPath = tempDir + currentFileName + ".part" + chunkIndex;
-                File chunkFile = new File(projectRoot + chunkPath);
-                files[i].transferTo(chunkFile);
-                log.info("成功保存分片: {}", chunkFile.getAbsolutePath());
-
-                // 检查是否所有分片都已上传
-                boolean allChunksUploaded = true;
-                for (int j = 0; j < totalChunks; j++) {
-                    File partFile = new File(projectRoot + tempDir + currentFileName + ".part" + j);
-                    if (!partFile.exists()) {
-                        allChunksUploaded = false;
-                        break;
-                    }
-                }
-
-                // 如果所有分片都已上传，合并文件
-                if (allChunksUploaded) {
-                    // 创建最终目录
-                    if (ensureDirectoryWithPlaceholder(fullPath)) {
-                        return AjaxResult.error("无法创建最终目录：" + fullPath);
-                    }
-
-                    File finalFile = new File(projectRoot + fullPath + currentFileName);
-
-                    // 检查目标文件是否已存在，如果存在则删除
-                    if (finalFile.exists()) {
-                        boolean deleted = finalFile.delete();
-                        if (!deleted) {
-                            log.error("无法删除已存在的文件: {}", finalFile.getAbsolutePath());
-                            return AjaxResult.error("无法删除已存在的文件: " + currentFileName);
-                        }
-                    }
-
-                    // 合并文件
-                    try (FileOutputStream fos = new FileOutputStream(finalFile)) {
-                        for (int j = 0; j < totalChunks; j++) {
-                            File partFile = new File(projectRoot + tempDir + currentFileName + ".part" + j);
-                            Files.copy(partFile.toPath(), fos);
-                            // 删除分片文件
-                            partFile.delete();
-                        }
-                    }
-                    log.info("所有分片合并完成: {}", finalFile.getAbsolutePath());
-                    fileCompleted[i] = true; // 标记当前文件处理完成
-                }
-            }
-
-            // 检查两个文件的处理状态
-            if (fileCompleted[0] && fileCompleted[1]) {
-                // 两个文件都处理完成
-                return AjaxResult.success("文件上传完成!");
-            } else if (!fileCompleted[0] && !fileCompleted[1]) {
-                // 两个文件都还在处理中
-                return AjaxResult.success("分片上传成功");
-            } else {
-                // 只有一个文件处理完成
-                log.info("导出文件完成状态: {}, 导入文件完成状态: {}", fileCompleted[0], fileCompleted[1]);
-                return AjaxResult.success("分片上传成功，部分文件已完成合并");
-            }
-
-        } catch (IOException e) {
-            log.error("文件处理失败: {}", e.getMessage(), e);
-            return AjaxResult.error("文件处理失败：" + e.getMessage());
-        } catch (Exception e) {
-            log.error("未知错误: {}", e.getMessage(), e);
-            return AjaxResult.error("系统错误，请稍后重试");
-        }
-    }*/
-
-    /*public AjaxResult updateCalculate(MultipartFile importFile, MultipartFile exportFile, String user) {
-        String filename = exportFile.getOriginalFilename();
-
-        String flieUrlRx = "/mnt/file/";
-
-        List<String> flieUrlRx0 = new ArrayList<>();
-
-        flieUrlRx0.add("export/");
-        flieUrlRx0.add("import/");
-
-        try {
-            for (int i = 0; i < flieUrlRx0.size(); i++) {
-                String ReadName = flieUrlRx + flieUrlRx0.get(i) + user + '/'
-                        + (i == 0 ? filename : filename.replace("导出", "导入"));
-
-                File file2 = new File("");
-                String filePath = file2.getCanonicalPath();
-                File newFile = new File(filePath + ReadName);
-                File Url = new File(filePath + flieUrlRx + flieUrlRx0.get(i) + user + '/' + "1.txt");// 生成路径
-                Upload.mkdirsmy(Url);
-
-                if (i == 0) {
-                    exportFile.transferTo(newFile);
-                } else {
-                    importFile.transferTo(newFile);
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            return AjaxResult.error("添加失败 !");
-        }
-        return AjaxResult.error("添加成功 !");
-    }*/
-
+    /*
+     * public AjaxResult updateCalculate(MultipartFile importFile, MultipartFile
+     * exportFile, String user) {
+     * String filename = exportFile.getOriginalFilename();
+     * 
+     * String flieUrlRx = "/mnt/file/";
+     * 
+     * List<String> flieUrlRx0 = new ArrayList<>();
+     * 
+     * flieUrlRx0.add("export/");
+     * flieUrlRx0.add("import/");
+     * 
+     * try {
+     * for (int i = 0; i < flieUrlRx0.size(); i++) {
+     * String ReadName = flieUrlRx + flieUrlRx0.get(i) + user + '/'
+     * + (i == 0 ? filename : filename.replace("导出", "导入"));
+     * 
+     * File file2 = new File("");
+     * String filePath = file2.getCanonicalPath();
+     * File newFile = new File(filePath + ReadName);
+     * File Url = new File(filePath + flieUrlRx + flieUrlRx0.get(i) + user + '/' +
+     * "1.txt");// 生成路径
+     * Upload.mkdirsmy(Url);
+     * 
+     * if (i == 0) {
+     * exportFile.transferTo(newFile);
+     * } else {
+     * importFile.transferTo(newFile);
+     * }
+     * }
+     * } catch (Exception e) {
+     * e.printStackTrace();
+     * return AjaxResult.error("添加失败 !");
+     * }
+     * return AjaxResult.error("添加成功 !");
+     * }
+     */
 
     public Map<String, Object> calculateList(String deptName, String flowCount) {
         Map<String, Object> rmap = new HashMap<>();
@@ -2564,7 +2604,8 @@ public class YzCardServiceImpl implements IYzCardService {
             Files.walkFileTree(normalizedPath, new SimpleFileVisitor<Path>() {
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                    if (file.toString().toLowerCase().endsWith(".zip") || file.toString().toLowerCase().endsWith(".xlsx")) {
+                    if (file.toString().toLowerCase().endsWith(".zip")
+                            || file.toString().toLowerCase().endsWith(".xlsx")) {
                         xlsxFiles.add(file.getFileName().toString());
                     }
                     return FileVisitResult.CONTINUE;
@@ -3033,5 +3074,618 @@ public class YzCardServiceImpl implements IYzCardService {
             log.error("获取业务量统计数据失败: {}", e.getMessage());
             return AjaxResult.error("获取业务量统计数据失败");
         }
+    }
+
+    /**
+     * 计费配置类
+     */
+    public static class BillingConfig {
+        private List<CompanyConfig> companyConfigs;
+        private String createTime;
+        private String createBy;
+
+        public static class CompanyConfig {
+            private String companyName;
+            private String keyword;
+            private double price; // 价格参数
+            private double minimumPrice; // 低消价格参数
+
+            // getters and setters
+            public String getCompanyName() {
+                return companyName;
+            }
+
+            public void setCompanyName(String companyName) {
+                this.companyName = companyName;
+            }
+
+            public String getKeyword() {
+                return keyword;
+            }
+
+            public void setKeyword(String keyword) {
+                this.keyword = keyword;
+            }
+
+            public double getPrice() {
+                return price;
+            }
+
+            public void setPrice(double price) {
+                this.price = price;
+            }
+
+            public double getMinimumPrice() {
+                return minimumPrice;
+            }
+
+            public void setMinimumPrice(double minimumPrice) {
+                this.minimumPrice = minimumPrice;
+            }
+        }
+
+        // getters and setters
+        public List<CompanyConfig> getCompanyConfigs() {
+            return companyConfigs;
+        }
+
+        public void setCompanyConfigs(List<CompanyConfig> companyConfigs) {
+            this.companyConfigs = companyConfigs;
+        }
+
+        public String getCreateTime() {
+            return createTime;
+        }
+
+        public void setCreateTime(String createTime) {
+            this.createTime = createTime;
+        }
+
+        public String getCreateBy() {
+            return createBy;
+        }
+
+        public void setCreateBy(String createBy) {
+            this.createBy = createBy;
+        }
+    }
+
+    /**
+     * 卡计费信息类
+     */
+    public static class CardBillingInfo {
+        private String iccid;
+        private double flowGB; // 流量(GB)
+        private String activateTime; // 激活时间
+        private String status; // 卡状态
+        private boolean isExistingUser; // 是否存量用户
+        private double billingAmount; // 计费金额
+
+        // constructors
+        public CardBillingInfo() {
+        }
+
+        public CardBillingInfo(String iccid, double flowGB, String activateTime, String status) {
+            this.iccid = iccid;
+            this.flowGB = flowGB;
+            this.activateTime = activateTime;
+            this.status = status;
+        }
+
+        // getters and setters
+        public String getIccid() {
+            return iccid;
+        }
+
+        public void setIccid(String iccid) {
+            this.iccid = iccid;
+        }
+
+        public double getFlowGB() {
+            return flowGB;
+        }
+
+        public void setFlowGB(double flowGB) {
+            this.flowGB = flowGB;
+        }
+
+        public String getActivateTime() {
+            return activateTime;
+        }
+
+        public void setActivateTime(String activateTime) {
+            this.activateTime = activateTime;
+        }
+
+        public String getStatus() {
+            return status;
+        }
+
+        public void setStatus(String status) {
+            this.status = status;
+        }
+
+        public boolean isExistingUser() {
+            return isExistingUser;
+        }
+
+        public void setExistingUser(boolean existingUser) {
+            isExistingUser = existingUser;
+        }
+
+        public double getBillingAmount() {
+            return billingAmount;
+        }
+
+        public void setBillingAmount(double billingAmount) {
+            this.billingAmount = billingAmount;
+        }
+    }
+
+    /**
+     * 计费统计结果类 - 按公司存储统计信息
+     */
+    public static class BillingStatistics {
+        private List<CompanyBillingInfo> companyBillings; // 各公司计费信息
+        private String calculateDate; // 计算日期
+        private String calculateTime; // 计算时间
+
+        /**
+         * 公司计费信息类
+         */
+        public static class CompanyBillingInfo {
+            private String companyName; // 公司名称
+            private String keyword; // 关键词
+            private int totalCardCount; // 总卡数
+            private int realNameCardCount; // 已实名卡数
+            private double billAmount; // 账单价格(存量+新增+0.06部分)
+            private int activatedCardCount; // 新增：已激活卡数量
+            private double totalFlowGB; // 新增：总流量（GB）
+
+            // constructors
+            public CompanyBillingInfo() {
+            }
+
+            public CompanyBillingInfo(String companyName, String keyword) {
+                this.companyName = companyName;
+                this.keyword = keyword;
+            }
+
+            // getters and setters
+            public String getCompanyName() {
+                return companyName;
+            }
+
+            public void setCompanyName(String companyName) {
+                this.companyName = companyName;
+            }
+
+            public String getKeyword() {
+                return keyword;
+            }
+
+            public void setKeyword(String keyword) {
+                this.keyword = keyword;
+            }
+
+            public int getTotalCardCount() {
+                return totalCardCount;
+            }
+
+            public void setTotalCardCount(int totalCardCount) {
+                this.totalCardCount = totalCardCount;
+            }
+
+            public int getRealNameCardCount() {
+                return realNameCardCount;
+            }
+
+            public void setRealNameCardCount(int realNameCardCount) {
+                this.realNameCardCount = realNameCardCount;
+            }
+
+            public double getBillAmount() {
+                return billAmount;
+            }
+
+            public void setBillAmount(double billAmount) {
+                this.billAmount = billAmount;
+            }
+
+            public int getActivatedCardCount() {
+                return activatedCardCount;
+            }
+
+            public void setActivatedCardCount(int activatedCardCount) {
+                this.activatedCardCount = activatedCardCount;
+            }
+
+            public double getTotalFlowGB() {
+                return totalFlowGB;
+            }
+
+            public void setTotalFlowGB(double totalFlowGB) {
+                this.totalFlowGB = totalFlowGB;
+            }
+        }
+
+        // constructors
+        public BillingStatistics() {
+            this.companyBillings = new ArrayList<>();
+        }
+
+        // getters and setters
+        public List<CompanyBillingInfo> getCompanyBillings() {
+            return companyBillings;
+        }
+
+        public void setCompanyBillings(List<CompanyBillingInfo> companyBillings) {
+            this.companyBillings = companyBillings;
+        }
+
+        public String getCalculateDate() {
+            return calculateDate;
+        }
+
+        public void setCalculateDate(String calculateDate) {
+            this.calculateDate = calculateDate;
+        }
+
+        public String getCalculateTime() {
+            return calculateTime;
+        }
+
+        public void setCalculateTime(String calculateTime) {
+            this.calculateTime = calculateTime;
+        }
+
+        // 便捷方法
+        public void addCompanyBilling(CompanyBillingInfo companyBilling) {
+            this.companyBillings.add(companyBilling);
+        }
+
+        public boolean hasData() {
+            return companyBillings != null && !companyBillings.isEmpty() &&
+                    companyBillings.stream().anyMatch(c -> c.getTotalCardCount() > 0 || c.getBillAmount() > 0);
+        }
+
+        // 兼容性方法 - 为了不破坏现有代码调用
+        public double getTotalBillingAmount() {
+            return companyBillings.stream().mapToDouble(CompanyBillingInfo::getBillAmount).sum();
+        }
+
+        public int getBillingCardCount() {
+            return companyBillings.stream().mapToInt(CompanyBillingInfo::getTotalCardCount).sum();
+        }
+
+        public int getExistingUserCount() {
+            return 0;
+        } // 兼容性保留
+
+        public int getNewUserCount() {
+            return 0;
+        } // 兼容性保留
+    }
+
+    /**
+     * 从Redis获取计费配置
+     */
+    private BillingConfig getBillingConfig() {
+        try {
+            String configKey = "yunze:calculate:company:config";
+            String configJson = redisCache.getCacheObject(configKey);
+
+            if (StringUtils.isNotEmpty(configJson)) {
+                BillingConfig config = JSON.parseObject(configJson, BillingConfig.class);
+                // 检查配置是否有效：companyConfigs数组不为空
+                if (config != null && config.getCompanyConfigs() != null && !config.getCompanyConfigs().isEmpty()) {
+                    return config;
+                } else {
+                    log.info("计费配置中的companyConfigs数组为空或不存在，跳过计费计算");
+                    return null;
+                }
+            } else {
+                log.info("计费配置为空，跳过计费计算");
+                return null;
+            }
+        } catch (Exception e) {
+            log.error("获取计费配置失败: {}", e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /**
+     * 判断是否为自然月间激活的卡（新增用户）
+     * 自然月：上月27至本月26号为一个月
+     */
+    private boolean isNewUserInNaturalMonth(LocalDate activateDate, LocalDate fileDate) {
+        if (activateDate == null) {
+            return false;
+        }
+
+        // 计算自然月的开始和结束日期
+        LocalDate naturalMonthStart;
+        LocalDate naturalMonthEnd;
+
+        if (fileDate.getDayOfMonth() >= 27) {
+            // 当前日期在27号或之后，自然月为当月27号到下月26号
+            naturalMonthStart = fileDate.withDayOfMonth(27);
+            naturalMonthEnd = fileDate.plusMonths(1).withDayOfMonth(26);
+        } else {
+            // 当前日期在26号或之前，自然月为上月27号到当月26号
+            naturalMonthStart = fileDate.minusMonths(1).withDayOfMonth(27);
+            naturalMonthEnd = fileDate.withDayOfMonth(26);
+        }
+
+        return !activateDate.isBefore(naturalMonthStart) && !activateDate.isAfter(naturalMonthEnd);
+    }
+
+    /**
+     * 计算单卡计费金额
+     */
+    private double calculateCardBilling(CardBillingInfo cardInfo, double avgFlowGB,
+            BillingConfig.CompanyConfig config, boolean isExistingUser) {
+        // 卡状态为已停用且当月无用量不进行价格计算与收费
+        if ("停机".equals(cardInfo.getStatus()) && cardInfo.getFlowGB() == 0) {
+            return 0.0;
+        }
+
+        double flowMB = cardInfo.getFlowGB() * 1024; // 转换为MB
+
+        if (isExistingUser) {
+            // 存量用户计算方式
+            if (flowMB == 0) {
+                // 使用流量为0MB的卡统一计费为0.06R，且不参与总平均流量GB值和后续计算
+                return 0.06;
+            } else {
+                // 通用计算方式
+                return calculateCommonBilling(cardInfo.getFlowGB(), avgFlowGB, config);
+            }
+        } else {
+            // 新增用户计算方式
+            if (flowMB >= 0 && flowMB <= 30) {
+                // 使用流量0~30MB的卡统一计费为0.06R，且流量为0MB的卡不参与总平均流量GB值和后续计算
+                return 0.06;
+            } else {
+                // 通用计算方式
+                return calculateCommonBilling(cardInfo.getFlowGB(), avgFlowGB, config);
+            }
+        }
+    }
+
+    /**
+     * 通用计算方式
+     */
+    private double calculateCommonBilling(double cardFlowGB, double avgFlowGB, BillingConfig.CompanyConfig config) {
+        if (avgFlowGB <= 20) {
+            // 总平均流量GB小于等于20GB则单卡计费为低消价格参数
+            return config.getMinimumPrice();
+        } else {
+            // 总平均流量GB大于20GB则单卡计费为卡实际流量(GB) * 价格参数
+            return cardFlowGB * config.getPrice();
+        }
+    }
+
+    /**
+     * 计算业务统计的计费信息 - 按公司统计
+     */
+    private BillingStatistics calculateBillingStatistics(List<List<String>> allData,
+            List<String> headerRow,
+            LocalDate fileDate) {
+        // 不再使用独立的计费缓存键，直接返回计算结果
+        // 计费统计将合并到业务统计缓存中
+
+        BillingStatistics billingStats = new BillingStatistics();
+        billingStats.setCalculateDate(fileDate.toString());
+        billingStats.setCalculateTime(LocalDateTime.now().toString());
+
+        // 获取计费配置
+        BillingConfig billingConfig = getBillingConfig();
+        if (billingConfig == null) {
+            // 配置无效时返回空的计费统计，不进行计费计算
+            log.debug("计费配置无效，返回空的计费统计");
+            return billingStats;
+        }
+
+        // 查找关键列索引
+        int flowIndex = -1, statusIndex = -1, activateTimeIndex = -1, realNameIndex = -1, subAccountIndex = -1;
+        for (int i = 0; i < headerRow.size(); i++) {
+            String header = headerRow.get(i);
+            if (header.contains("周期累计用量")) {
+                flowIndex = i;
+            }
+            if (header.equals("SIM卡状态")) {
+                statusIndex = i;
+            }
+            if (header.contains("激活时间")) {
+                activateTimeIndex = i;
+            }
+            if (header.contains("实名")) {
+                realNameIndex = i;
+            }
+            // 新增：查找子账户列
+            if (header.contains("子账户") || header.contains("子账号") || header.contains("子账户名称")) {
+                subAccountIndex = i;
+            }
+        }
+
+        // 为每个公司配置计算统计信息
+        for (BillingConfig.CompanyConfig config : billingConfig.getCompanyConfigs()) {
+            BillingStatistics.CompanyBillingInfo companyBilling = new BillingStatistics.CompanyBillingInfo(
+                    config.getCompanyName(), config.getKeyword());
+
+            // 收集该公司的所有卡信息
+            List<CardBillingInfo> existingUsers = new ArrayList<>();
+            List<CardBillingInfo> newUsers = new ArrayList<>();
+            int totalCards = 0;
+            int realNameCards = 0;
+            int activatedCards = 0; // 新增：已激活卡数量
+            double totalFlowGB = 0.0; // 新增：总流量（GB）
+
+            // 处理数据行（跳过标题行）
+            for (int i = 1; i < allData.size(); i++) {
+                List<String> row = allData.get(i);
+                if (row.isEmpty()) {
+                    continue;
+                }
+
+                // 新增：子账户匹配过滤
+                if (subAccountIndex == -1) {
+                    // 没有子账户列，无法归属，跳过
+                    continue;
+                }
+                String subAccountValue = row.get(subAccountIndex);
+                if (subAccountValue == null || !subAccountValue.contains(config.getKeyword())) {
+                    continue;
+                }
+
+                totalCards++;
+
+                // 检查实名状态
+                if (realNameIndex != -1 && row.size() > realNameIndex) {
+                    String realNameStatus = row.get(realNameIndex);
+                    if (realNameStatus != null && realNameStatus.contains("已实名")) {
+                        realNameCards++;
+                    }
+                }
+
+                // 获取状态信息
+                String status = row.get(statusIndex);
+                if ("已激活".equals(status)) {
+                    activatedCards++;
+                }
+
+                // 获取流量信息
+                String flowStr = row.get(flowIndex);
+                double flowMB = 0.0;
+                if (!"-".equals(flowStr) && !flowStr.isEmpty()) {
+                    try {
+                        flowMB = Double.parseDouble(flowStr);
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+                double flowGB = flowMB / 1024; // 转换为GB
+                totalFlowGB += flowGB; // 新增：累计总流量
+
+                // 获取激活时间
+                String activateTime = row.get(activateTimeIndex);
+                LocalDate activateDate = null;
+                if (!"-".equals(activateTime) && !activateTime.isEmpty()) {
+                    try {
+                        activateDate = LocalDate.parse(activateTime.split(" ")[0]);
+                    } catch (Exception ignored) {
+                    }
+                }
+
+                // 创建卡计费信息
+                CardBillingInfo cardInfo = new CardBillingInfo("", flowGB, activateTime, status);
+
+                // 判断是否为新增用户
+                boolean isNewUser = isNewUserInNaturalMonth(activateDate, fileDate);
+                cardInfo.setExistingUser(!isNewUser);
+
+                if (isNewUser) {
+                    newUsers.add(cardInfo);
+                } else {
+                    existingUsers.add(cardInfo);
+                }
+            }
+
+            // 计算平均流量
+            double existingUserAvgFlow = existingUsers.stream()
+                    .filter(card -> card.getFlowGB() > 0)
+                    .mapToDouble(CardBillingInfo::getFlowGB)
+                    .average().orElse(0.0);
+
+            double newUserAvgFlow = newUsers.stream()
+                    .filter(card -> card.getFlowGB() > 0)
+                    .mapToDouble(CardBillingInfo::getFlowGB)
+                    .average().orElse(0.0);
+
+            // 计算总计费金额（包括0.06的部分）
+            double totalBillAmount = 0.0;
+
+            // 计算存量用户计费
+            for (CardBillingInfo card : existingUsers) {
+                double billing = calculateCardBilling(card, existingUserAvgFlow, config, true);
+                totalBillAmount += billing;
+            }
+
+            // 计算新增用户计费
+            for (CardBillingInfo card : newUsers) {
+                double billing = calculateCardBilling(card, newUserAvgFlow, config, false);
+                totalBillAmount += billing;
+            }
+
+            // 设置公司统计信息
+            companyBilling.setTotalCardCount(totalCards);
+            companyBilling.setRealNameCardCount(realNameCards);
+            companyBilling.setBillAmount(Math.round(totalBillAmount * 100.0) / 100.0); // 保留两位小数
+            companyBilling.setActivatedCardCount(activatedCards);
+            // 新增：设置总流量（GB，保留两位小数）
+            companyBilling.setTotalFlowGB(Math.round(totalFlowGB * 100.0) / 100.0);
+
+            billingStats.addCompanyBilling(companyBilling);
+        }
+
+        // 计费统计结果不再单独缓存，将合并到业务统计缓存中
+
+        return billingStats;
+    }
+
+    /**
+     * 用于测试计费逻辑的方法
+     * 
+     * @param testDate 测试日期，格式：yyyy-MM-dd
+     * @return 计费测试结果
+     */
+    public Map<String, Object> testBillingLogic(String testDate) {
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            // 解析测试日期
+            LocalDate fileDate = LocalDate.parse(testDate);
+
+            // 获取计费配置
+            BillingConfig billingConfig = getBillingConfig();
+
+            result.put("success", true);
+            result.put("billingConfig", billingConfig);
+            result.put("testDate", testDate);
+            result.put("naturalMonthInfo", getNaturalMonthInfo(fileDate));
+
+            log.info("计费逻辑测试完成，日期：{}", testDate);
+
+        } catch (Exception e) {
+            log.error("计费逻辑测试失败：{}", e.getMessage(), e);
+            result.put("success", false);
+            result.put("error", e.getMessage());
+        }
+
+        return result;
+    }
+
+    /**
+     * 获取自然月信息（用于测试）
+     */
+    private Map<String, Object> getNaturalMonthInfo(LocalDate fileDate) {
+        Map<String, Object> info = new HashMap<>();
+
+        LocalDate naturalMonthStart;
+        LocalDate naturalMonthEnd;
+
+        if (fileDate.getDayOfMonth() >= 27) {
+            naturalMonthStart = fileDate.withDayOfMonth(27);
+            naturalMonthEnd = fileDate.plusMonths(1).withDayOfMonth(26);
+        } else {
+            naturalMonthStart = fileDate.minusMonths(1).withDayOfMonth(27);
+            naturalMonthEnd = fileDate.withDayOfMonth(26);
+        }
+
+        info.put("naturalMonthStart", naturalMonthStart.toString());
+        info.put("naturalMonthEnd", naturalMonthEnd.toString());
+        info.put("isAfter27", fileDate.getDayOfMonth() >= 27);
+
+        return info;
     }
 }

@@ -1,130 +1,73 @@
 package com.yunze.web.controller.system;
 
-import java.util.List;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.alibaba.fastjson.JSON;
+import com.yunze.common.core.redis.RedisCache;
+import com.yunze.common.utils.yunze.AesEncryptUtil;
+import com.yunze.web.core.config.MyBaseController;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import com.yunze.common.annotation.Log;
-import com.yunze.common.constant.UserConstants;
-import com.yunze.common.core.controller.BaseController;
-import com.yunze.common.core.domain.AjaxResult;
-import com.yunze.common.core.page.TableDataInfo;
-import com.yunze.common.enums.BusinessType;
-import com.yunze.common.utils.SecurityUtils;
-import com.yunze.common.utils.poi.ExcelUtil;
-import com.yunze.system.domain.SysPost;
-import com.yunze.system.service.ISysPostService;
+import org.springframework.web.bind.annotation.*;
+
+import javax.annotation.Resource;
+import java.math.BigDecimal;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 /**
- * 岗位信息操作处理
+ * 公司信息配置
  * 
- * @author yunze
+ * @author Wu_Nai
  */
 @RestController
-@RequestMapping("/system/post")
-public class SysPostController extends BaseController
+@RequestMapping("/system/calculate")
+public class SysCalculateController extends MyBaseController
 {
-    @Autowired
-    private ISysPostService postService;
+
+    private final String Key = "yunze:calculate:company:config";
+
+    @Resource
+    private RedisCache redisCache;
 
     /**
-     * 获取岗位列表
+     * 保存计算公司信息
      */
-    @PreAuthorize("@ss.hasPermi('system:post:list')")
-    @GetMapping("/list")
-    public TableDataInfo list(SysPost post)
-    {
-        startPage();
-        List<SysPost> list = postService.selectPostList(post);
-        return getDataTable(list);
-    }
-    
-    @Log(title = "岗位管理", businessType = BusinessType.EXPORT)
-    @PreAuthorize("@ss.hasPermi('system:post:export')")
-    @GetMapping("/export")
-    public AjaxResult export(SysPost post)
-    {
-        List<SysPost> list = postService.selectPostList(post);
-        ExcelUtil<SysPost> util = new ExcelUtil<SysPost>(SysPost.class);
-        return util.exportExcel(list, "岗位数据");
-    }
+    @PreAuthorize("@ss.hasPermi('system:calculate:saveCompanyConfig')")
+    @PostMapping("/saveCompanyConfig")
+    public String saveCompanyConfig(@RequestBody String Pstr) {
+        try {
+            // 解密请求数据
+            Pstr = AesEncryptUtil.desEncrypt(Pstr);
 
-    /**
-     * 根据岗位编号获取详细信息
-     */
-    @PreAuthorize("@ss.hasPermi('system:post:query')")
-    @GetMapping(value = "/{postId}")
-    public AjaxResult getInfo(@PathVariable Long postId)
-    {
-        return AjaxResult.success(postService.selectPostById(postId));
-    }
+            //查询公司配置列表是否存在
+            if (redisCache.getCacheObject(Key) != null) {
+                redisCache.deleteObject(Key);
+            }
 
-    /**
-     * 新增岗位
-     */
-    @PreAuthorize("@ss.hasPermi('system:post:add')")
-    @Log(title = "岗位管理", businessType = BusinessType.INSERT)
-    @PostMapping
-    public AjaxResult add(@Validated @RequestBody SysPost post)
-    {
-        if (UserConstants.NOT_UNIQUE.equals(postService.checkPostNameUnique(post)))
-        {
-            return AjaxResult.error("新增岗位'" + post.getPostName() + "'失败，岗位名称已存在");
+            // 缓存公司配置列表
+            redisCache.setCacheObject(Key, Pstr);
+
+            // 构建成功响应
+            return MyRetunSuccess("保存成功", null);
+
+        } catch (Exception e) {
+            logger.error("保存公司配置失败: ", e);
+            return Myerr("保存公司配置失败");
         }
-        else if (UserConstants.NOT_UNIQUE.equals(postService.checkPostCodeUnique(post)))
-        {
-            return AjaxResult.error("新增岗位'" + post.getPostName() + "'失败，岗位编码已存在");
-        }
-        post.setCreateBy(SecurityUtils.getUsername());
-        return toAjax(postService.insertPost(post));
     }
 
-    /**
-     * 修改岗位
-     */
-    @PreAuthorize("@ss.hasPermi('system:post:edit')")
-    @Log(title = "岗位管理", businessType = BusinessType.UPDATE)
-    @PutMapping
-    public AjaxResult edit(@Validated @RequestBody SysPost post)
-    {
-        if (UserConstants.NOT_UNIQUE.equals(postService.checkPostNameUnique(post)))
-        {
-            return AjaxResult.error("修改岗位'" + post.getPostName() + "'失败，岗位名称已存在");
+    @PreAuthorize("@ss.hasPermi('system:calculate:getCompanyConfigList')")
+    @GetMapping("/getCompanyConfigList")
+    public String getCompanyConfigList() {
+        try {
+            //查询公司配置列表是否存在
+            String data = redisCache.getCacheObject(Key);
+            if (data != null) {
+                return MyRetunSuccess(data, null);
+            }
+            return MyRetunSuccess(null,null);
+        } catch (Exception e) {
+            logger.error("获取公司配置失败: ", e);
+            return Myerr("获取公司配置失败");
         }
-        else if (UserConstants.NOT_UNIQUE.equals(postService.checkPostCodeUnique(post)))
-        {
-            return AjaxResult.error("修改岗位'" + post.getPostName() + "'失败，岗位编码已存在");
-        }
-        post.setUpdateBy(SecurityUtils.getUsername());
-        return toAjax(postService.updatePost(post));
-    }
-
-    /**
-     * 删除岗位
-     */
-    @PreAuthorize("@ss.hasPermi('system:post:remove')")
-    @Log(title = "岗位管理", businessType = BusinessType.DELETE)
-    @DeleteMapping("/{postIds}")
-    public AjaxResult remove(@PathVariable Long[] postIds)
-    {
-        return toAjax(postService.deletePostByIds(postIds));
-    }
-
-    /**
-     * 获取岗位选择框列表
-     */
-    @GetMapping("/optionselect")
-    public AjaxResult optionselect()
-    {
-        List<SysPost> posts = postService.selectPostAll();
-        return AjaxResult.success(posts);
     }
 }
