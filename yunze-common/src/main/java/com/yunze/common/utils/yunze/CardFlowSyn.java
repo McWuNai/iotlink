@@ -202,11 +202,11 @@ public class CardFlowSyn {
         findMap.put("nowMonthEnd",nowMonthEnd+" 23:59:59");
         //0.修改 时间到期资费计划
         yzCardFlowMapper.updStatus(findMap);
-        //1.查询过期用量
+        //1.查询过期的已使用用量
         String SumErrorFlow = yzCardFlowMapper.findInvalidationSumErrorFlow(findMap);
         Double SumErrorFlow_D = SumErrorFlow!=null && SumErrorFlow.length()>0?Double.parseDouble(SumErrorFlow):0.0;
 
-        Double DseFlow = SumErrorFlow!=null && SumErrorFlow.length()>0?Double.parseDouble(SumErrorFlow):0.0;
+        Double DseFlow = SumErrorFlow_D;
 
         /*SumErrorFlow_D = Arith.add(SumErrorFlow_Year_D,SumErrorFlow_D);
         DseFlow = Arith.add(SumErrorFlow_Year_D,DseFlow);*/
@@ -311,13 +311,12 @@ public class CardFlowSyn {
             bool_flowHis = yzCardFlowHisMapper.save(saveMap)>0;
         }
 
-        //当前计算 = 接口用量 - 已到期 用量
+        //用量计算： 当月总用量(接口) - 已使用的到期用量 = 剩余未分配用量
         Double cl_Used = Arith.sub(total_show_flow,DseFlow);
-        Double used = DseFlow;//主表 账期 已用
 
         List<Map<String,Object>> InEffectArr =  yzCardFlowMapper.findInEffect(findMap);
         if(InEffectArr!=null && InEffectArr.size()>0){
-            Double UdF = cl_Used+0;
+            Double UdF;
             for (int i = 0; i < InEffectArr.size(); i++) {
                 Map<String,Object> Pobj = InEffectArr.get(i);
                 Double true_flow = Double.parseDouble(Pobj.get("true_flow").toString());
@@ -333,7 +332,7 @@ public class CardFlowSyn {
                         cl_Used = Arith.add(cl_Used, use_ture_flow);
                     }
                 }*/
-                //   当前计算 用量 - 资费计划 用量 作比较 小等 0 用完了 否则未用完继续 作比较
+                //   当前计算 用量 - 资费计划用量 作比较 小等 0 用完了 否则未用完继续 作比较
                 UdF = Arith.sub(cl_Used,error_flow);
                 if(UdF<0){
                     Double use_so_flow = Arith.mul(cl_Used,error_time);
@@ -346,7 +345,7 @@ public class CardFlowSyn {
                     bool_flow =  yzCardFlowMapper.updFlow(UpdMap)>0;
                     break;
                 }else{
-                    cl_Used = Arith.sub(cl_Used,error_flow);
+                    cl_Used = UdF;
                     DseFlow = Arith.add(Arith.add(DseFlow,error_flow),Math.abs(cl_Used));//累加 主表用量 = 包容量 + 超出部分绝对值
                     Map<String,Object> UpdMap = new HashMap<>();
                     UpdMap.put("use_true_flow",error_flow);

@@ -6,8 +6,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 
 
 
-	<!--查询套餐信息-->
-	<select id="queryflow" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--查询套餐信息-->
+    <select id="queryflow" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			a.id,
 			a.package_id,
@@ -39,23 +39,23 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			yz_card_flow a,
 			yz_card_packet b,
 			yz_order c
-		<where>
+        <where>
 			a.iccid = #{iccid}
 			AND a.packet_id = b.packet_id
 			AND a.ord_no = c.ord_no
-			<if test="NotExpired == 1">
+            <if test="NotExpired == 1">
 				AND  a.end_time > now()
-			</if>
-		</where>
+            </if>
+        </where>
 		ORDER BY start_time
-	</select>
+    </select>
 
 
 
 
 
-	<!--查询现有套餐信息-->
-	<select id="queryflow_agent" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--查询现有套餐信息-->
+    <select id="queryflow_agent" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			a.id,
 			a.package_id,
@@ -87,23 +87,23 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			yz_card_flow a,
 			yz_card_packet b,
 			yz_order c
-		<where>
+        <where>
 			a.iccid = #{iccid}
 			AND a.packet_id = b.packet_id
 			AND a.ord_no = c.ord_no
 			AND b.package_id = #{package_id}
 			AND b.dept_id = #{agent_id}
-			<if test="NotExpired == 1">
+            <if test="NotExpired == 1">
 				AND a.end_time > now()
-			</if>
-		</where>
+            </if>
+        </where>
 		ORDER BY start_time
-	</select>
+    </select>
 
 
 
-	<!--查询当前套餐简要信息-->
-	<select id="queryflow_simple" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--查询当前套餐简要信息-->
+    <select id="queryflow_simple" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			b.packet_wx_name,
 			b.packet_valid_time,
@@ -113,20 +113,20 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 		FROM
 			yz_card_flow a,
 			yz_card_packet b
-		<where>
+        <where>
 			a.iccid = #{iccid}
 			and	a.packet_id = b.packet_id
-		</where>
+        </where>
 			ORDER BY
 			start_time DESC
 			LIMIT 1
-	</select>
+    </select>
 
 
 
 
-	<!--查询当前套餐简要信息 代理 -->
-	<select id="queryflowAgent_simple" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--查询当前套餐简要信息 代理 -->
+    <select id="queryflowAgent_simple" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			b.packet_wx_name,
 			b.packet_valid_time,
@@ -136,42 +136,42 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 		FROM
 		yz_card_flow a,
 		yz_agent_packet b
-		<where>
+        <where>
 			a.iccid = #{iccid}
 			and	a.packet_id = b.packet_id
-		</where>
+        </where>
 		ORDER BY
 		start_time DESC
 		LIMIT 1
-	</select>
+    </select>
 
 
 
-	<!--获取资费组简要信息-->
-	<select id="queryPackage_simple" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--获取资费组简要信息-->
+    <select id="queryPackage_simple" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			package_id,
 			package_agentname
 		FROM
 			yz_card_package
-	</select>
+    </select>
 
-	<!--获取 代理 资费组简要信息-->
-	<select id="queryAgentPackage_simple" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--获取 代理 资费组简要信息-->
+    <select id="queryAgentPackage_simple" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			package_id,
 			package_agentname
 		FROM
 			yz_agent_package
-		<where>
+        <where>
 			dept_id  = #{agent_id}
-		</where>
-	</select>
+        </where>
+    </select>
 
 
 
-	<!--获取资费计划简要信息-->
-	<select id="queryPacket_simple" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--获取资费计划简要信息-->
+    <select id="queryPacket_simple" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			packet_id as dictValue,
 			packet_wx_name as dictLabel,
@@ -179,10 +179,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			packet_valid_type
 		FROM
 			yz_card_packet
-	</select>
+    </select>
 
-	<!--获取 代理 资费计划简要信息-->
-	<select id="queryAgentPacket_simple" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--获取 代理 资费计划简要信息-->
+    <select id="queryAgentPacket_simple" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			packet_id as dictValue,
 			packet_wx_name as dictLabel,
@@ -190,21 +190,21 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			packet_valid_type
 		FROM
 			yz_agent_packet
-		<where>
+        <where>
 			dept_id in
-			<foreach item="agent_id" collection="agent_id" index="agent_id" open="(" separator="," close=")">
+            <foreach item="agent_id" collection="agent_id" index="agent_id" open="(" separator="," close=")">
 				#{agent_id}
-			</foreach>
-		</where>
-	</select>
+            </foreach>
+        </where>
+    </select>
 
 
 
 
 
 
-	<!--卡板信息导出需要用到的套餐数据-->
-	<select id="outCardFlow" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--卡板信息导出需要用到的套餐数据-->
+    <select id="outCardFlow" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			iccid,
 			true_flow,
@@ -216,10 +216,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			b.packet_valid_name
 		FROM
 			( SELECT * FROM yz_card_flow WHERE iccid IN
-			<foreach item="iccid_arrs" collection="iccid_arrs" index="index"  separator="," open="(" close=")" >
+        <foreach item="iccid_arrs" collection="iccid_arrs" index="index" separator="," open="(" close=")">
 					#{iccid_arrs}
-			</foreach>
-		<![CDATA[	ORDER BY start_time DESC  LIMIT 99999999 ) a ,
+        </foreach>
+        <![CDATA[	ORDER BY start_time DESC  LIMIT 99999999 ) a ,
 			yz_card_packet b
 		WHERE
 			a.packet_id = b.packet_id
@@ -227,26 +227,26 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 		GROUP BY
 		a.iccid
 		]]>
-	</select>
+    </select>
 
 
-	<!-- 修改 资费计划用量-->
-	<update id="updFlow" parameterType="java.util.HashMap" >
+    <!-- 修改 资费计划用量-->
+    <update id="updFlow" parameterType="java.util.HashMap">
 		update yz_card_flow
-		<set>
+        <set>
 			use_true_flow = #{use_true_flow},
 			use_so_flow = #{use_so_flow},
-			<if test="status!=null">
+            <if test="status!=null">
 				status = #{status}
-			</if>
-		</set>
-		<where>
+            </if>
+        </set>
+        <where>
 			id =#{id}
-		</where>
-	</update>
+        </where>
+    </update>
 
-	<!--查询 生效中 未生效 资费计划  -->
-	<select id="findInEffect" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--查询 生效中 未生效 资费计划  -->
+    <select id="findInEffect" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		select
 			id,
 			true_flow,
@@ -254,79 +254,79 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			error_time
 		from
 			yz_card_flow
-		<where>
+        <where>
 			iccid =#{iccid}
 			and status in ("1","2")
-			AND (#{nowMonthSta} <![CDATA[ <= ]]>end_time and end_time <![CDATA[ <= ]]>#{nowMonthEnd} or #{nowMonthSta}  <![CDATA[ <= ]]>start_time
-			AND start_time  <![CDATA[ <= ]]> #{nowMonthEnd} or start_time <![CDATA[ <= ]]>#{nowMonthSta} and #{nowMonthEnd}  <![CDATA[ <= ]]> end_time)
-			and start_time  <![CDATA[ <= ]]> now()
-		</where>
-	</select>
+			AND (#{nowMonthSta}             <![CDATA[ <= ]]>end_time and end_time             <![CDATA[ <= ]]>#{nowMonthEnd} or #{nowMonthSta}              <![CDATA[ <= ]]>start_time
+			AND start_time              <![CDATA[ <= ]]> #{nowMonthEnd} or start_time             <![CDATA[ <= ]]>#{nowMonthSta} and #{nowMonthEnd}              <![CDATA[ <= ]]> end_time)
+			and start_time              <![CDATA[ <= ]]> now()
+        </where>
+    </select>
 
-	<!--查询 已失效 资费计划 真实用量-->
-	<select id="findInvalidationSumErrorFlow" parameterType="java.util.HashMap" resultType="java.lang.String">
+    <!--查询 已失效 资费计划 真实用量-->
+    <select id="findInvalidationSumErrorFlow" parameterType="java.util.HashMap" resultType="java.lang.String">
 		select
-			SUM(error_flow)
+			SUM(use_so_flow)
 		from
 			yz_card_flow
-		<where>
+        <where>
 			iccid =#{iccid}
 			and status in ("0")
-			AND (#{nowMonthSta} <![CDATA[ <= ]]>end_time and end_time <![CDATA[ <= ]]>#{nowMonthEnd} or #{nowMonthSta}  <![CDATA[ <= ]]>start_time
-			AND start_time  <![CDATA[ <= ]]> #{nowMonthEnd} or start_time <![CDATA[ <= ]]>#{nowMonthSta} and #{nowMonthEnd}  <![CDATA[ <= ]]> end_time)
-			and start_time  <![CDATA[ <= ]]> now()
-		</where>
-	</select>
+			AND (#{nowMonthSta}             <![CDATA[ <= ]]>end_time and end_time             <![CDATA[ <= ]]>#{nowMonthEnd} or #{nowMonthSta}              <![CDATA[ <= ]]>start_time
+			AND start_time              <![CDATA[ <= ]]> #{nowMonthEnd} or start_time             <![CDATA[ <= ]]>#{nowMonthSta} and #{nowMonthEnd}              <![CDATA[ <= ]]> end_time)
+			and start_time              <![CDATA[ <= ]]> now()
+        </where>
+    </select>
 
-	<!--修改 时间到期资费计划-->
-	<update id="updStatus" parameterType="java.util.HashMap" >
+    <!--修改 时间到期资费计划-->
+    <update id="updStatus" parameterType="java.util.HashMap">
 		update yz_card_flow
-		<set>
+        <set>
 			status = 0
-		</set>
-		<where>
+        </set>
+        <where>
 			iccid =#{iccid}
-			and end_time  <![CDATA[ <= ]]> now()
-		</where>
-	</update>
+			and end_time              <![CDATA[ <= ]]> now()
+        </where>
+    </update>
 
 
-	<!--查询卡号对应订单号是否已经存在-->
-	<select id="findExistence" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+    <!--查询卡号对应订单号是否已经存在-->
+    <select id="findExistence" parameterType="java.util.HashMap" resultType="java.lang.Integer">
 		select
 			COUNT(iccid)
 		from
 			yz_card_flow
-		<where>
+        <where>
 			iccid =#{iccid}
 			and ord_no =#{ord_no}
 
-		</where>
-	</select>
+        </where>
+    </select>
 
 
-	<!--  获取当前充值 包 的最后 一个 到期 时间-->
-	<select id="findEndTime" parameterType="java.util.HashMap" resultType="java.lang.String">
+    <!--  获取当前充值 包 的最后 一个 到期 时间-->
+    <select id="findEndTime" parameterType="java.util.HashMap" resultType="java.lang.String">
 		SELECT
 			DATE_FORMAT( A.end_time, "%Y-%m-%d %H:%i:%S"  ) AS ymd
 		FROM
 			yz_card_flow A,
 			yz_card_packet B
-		<where>
+        <where>
 			A.iccid = #{iccid}
 			AND A.package_id = B.package_id
 			AND A.packet_id = B.packet_id
 			AND B.packet_type = 0
 			AND A.STATUS = 1
-		</where>
+        </where>
 		ORDER BY
 			A.end_time DESC
 			LIMIT 1;
-	</select>
+    </select>
 
 
-	<!--插入flow-->
-	<insert id="saveFlow" parameterType="java.util.HashMap" >
+    <!--插入flow-->
+    <insert id="saveFlow" parameterType="java.util.HashMap">
 		insert  into
 			yz_card_flow
 		(
@@ -346,7 +346,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			error_time,
 			validate_type
 		)value
-		<foreach item="flow_arrs" collection="flow_arrs" index="index"  separator="," >
+        <foreach item="flow_arrs" collection="flow_arrs" index="index" separator=",">
 			(#{flow_arrs.package_id},
 			#{flow_arrs.packet_id},
 			#{flow_arrs.ord_no},
@@ -362,16 +362,16 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			#{flow_arrs.iccid},
 			#{flow_arrs.error_time},
 			#{flow_arrs.validate_type})
-		</foreach>
+        </foreach>
 
-	</insert>
-
-
+    </insert>
 
 
 
-	<!--获取 资费计划 信息-->
-	<select id="FindPacket" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+
+
+    <!--获取 资费计划 信息-->
+    <select id="FindPacket" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			packet_id,
 			package_id,
@@ -393,15 +393,15 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			packet_valid_type as wxValidType
 		FROM
 			yz_card_packet
-		<where>
+        <where>
 			package_id = #{package_id}
 			and packet_id = #{packet_id}
-		</where>
+        </where>
 
-	</select>
+    </select>
 
-	<!--获取 代理 资费计划 信息-->
-	<select id="FindPacketAgent" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--获取 代理 资费计划 信息-->
+    <select id="FindPacketAgent" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			packet_id,
 			package_id,
@@ -423,17 +423,17 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			packet_valid_type as wxValidType
 		FROM
 			yz_agent_packet
-		<where>
+        <where>
 			package_id = #{package_id}
 			and packet_id = #{packet_id}
 			and dept_id  = #{agent_id}
-		</where>
-	</select>
+        </where>
+    </select>
 
 
 
-	<!--获取 资费计划 简要 信息-->
-	<select id="FindPacket_concise" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--获取 资费计划 简要 信息-->
+    <select id="FindPacket_concise" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			packet_flow,
 			packet_valid_time,
@@ -441,14 +441,14 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			is_month
 		FROM
 			yz_card_packet
-		<where>
+        <where>
 			and package_id = #{package_id}
 			and packet_id = #{packet_id}
-		</where>
-	</select>
+        </where>
+    </select>
 
-	<!--获取 代理 资费计划 简要 信息-->
-	<select id="FindPacketAgent_concise" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--获取 代理 资费计划 简要 信息-->
+    <select id="FindPacketAgent_concise" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			packet_flow,
 			packet_valid_time,
@@ -456,37 +456,37 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			is_month
 		FROM
 			yz_agent_packet
-		<where>
+        <where>
 			and package_id = #{package_id}
 			and packet_id = #{packet_id}
 			and dept_id  = #{agent_id}
-		</where>
-	</select>
+        </where>
+    </select>
 
 
 
 
 
-	<!--获取 资费计划 名称-->
-	<select id="FindPacketName_concise" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--获取 资费计划 名称-->
+    <select id="FindPacketName_concise" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			packet_wx_name,
 			packet_id
 		FROM
 			yz_card_packet
-	</select>
+    </select>
 
-	<!--获取 代理 资费计划 名称-->
-	<select id="FindPacketNameAgent_concise" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--获取 代理 资费计划 名称-->
+    <select id="FindPacketNameAgent_concise" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			packet_wx_name,
 			packet_id
 		FROM
 			yz_agent_packet
-		<where>
+        <where>
 			and dept_id  = #{agent_id}
-		</where>
-	</select>
+        </where>
+    </select>
 
 
 
@@ -495,23 +495,23 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 
 
 
-	<!--查询是否订购过基础包-->
-	<select id="findBaseFlow" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+    <!--查询是否订购过基础包-->
+    <select id="findBaseFlow" parameterType="java.util.HashMap" resultType="java.lang.Integer">
 		select
 			count(*)
 		from
 			yz_card_flow
-		<where>
+        <where>
 			iccid = #{iccid}
-			and start_time <![CDATA[ < ]]> #{Time}
-			and end_time <![CDATA[ > ]]> #{Time}
+			and start_time             <![CDATA[ < ]]> #{Time}
+			and end_time             <![CDATA[ > ]]> #{Time}
 			and packet_type = 0
-		</where>
-	</select>
+        </where>
+    </select>
 
 
 
-	<select id="webFindFlow" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <select id="webFindFlow" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			packet_id,
 			true_flow,
@@ -521,80 +521,80 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			DATE_FORMAT( create_time, "%Y-%m-%d %H:%i:%S" ) AS 'create_time'
 		FROM
 			yz_card_flow
-		<where>
+        <where>
 			iccid = #{iccid}
 			AND status = #{status}
-		</where>
-		<if test="status!=null and status == 0">
+        </where>
+        <if test="status!=null and status == 0">
 			ORDER BY
 			start_time DESC
 			LIMIT 10
-		</if>
-		<if test="status!=null and status != 0">
+        </if>
+        <if test="status!=null and status != 0">
 			ORDER BY
 			start_time ASC
-		</if>
-	</select>
+        </if>
+    </select>
 
-	<!--查询失效的防超套系数-->
-	<select id="FindError_time" parameterType="java.util.HashMap" resultType="java.lang.String">
+    <!--查询失效的防超套系数-->
+    <select id="FindError_time" parameterType="java.util.HashMap" resultType="java.lang.String">
 		SELECT
 		error_time
 		FROM
 		yz_card_flow
-		<where>
+        <where>
 			iccid = #{iccid}
 			and status in ("0")
-		</where>
+        </where>
 		ORDER BY end_time DESC
 		LIMIT 1
-	</select>
+    </select>
 
 
-	<!--查询 已失效 资费计划 真实用量 年包 -->
-	<select id="findInvalidationSumErrorFlow_Year" parameterType="java.util.HashMap" resultType="java.lang.String">
+    <!--查询 已失效 资费计划 真实用量 年包 -->
+    <select id="findInvalidationSumErrorFlow_Year" parameterType="java.util.HashMap" resultType="java.lang.String">
 		select
 		SUM(a.error_flow)
 		from
 		yz_card_flow a,
 		yz_card_packet b
-		<where>
+        <where>
 			a.packet_id = b.packet_id
 			and iccid = #{iccid}
 			and a.status in ("0")
 			and a.ord_type = '2'
 			and b.is_month = '0'
-			and start_time <![CDATA[ <= ]]> now()
-			and end_time <![CDATA[ >= ]]> now()
+			and start_time             <![CDATA[ <= ]]> now()
+			and end_time             <![CDATA[ >= ]]> now()
 			and b.packet_valid_name = '年'
-		</where>
-	</select>
+        </where>
+    </select>
 
 
-	<!--查询 已失效 资费计划 总用量和总已用 -->
-	<select id="findInvalidationSum" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--查询 已失效 资费计划 总用量和总已用 -->
+    <select id="findInvalidationSum" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		select
 		SUM(a.true_flow) as 'sumTrue_flow',
 		SUM(a.use_so_flow) as 'sumUse_so_flow'
 		from
 		yz_card_flow a
-		<where>
+        <where>
 			iccid = #{iccid}
 			and a.status in ("0")
-			and start_time <![CDATA[ <= ]]> now()
-			and end_time <![CDATA[ >= ]]> now()
-		</where>
-	</select>
+			and start_time             <![CDATA[ <= ]]> now()
+			and end_time             <![CDATA[ >= ]]> now()
+        </where>
+    </select>
 
     <select id="findPackageNameById" resultType="java.lang.String">
 		select
 		package_name
 		from
 		yz_card_package
-		<where>
+        <where>
 		package_id = #{packageId}
-		</where>
-	</select>
+        </where>
+    </select>
 
 
 </mapper>

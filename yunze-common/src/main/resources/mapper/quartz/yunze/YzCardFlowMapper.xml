@@ -287,7 +287,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 	<!--查询 已失效 资费计划 真实用量-->
 	<select id="findInvalidationSumErrorFlow" parameterType="java.util.HashMap" resultType="java.lang.String">
 		select
-			SUM(error_flow)
+			SUM(use_so_flow)
 		from
 			yz_card_flow
 		<where>
