@@ -13,10 +13,7 @@ import com.yunze.system.service.yunze.sysgl.IMySysDeptService;
 import com.yunze.web.core.config.MyBaseController;
 import io.swagger.annotations.Api;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import java.util.HashMap;
@@ -97,8 +94,8 @@ public class MySysDeptController extends MyBaseController {
     /**
      * 企业预存 【微信支付】
      */
-    @RequestMapping(value = "/weChatNotify", produces = {"application/json;charset=UTF-8"})
-    public String weChatNotify(@RequestBody String xmlData) {
+    @RequestMapping(value = "/weChatNotify/{appId}", produces = {"application/json;charset=UTF-8"})
+    public String weChatNotify(@PathVariable("appId") String appId, @RequestBody String xmlData) {
         String ip = "";
         try {
             ip = IpUtils.getIpAddr(ServletUtils.getRequest());
@@ -106,7 +103,7 @@ public class MySysDeptController extends MyBaseController {
             System.out.println("IP 获取操作失败");
         }
         try {
-            return iMySysDeptService.weChatNotify(xmlData,ip);
+            return iMySysDeptService.weChatNotify(xmlData,ip,appId);
         } catch (Exception e) {
 
             logger.error("<br/> /yunze/MySysDept/weChatNotify  <br/> xmlData = " + xmlData + " <br/> ip =  " + ip + " <br/> ", e.getCause().toString());

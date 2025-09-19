@@ -112,6 +112,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter
                 .antMatchers("/yunze/ExecutionTask/download","/yunze/ExecutionTask/downloadConversion").anonymous()//放行下载
                 .antMatchers("/yunze/card/selCardOpen").anonymous()//放行 公共查询卡信息
 
+                .antMatchers("/system/user/authTxt/*").anonymous()
+
                 .antMatchers(
                         HttpMethod.GET,
                         "/*.html",

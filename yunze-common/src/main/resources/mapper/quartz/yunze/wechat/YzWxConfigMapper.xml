@@ -67,10 +67,54 @@
             yz_wx_config
     </select>
 
+    <insert id="paySetting" parameterType="java.util.HashMap">
+        INSERT INTO yz_wx_config (
+            app_id, app_secret, app_token, mch_id, paterner_key,
+            index_url, back_url, status, create_time, update_time, create_user,
+                                  native_url, auth_txt
+        ) VALUES (
+                  #{app_id}, #{app_secret}, #{app_token}, #{mch_id}, #{paterner_key},
+                  #{index_url}, #{back_url}, #{status}, NOW(), NOW(), #{create_user},
+                  #{native_url}, #{auth_txt}
+                 )
+        ON DUPLICATE KEY UPDATE
+                             app_id = VALUES(app_id),
+                             app_secret = VALUES(app_secret),
+                             app_token = VALUES(app_token),
+                             mch_id = VALUES(mch_id),
+                             paterner_key = VALUES(paterner_key),
+                             index_url = VALUES(index_url),
+                             back_url = VALUES(back_url),
+                             status = VALUES(status),
+                             update_time = NOW(),
+                             native_url = VALUES(native_url),
+                             auth_txt = VALUES(auth_txt)
+    </insert>
+
+    <select id="paySearch" parameterType="String" resultType="java.util.HashMap">
+        select
+            app_id,
+            app_secret,
+            app_token,
+            mch_id,
+            paterner_key,
+            status,
+            auth_txt,
+            back_url,
+            index_url
+        from
+            yz_wx_config
+        where create_user = #{userId}
+    </select>
 
 
-
-
+    <select id="getContentByToken" parameterType="String" resultType="String">
+        select
+            auth_txt
+        from
+            yz_wx_config
+        where auth_txt = #{token}
+    </select>
 </mapper>
 
 

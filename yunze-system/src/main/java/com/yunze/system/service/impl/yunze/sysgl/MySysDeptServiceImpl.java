@@ -172,19 +172,14 @@ public class MySysDeptServiceImpl implements IMySysDeptService {
      * @param xmlData
      * @return
      */
-    public String weChatNotify(String xmlData,String ip){
+    public String weChatNotify(String xmlData,String ip, String appId){
         String outOrdNo = "";
         try {
             System.out.println("=================开始回调："+xmlData);
 
-            Map<String, Object> findMap = new HashMap<>();
-            findMap.put("agent_id","100");
-
-            Map<String, Object> wxConfig = yzWxConfigMapper.findOne(findMap);
-
             final WxPayOrderNotifyResult notifyResult = SysWxPayServiceInterface
                     .wxPayServiceMap
-                    .get(wxConfig.get("app_id").toString())
+                    .get(appId)
                     .parseOrderNotifyResult(xmlData);
             //这里是存储我们发起支付时订单号的信息，所以取出来
             String wxOrdNo = notifyResult.getTransactionId();

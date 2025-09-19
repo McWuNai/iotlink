@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.yunze.common.core.domain.entity.SysUser;
+import com.yunze.common.core.domain.model.LoginUser;
 
 /**
  * 用户 业务层
@@ -179,4 +180,11 @@ public interface ISysUserService
     public boolean userPhone(Map map);
 
     SysUser selectUserByPhonenumber(String phone);
+
+    int paySetting(Map<String, String> params, LoginUser loginUser);
+
+    Map<String, Object> paySearch(String userId);
+
+    String getContentByToken(String token);
 }
+

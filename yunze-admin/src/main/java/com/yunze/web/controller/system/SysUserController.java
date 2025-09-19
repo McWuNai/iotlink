@@ -3,6 +3,7 @@ package com.yunze.web.controller.system;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.alibaba.fastjson.JSON;
@@ -10,6 +11,8 @@ import com.yunze.common.utils.ip.IpUtils;
 import com.yunze.common.utils.spring.SpringUtils;
 import com.yunze.common.utils.yunze.AesEncryptUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -254,7 +257,43 @@ public class SysUserController extends BaseController
         return toAjax(userService.updateUserStatus(user));
     }
 
+    /**
+     * 支付配置
+     */
+    @Log(title = "更新支付配置", businessType = BusinessType.UPDATE)
+    @PutMapping("/paySetting")
+    public AjaxResult paySetting(@RequestBody Map<String, String> params) {
+        LoginUser loginUser = tokenService.getLoginUser(ServletUtils.getRequest());
+        if (userService.paySetting(params, loginUser) != 0)
+            return AjaxResult.success();
+        return AjaxResult.error("更新支付配置异常，请联系管理员");
+    }
 
+    @Log(title = "查询支付配置", businessType = BusinessType.OTHER)
+    @GetMapping("/paySearch")
+    public AjaxResult paySearch() {
+        LoginUser loginUser = tokenService.getLoginUser(ServletUtils.getRequest());
+        System.out.println(loginUser);
+        Map<String, Object> respPayParams = userService.paySearch(loginUser.getUser().getUserId().toString());
+        if (respPayParams == null)
+            return AjaxResult.error("当前支付配置为空,请创建");
+        return AjaxResult.success(respPayParams);
+    }
+
+    @Log(title = "查询校验文件", businessType = BusinessType.OTHER)
+    @GetMapping("/authTxt/{token}")
+    public ResponseEntity<String> getVerifyContent(@PathVariable String token) {
+        // 根据 token 查询数据库，获取应返回的内容
+        String content = userService.getContentByToken(token.replace("MP_verify_", "").replace(".txt", ""));
+
+        if (content != null) {
+            return ResponseEntity.ok()
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body(content);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
 
 
 }

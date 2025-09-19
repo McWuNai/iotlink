@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.yunze.common.core.domain.model.LoginUser;
+import com.yunze.common.mapper.yunze.wechat.YzWxConfigMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +30,8 @@ import com.yunze.system.mapper.SysUserRoleMapper;
 import com.yunze.system.service.ISysConfigService;
 import com.yunze.system.service.ISysUserService;
 
+import javax.annotation.Resource;
+
 /**
  * 用户 业务层处理
  *
@@ -37,24 +41,26 @@ import com.yunze.system.service.ISysUserService;
 public class SysUserServiceImpl implements ISysUserService {
     private static final Logger log = LoggerFactory.getLogger(SysUserServiceImpl.class);
 
-    @Autowired
+    @Resource
     private SysUserMapper userMapper;
 
-    @Autowired
+    @Resource
     private SysRoleMapper roleMapper;
 
-    @Autowired
+    @Resource
     private SysPostMapper postMapper;
 
-    @Autowired
+    @Resource
     private SysUserRoleMapper userRoleMapper;
 
-    @Autowired
+    @Resource
     private SysUserPostMapper userPostMapper;
 
     @Autowired
     private ISysConfigService configService;
 
+    @Resource
+    private YzWxConfigMapper yzWxConfigMapper;
     /**
      * 根据条件分页查询用户列表
      *
@@ -440,6 +446,35 @@ public class SysUserServiceImpl implements ISysUserService {
     public SysUser selectUserByPhonenumber(String phone) {
 
         return userMapper.userByPhonenumber(phone);
+    }
+
+    @Override
+    public int paySetting(Map<String, String> params,
+                          LoginUser loginUser) {
+        HashMap<String, Object> payParams = new HashMap<>();
+        payParams.put("app_id", params.get("appId"));
+        payParams.put("app_secret", params.get("appSecret"));
+        payParams.put("app_token", params.get("appToken"));
+        payParams.put("mch_id", params.get("mchId"));
+        payParams.put("paterner_key", params.get("paternerKey"));
+        payParams.put("index_url", "https://swww.iotesim.cn/wechat?appId=" + params.get("appId"));
+        payParams.put("back_url", "http://sgtw.iotesim.cn/web/weixin/pay/weixinPayNotify/" + params.get("appId"));
+        payParams.put("status", params.get("status"));
+        payParams.put("create_user", loginUser.getUser().getUserId());
+        payParams.put("native_url", "http://sgtw.iotesim.cn/yunze/MySysDept/weChatNotify/" + params.get("appId"));
+        payParams.put("auth_txt", params.get("authTxt"));
+
+        return yzWxConfigMapper.paySetting(payParams);
+    }
+
+    @Override
+    public Map<String, Object> paySearch(String userId) {
+        return yzWxConfigMapper.paySearch(userId);
+    }
+
+    @Override
+    public String getContentByToken(String token) {
+        return yzWxConfigMapper.getContentByToken(token);
     }
 
 

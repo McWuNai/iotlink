@@ -30,7 +30,7 @@ public interface IMySysDeptService {
      * @param ip
      * @return
      */
-    public String weChatNotify(String xmlData,String ip);
+    public String weChatNotify(String xmlData,String ip,String appId);
 
 
     /**

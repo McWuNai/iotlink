@@ -1,5 +1,6 @@
 package com.yunze.common.mapper.yunze.wechat;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -22,4 +23,9 @@ public interface YzWxConfigMapper {
     public List<Map <String,Object>> getWxConfigs();
 
 
+    int paySetting(HashMap<String, Object> payParams);
+
+    Map<String, Object> paySearch(String userId);
+
+    String getContentByToken(String token);
 }
