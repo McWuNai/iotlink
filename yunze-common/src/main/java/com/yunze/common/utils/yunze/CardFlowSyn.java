@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 卡用量同步
+ * 
  * @Auther: zhang feng
  * @Date: 2021/07/20/15:19
  * @Description:
@@ -55,46 +56,51 @@ public class CardFlowSyn {
     final private static String isChickDateValue = "isChickDateValue";
     final private static String stringDateShortStart = "stringDateShortStart";
     final private static String RedisNetWorkKeyName = "yunze:card:NetWork:LimitSpeed";
+
     /**
      * 用量计算 [直接同步 yzCardMapper ]
+     * 
      * @param iccid
      * @param ApiUsed
      * @return
      */
-    public Map<String,Object> CalculationFlow(String iccid,Double ApiUsed, Map<String,Object> map){
-        Map<String,Object> Rmap = CalculationFlowCommon(iccid, ApiUsed, map, null);
+    public Map<String, Object> CalculationFlow(String iccid, Double ApiUsed, Map<String, Object> map) {
+        Map<String, Object> Rmap = CalculationFlowCommon(iccid, ApiUsed, map, null);
         return CalculationFlowCommon(Rmap, iccid, map);
     }
 
-    public Map<String,Object> CalculationBatchFlow(String iccid,Double ApiUsed, Map<String,Object> map, String realNameStatus){
-        Map<String,Object> Rmap = CalculationFlowCommon(iccid, ApiUsed, map, realNameStatus);
+    public Map<String, Object> CalculationBatchFlow(String iccid, Double ApiUsed, Map<String, Object> map,
+            String realNameStatus) {
+        Map<String, Object> Rmap = CalculationFlowCommon(iccid, ApiUsed, map, realNameStatus);
         return CalculationFlowCommon(Rmap, iccid, map);
     }
 
-    public Map<String,Object> CalculationFlowCommon(Map<String,Object> Rmap, String iccid, Map<String,Object> map){
+    public Map<String, Object> CalculationFlowCommon(Map<String, Object> Rmap, String iccid, Map<String, Object> map) {
         Double SumFlow = Double.parseDouble(Rmap.get("SumFlow").toString());
         Double total_show_flow = Double.parseDouble(Rmap.get("total_show_flow").toString());
         boolean bool_info;
-        Double remaining = Arith.sub(SumFlow,total_show_flow);
-        Map<String,Object> updUsedMap = new HashMap<>();
-        updUsedMap.put("iccid",iccid);
-        updUsedMap.put("used",total_show_flow);
-        updUsedMap.put("remaining",remaining);
-        bool_info = yzCardMapper.updUsed(updUsedMap)>0;
-        //返回数据
-        Rmap.put("used",total_show_flow);
-        Rmap.put("remaining",remaining);
-        Rmap.put("bool_info",bool_info);
-        //判断是否限速
-        if(remaining>=0) setNetWork(iccid, (!(total_show_flow <= 0.0) && (total_show_flow + remaining * 0.8) <= total_show_flow), map, total_show_flow/1024);
+        Double remaining = Arith.sub(SumFlow, total_show_flow);
+        Map<String, Object> updUsedMap = new HashMap<>();
+        updUsedMap.put("iccid", iccid);
+        updUsedMap.put("used", total_show_flow);
+        updUsedMap.put("remaining", remaining);
+        bool_info = yzCardMapper.updUsed(updUsedMap) > 0;
+        // 返回数据
+        Rmap.put("used", total_show_flow);
+        Rmap.put("remaining", remaining);
+        Rmap.put("bool_info", bool_info);
+        // 判断是否限速
+        if (remaining >= 0)
+            setNetWork(iccid, (!(total_show_flow <= 0.0) && (total_show_flow + remaining * 0.8) <= total_show_flow),
+                    map, total_show_flow / 1024);
         return Rmap;
     }
 
-    private void setNetWork(String iccid,boolean bool, Map<String,Object> map, double total_show_flow){
-        //获取 redis 对应iccid是否存在
+    private void setNetWork(String iccid, boolean bool, Map<String, Object> map, double total_show_flow) {
+        // 获取 redis 对应iccid是否存在
         boolean equalsMap = Boolean.TRUE.equals(redisCache.getCacheMap(RedisNetWorkKeyName).containsKey(iccid));
-        Map<String,Object> Rmap = new HashMap<>();
-        Rmap.put("iccid",iccid);
+        Map<String, Object> Rmap = new HashMap<>();
+        Rmap.put("iccid", iccid);
         // 存在
         if (equalsMap) {
             // 获取当前布尔值并比对Redis布尔值是否一致
@@ -122,7 +128,8 @@ public class CardFlowSyn {
                 // 布尔值为true 创建redis
                 Rmap.put("speedValue", 1);
                 Map<String, Object> stringObjectMap = internalApiRequest.SpeedLimit(Rmap, map);
-                if (stringObjectMap.get("code").toString().equals("200") && stringObjectMap.get("status").toString().equals("200")) {
+                if (stringObjectMap.get("code").toString().equals("200")
+                        && stringObjectMap.get("status").toString().equals("200")) {
                     redisCache.setCacheMap(RedisNetWorkKeyName, Collections.singletonMap(iccid, true));
                     System.out.println("卡号>>> " + iccid + " <<<  已达套餐80%用量  >>> 触发流量通信限速 <<< ");
                 } else {
@@ -135,282 +142,307 @@ public class CardFlowSyn {
 
     /**
      * 用量计算 [queue 队列同步 yzCardMapper ]
+     * 
      * @param iccid
      * @param ApiUsed
      * @return
      */
-    public Map<String,Object> CalculationFlowQueue(String iccid,Double ApiUsed,boolean bool, Map<String,Object> map){
-        Map<String,Object> Rmap =  CalculationFlowCommon(iccid, ApiUsed, map, null);
+    public Map<String, Object> CalculationFlowQueue(String iccid, Double ApiUsed, boolean bool,
+            Map<String, Object> map) {
+        Map<String, Object> Rmap = CalculationFlowCommon(iccid, ApiUsed, map, null);
         Double SumFlow = Double.parseDouble(Rmap.get("SumFlow").toString());
         Double total_show_flow = Double.parseDouble(Rmap.get("total_show_flow").toString());
         String bool_info = "";
-        Double remaining = Arith.sub(SumFlow,total_show_flow);
-        Map<String,Object> updUsedMap = new HashMap<>();
-        updUsedMap.put("iccid",iccid);
-        updUsedMap.put("used",total_show_flow);
-        updUsedMap.put("remaining",remaining);
-        //1.创建路由 绑定 生产队列 发送消息
-        String card_exchangeName = "admin_card_exchange", card_queueName = "admin_CardUpd_queue", card_routingKey = "admin.CardUpd.queue",
-                card_del_exchangeName = "dlx_"+card_exchangeName,card_del_queueName = "dlx_"+card_queueName, card_del_routingKey = "dlx_"+card_routingKey;
+        Double remaining = Arith.sub(SumFlow, total_show_flow);
+        Map<String, Object> updUsedMap = new HashMap<>();
+        updUsedMap.put("iccid", iccid);
+        updUsedMap.put("used", total_show_flow);
+        updUsedMap.put("remaining", remaining);
+        // 1.创建路由 绑定 生产队列 发送消息
+        String card_exchangeName = "admin_card_exchange", card_queueName = "admin_CardUpd_queue",
+                card_routingKey = "admin.CardUpd.queue",
+                card_del_exchangeName = "dlx_" + card_exchangeName, card_del_queueName = "dlx_" + card_queueName,
+                card_del_routingKey = "dlx_" + card_routingKey;
         try {
-            if(bool){
+            if (bool) {
                 try {
-                   // rabbitMQConfig.creatExchangeQueue(card_exchangeName, card_queueName, card_routingKey, card_del_exchangeName, card_del_queueName, card_del_routingKey,null);
-                }catch (Exception e){
-                    System.out.println("CalculationFlowQueue   》creatExchangeQueue "+e.getMessage());
+                    // rabbitMQConfig.creatExchangeQueue(card_exchangeName, card_queueName,
+                    // card_routingKey, card_del_exchangeName, card_del_queueName,
+                    // card_del_routingKey,null);
+                } catch (Exception e) {
+                    System.out.println("CalculationFlowQueue   》creatExchangeQueue " + e.getMessage());
                 }
             }
-            updUsedMap.put("queueTypeName","admin_CardUpdUsed_queue");
-            rabbitTemplate.convertAndSend(card_exchangeName, card_routingKey, JSON.toJSONString(updUsedMap), message -> {
-                // 设置消息过期时间 30 分钟 过期
-                message.getMessageProperties().setExpiration("" + (30 * 1000 * 60));
-                return message;
-            });
+            updUsedMap.put("queueTypeName", "admin_CardUpdUsed_queue");
+            rabbitTemplate.convertAndSend(card_exchangeName, card_routingKey, JSON.toJSONString(updUsedMap),
+                    message -> {
+                        // 设置消息过期时间 30 分钟 过期
+                        message.getMessageProperties().setExpiration("" + (30 * 1000 * 60));
+                        return message;
+                    });
             bool_info = "发送 主表修改 指令成功 ！";
         } catch (Exception e) {
             System.out.println("用量计算 队列同步 创建 失败 " + e.getMessage().toString());
             bool_info = e.getMessage().toString();
-            bool_info = bool_info.length()>500?bool_info.substring(0,500):bool_info;
+            bool_info = bool_info.length() > 500 ? bool_info.substring(0, 500) : bool_info;
         }
 
-
-
-        //返回数据
-        Rmap.put("used",total_show_flow);
-        Rmap.put("remaining",remaining);
-        Rmap.put("bool_info",bool_info);
-        return  Rmap;
+        // 返回数据
+        Rmap.put("used", total_show_flow);
+        Rmap.put("remaining", remaining);
+        Rmap.put("bool_info", bool_info);
+        return Rmap;
     }
-
 
     /**
      * 用量计算
+     * 
      * @param iccid
      * @param ApiUsed
      * @return
      */
-    public Map<String,Object> CalculationFlowCommon(String iccid,Double ApiUsed, Map<String,Object> map, String realNameStatus){
-        Map<String,Object> Rmap = new HashMap<>();
-        boolean bool_info=false,bool_flow=false,bool_flowHis=false;
-        Map<String,Object> findMap = new HashMap<>();
-        findMap.put("iccid",iccid);
+    public Map<String, Object> CalculationFlowCommon(String iccid, Double ApiUsed, Map<String, Object> map,
+            String realNameStatus) {
+        Map<String, Object> Rmap = new HashMap<>();
+        boolean bool_info = false, bool_flow = false, bool_flowHis = false;
+        Map<String, Object> findMap = new HashMap<>();
+        findMap.put("iccid", iccid);
 
-        String  []YyyyAndMm = VeDate.getYyyyAndMm();
-        String nowMonthSta = YyyyAndMm[0]+"-"+YyyyAndMm[1]+"-01";
-        String nowMonthEnd = VeDate.getLastDayOfMonth(Integer.parseInt(YyyyAndMm[0]),Integer.parseInt(YyyyAndMm[1]));
-        findMap.put("nowMonthSta",nowMonthSta+" 00:00:00");
-        findMap.put("nowMonthEnd",nowMonthEnd+" 23:59:59");
-        //0.修改 时间到期资费计划
+        String[] YyyyAndMm = VeDate.getYyyyAndMm();
+        String nowMonthSta = YyyyAndMm[0] + "-" + YyyyAndMm[1] + "-01";
+        String nowMonthEnd = VeDate.getLastDayOfMonth(Integer.parseInt(YyyyAndMm[0]), Integer.parseInt(YyyyAndMm[1]));
+        findMap.put("nowMonthSta", nowMonthSta + " 00:00:00");
+        findMap.put("nowMonthEnd", nowMonthEnd + " 23:59:59");
+        // 0.修改 时间到期资费计划
         yzCardFlowMapper.updStatus(findMap);
-        //1.查询过期的已使用用量
+        // 1.查询过期的已使用用量
         String SumErrorFlow = yzCardFlowMapper.findInvalidationSumErrorFlow(findMap);
-        Double SumErrorFlow_D = SumErrorFlow!=null && SumErrorFlow.length()>0?Double.parseDouble(SumErrorFlow):0.0;
+        Double SumErrorFlow_D = SumErrorFlow != null && SumErrorFlow.length() > 0 ? Double.parseDouble(SumErrorFlow)
+                : 0.0;
 
         Double DseFlow = SumErrorFlow_D;
 
-        /*SumErrorFlow_D = Arith.add(SumErrorFlow_Year_D,SumErrorFlow_D);
-        DseFlow = Arith.add(SumErrorFlow_Year_D,DseFlow);*/
+        /*
+         * SumErrorFlow_D = Arith.add(SumErrorFlow_Year_D,SumErrorFlow_D);
+         * DseFlow = Arith.add(SumErrorFlow_Year_D,DseFlow);
+         */
 
-        //2.获取 有效资费计划 计算
-        Double xiShu = 1.0;//默认
+        // 2.获取 有效资费计划 计算
+        Double xiShu = 1.0;// 默认
 
         double sumTrue_flow = 0.0;
         double sumUse_so_flow = 0.0;
 
         String[] now = VeDate.getStringDateShort().split("-");
-        findMap.put("year",now[0]);
-        findMap.put("month",now[1]);
-        findMap.put("day",now[2]);
+        findMap.put("year", now[0]);
+        findMap.put("month", now[1]);
+        findMap.put("day", now[2]);
 
-        //同步
+        // 同步
         Double total_flow_now = 0.00;
-        //获取截至当天的当月总流量
+        // 获取截至当天的当月总流量
 
         Double total_show_flow = 0.00;
         Double total_show_flow_now = 0.00;
         int IDay = Integer.parseInt(now[2]);
 
-            if (IDay == 1) {
-                //判断 是否为当月1号
-                //是 调用 B方法
-                //是 截至当天的当月总流量 - 前月末总流量 = 新月当天总流量 = 新月当天流量
+        if (IDay == 1) {
+            // 判断 是否为当月1号
+            // 是 调用 B方法
+            // 是 截至当天的当月总流量 - 前月末总流量 = 新月当天总流量 = 新月当天流量
 
-                Map<String, Object> flowCounting = getFlowCounting(iccid, ApiUsed);
-                total_flow_now = flowCounting != null ? Arith.sub(ApiUsed, Double.parseDouble(flowCounting.get("total_flow").toString())) : 0.00;
-                total_show_flow = total_flow_now;
-                total_show_flow_now = total_flow_now;
-            } else if (IDay == 27) {
-                //判断 是否为当月 27号
-                //是 调用 A方法
-                //是 获取 上月流量周期
-                //是 上月流量周期 + 截至当天的当月总流量 = 当月总流量
-                //是 截至当天的当月总流量 = 当天总流量
+            Map<String, Object> flowCounting = getFlowCounting(iccid, ApiUsed);
+            total_flow_now = flowCounting != null
+                    ? Arith.sub(ApiUsed, Double.parseDouble(flowCounting.get("total_flow").toString()))
+                    : 0.00;
+            total_show_flow = total_flow_now;
+            total_show_flow_now = total_flow_now;
+        } else if (IDay == 27) {
+            // 判断 是否为当月 27号
+            // 是 调用 A方法
+            // 是 获取 上月流量周期
+            // 是 上月流量周期 + 截至当天的当月总流量 = 当月总流量
+            // 是 截至当天的当月总流量 = 当天总流量
 
-                String cycleTotalFlow = getCycleTotalFlow(findMap, map, realNameStatus);
-                total_flow_now = ApiUsed;
-                total_show_flow = Arith.add(Double.parseDouble(cycleTotalFlow), ApiUsed);
-                total_show_flow_now = ApiUsed;
-            } else if (IDay > 1 && IDay < 27) {
-                //判断 当天号数 > 1 && 当天号数 < 27
-                //是 调用 B方法
-                //是 截至当天的当月总流量 - 前月末总流量 = 当月总流量
-                //是 截至当天的当月总流量 - 截至昨天的当月总流量 = 当天总流量
+            String cycleTotalFlow = getCycleTotalFlow(findMap, map, realNameStatus);
+            total_flow_now = ApiUsed;
+            total_show_flow = Arith.add(Double.parseDouble(cycleTotalFlow), ApiUsed);
+            total_show_flow_now = ApiUsed;
+        } else if (IDay > 1 && IDay < 27) {
+            // 判断 当天号数 > 1 && 当天号数 < 27
+            // 是 调用 B方法
+            // 是 截至当天的当月总流量 - 前月末总流量 = 当月总流量
+            // 是 截至当天的当月总流量 - 截至昨天的当月总流量 = 当天总流量
 
-                Map<String, Object> flowCounting = getFlowCounting(iccid, ApiUsed);
-                total_flow_now = flowCounting != null ? Arith.sub(ApiUsed, Double.parseDouble(flowCounting.get("total_flow_yesterday").toString())) : 0.00;
-                total_show_flow = flowCounting != null ? Arith.sub(ApiUsed, Double.parseDouble(flowCounting.get("total_flow").toString())) : 0.00;
-                total_show_flow_now = total_flow_now;
-            } else if (IDay > 27) {
-                //判断 当天号数 > 27
-                //是 调用 C方法
-                //是 调用 A方法
-                //是 获取上月流量周期
-                //是 上月流量周期 + 截至当天的当月总流量 = 当月总流量
-                //是 截至当天的当月总流量 - 截至昨天的当月总流量 = 当天总流量
-                String cycleTotalFlow = getCycleTotalFlow(findMap, map, realNameStatus);
-                total_show_flow = Arith.add(ApiUsed, Double.parseDouble(cycleTotalFlow));
+            Map<String, Object> flowCounting = getFlowCounting(iccid, ApiUsed);
+            total_flow_now = flowCounting != null
+                    ? Arith.sub(ApiUsed, Double.parseDouble(flowCounting.get("total_flow_yesterday").toString()))
+                    : 0.00;
+            total_show_flow = flowCounting != null
+                    ? Arith.sub(ApiUsed, Double.parseDouble(flowCounting.get("total_flow").toString()))
+                    : 0.00;
+            total_show_flow_now = total_flow_now;
+        } else if (IDay > 27) {
+            // 判断 当天号数 > 27
+            // 是 调用 C方法
+            // 是 调用 A方法
+            // 是 获取上月流量周期
+            // 是 上月流量周期 + 截至当天的当月总流量 = 当月总流量
+            // 是 截至当天的当月总流量 - 截至昨天的当月总流量 = 当天总流量
+            String cycleTotalFlow = getCycleTotalFlow(findMap, map, realNameStatus);
+            total_show_flow = Arith.add(ApiUsed, Double.parseDouble(cycleTotalFlow));
 
-                String[] yyyyAndMmShortYesterday = VeDate.getYyyyAndMmShortYesterday();
-                Map<String, Object> yes = new HashMap<>();
-                yes.put("year", yyyyAndMmShortYesterday[0]);
-                yes.put("month", yyyyAndMmShortYesterday[1]);
-                yes.put("day", yyyyAndMmShortYesterday[2]);
-                yes.put("iccid", iccid);
-                Integer exist = yzCardFlowHisMapper.isExist(yes);
-                if (exist > 0) {
-                    total_flow_now = Arith.sub(ApiUsed, Double.parseDouble(yzCardFlowHisMapper.total_flow(yes)));
-                } else {
-                    int chickDate = isChickDate();
-                    total_flow_now = Arith.div(ApiUsed, chickDate);
-                    yes.put("total_flow_now", total_flow_now);
-                    yes.put("total_flow", Arith.sub(ApiUsed, total_flow_now));
-                    yzCardFlowHisMapper.save(yes);
-                }
-                total_show_flow_now = total_flow_now;
+            String[] yyyyAndMmShortYesterday = VeDate.getYyyyAndMmShortYesterday();
+            Map<String, Object> yes = new HashMap<>();
+            yes.put("year", yyyyAndMmShortYesterday[0]);
+            yes.put("month", yyyyAndMmShortYesterday[1]);
+            yes.put("day", yyyyAndMmShortYesterday[2]);
+            yes.put("iccid", iccid);
+            Integer exist = yzCardFlowHisMapper.isExist(yes);
+            if (exist > 0) {
+                total_flow_now = Arith.sub(ApiUsed, Double.parseDouble(yzCardFlowHisMapper.total_flow(yes)));
+            } else {
+                int chickDate = isChickDate();
+                total_flow_now = Arith.div(ApiUsed, chickDate);
+                yes.put("total_flow_now", total_flow_now);
+                yes.put("total_flow", Arith.sub(ApiUsed, total_flow_now));
+                yzCardFlowHisMapper.save(yes);
             }
-
-        //3.同步用量历史表
-        total_show_flow = Arith.mul(total_show_flow,xiShu);
-        total_show_flow_now = Arith.mul(total_show_flow_now,xiShu);
-        Integer isExist = yzCardFlowHisMapper.isExist(findMap);//历史用量 月用量记录
-        if(isExist!=null && isExist>0){
-            Map<String,Object> editMap = new HashMap<>();
-            editMap.putAll(findMap);
-            editMap.put("total_flow",ApiUsed);
-            editMap.put("total_flow_now",total_flow_now);
-            editMap.put("total_show_flow",total_show_flow);
-            editMap.put("total_show_flow_now",total_show_flow_now);
-            bool_flowHis = yzCardFlowHisMapper.edit(editMap)>0;
-        }else{
-            Map<String,Object> saveMap = new HashMap<>();
-            saveMap.putAll(findMap);
-            saveMap.put("total_flow",ApiUsed);
-            saveMap.put("total_flow_now",total_flow_now);
-            saveMap.put("total_show_flow",total_show_flow);
-            saveMap.put("total_show_flow_now",total_show_flow_now);
-            bool_flowHis = yzCardFlowHisMapper.save(saveMap)>0;
+            total_show_flow_now = total_flow_now;
         }
 
-        //用量计算： 当月总用量(接口) - 已使用的到期用量 = 剩余未分配用量
-        Double cl_Used = Arith.sub(total_show_flow,DseFlow);
+        // 3.同步用量历史表
+        total_show_flow = Arith.mul(total_show_flow, xiShu);
+        total_show_flow_now = Arith.mul(total_show_flow_now, xiShu);
+        Integer isExist = yzCardFlowHisMapper.isExist(findMap);// 历史用量 月用量记录
+        if (isExist != null && isExist > 0) {
+            Map<String, Object> editMap = new HashMap<>();
+            editMap.putAll(findMap);
+            editMap.put("total_flow", ApiUsed);
+            editMap.put("total_flow_now", total_flow_now);
+            editMap.put("total_show_flow", total_show_flow);
+            editMap.put("total_show_flow_now", total_show_flow_now);
+            bool_flowHis = yzCardFlowHisMapper.edit(editMap) > 0;
+        } else {
+            Map<String, Object> saveMap = new HashMap<>();
+            saveMap.putAll(findMap);
+            saveMap.put("total_flow", ApiUsed);
+            saveMap.put("total_flow_now", total_flow_now);
+            saveMap.put("total_show_flow", total_show_flow);
+            saveMap.put("total_show_flow_now", total_show_flow_now);
+            bool_flowHis = yzCardFlowHisMapper.save(saveMap) > 0;
+        }
 
-        List<Map<String,Object>> InEffectArr =  yzCardFlowMapper.findInEffect(findMap);
-        if(InEffectArr!=null && InEffectArr.size()>0){
+        // 用量计算： 当月总用量(接口) - 已使用的到期用量 = 剩余未分配用量
+        Double cl_Used = Arith.sub(total_show_flow, DseFlow);
+
+        List<Map<String, Object>> InEffectArr = yzCardFlowMapper.findInEffect(findMap);
+        if (InEffectArr != null && InEffectArr.size() > 0) {
             Double UdF;
             for (int i = 0; i < InEffectArr.size(); i++) {
-                Map<String,Object> Pobj = InEffectArr.get(i);
+                Map<String, Object> Pobj = InEffectArr.get(i);
                 Double true_flow = Double.parseDouble(Pobj.get("true_flow").toString());
                 Double error_flow = Double.parseDouble(Pobj.get("error_flow").toString());
                 Double error_time = Double.parseDouble(Pobj.get("error_time").toString());
                 String id = Pobj.get("id").toString();
-                xiShu = error_time;//同步包系数
+                xiShu = error_time;// 同步包系数
 
-                /*String ord_type = Pobj.get("ord_type").toString();
-                if ("3".equals(ord_type)) {
-                    if (Boolean.TRUE.equals(!(Pobj.get("use_true_flow") == null))) {
-                        Double use_ture_flow = Double.parseDouble(Pobj.get("use_true_flow").toString());
-                        cl_Used = Arith.add(cl_Used, use_ture_flow);
-                    }
-                }*/
-                //   当前计算 用量 - 资费计划用量 作比较 小等 0 用完了 否则未用完继续 作比较
-                UdF = Arith.sub(cl_Used,error_flow);
-                if(UdF<0){
-                    Double use_so_flow = Arith.mul(cl_Used,error_time);
-                    DseFlow = Arith.add(DseFlow,use_so_flow);//累加 主表用量 = 已用 * 系数
-                    Map<String,Object> UpdMap = new HashMap<>();
-                    UpdMap.put("use_true_flow",cl_Used);
-                    UpdMap.put("use_so_flow",use_so_flow);
-                    UpdMap.put("status","1");// 生效中
-                    UpdMap.put("id",id);
-                    bool_flow =  yzCardFlowMapper.updFlow(UpdMap)>0;
+                /*
+                 * String ord_type = Pobj.get("ord_type").toString();
+                 * if ("3".equals(ord_type)) {
+                 * if (Boolean.TRUE.equals(!(Pobj.get("use_true_flow") == null))) {
+                 * Double use_ture_flow =
+                 * Double.parseDouble(Pobj.get("use_true_flow").toString());
+                 * cl_Used = Arith.add(cl_Used, use_ture_flow);
+                 * }
+                 * }
+                 */
+                // 当前计算 用量 - 资费计划用量 作比较 小等 0 用完了 否则未用完继续 作比较
+                UdF = Arith.sub(cl_Used, error_flow);
+                if (UdF < 0) {
+                    Double use_so_flow = Arith.mul(cl_Used, error_time);
+                    DseFlow = Arith.add(DseFlow, use_so_flow);// 累加 主表用量 = 已用 * 系数
+                    Map<String, Object> UpdMap = new HashMap<>();
+                    UpdMap.put("use_true_flow", cl_Used);
+                    UpdMap.put("use_so_flow", use_so_flow);
+                    UpdMap.put("status", "1");// 生效中
+                    UpdMap.put("id", id);
+                    bool_flow = yzCardFlowMapper.updFlow(UpdMap) > 0;
                     break;
-                }else{
+                } else {
                     cl_Used = UdF;
-                    DseFlow = Arith.add(Arith.add(DseFlow,error_flow),Math.abs(cl_Used));//累加 主表用量 = 包容量 + 超出部分绝对值
-                    Map<String,Object> UpdMap = new HashMap<>();
-                    UpdMap.put("use_true_flow",error_flow);
-                    UpdMap.put("use_so_flow",true_flow);
-                    UpdMap.put("status","0");// 已失效
-                    UpdMap.put("id",id);
-                    //bool_flow = true;
-                    bool_flow =  yzCardFlowMapper.updFlow(UpdMap)>0;
+                    DseFlow = Arith.add(Arith.add(DseFlow, error_flow), Math.abs(cl_Used));// 累加 主表用量 = 包容量 + 超出部分绝对值
+                    Map<String, Object> UpdMap = new HashMap<>();
+                    UpdMap.put("use_true_flow", error_flow);
+                    UpdMap.put("use_so_flow", true_flow);
+                    UpdMap.put("status", "0");// 已失效
+                    UpdMap.put("id", id);
+                    // bool_flow = true;
+                    bool_flow = yzCardFlowMapper.updFlow(UpdMap) > 0;
                 }
             }
-        }else{
-            //获取最近过期的资费计划 系数
-            String Error_time =  yzCardFlowMapper.FindError_time(findMap);
-            xiShu = Error_time!=null && Error_time.length()>0 && Double.parseDouble(Error_time)>=1?Double.parseDouble(Error_time):xiShu;
+        } else {
+            // 获取最近过期的资费计划 系数
+            String Error_time = yzCardFlowMapper.FindError_time(findMap);
+            xiShu = Error_time != null && Error_time.length() > 0 && Double.parseDouble(Error_time) >= 1
+                    ? Double.parseDouble(Error_time)
+                    : xiShu;
 
         }
 
-        //同步主表用量
+        // 同步主表用量
         Double SumFlow = 0.0;
-        SumFlow = Arith.add(SumFlow,SumErrorFlow_D);
-        if(InEffectArr!=null && InEffectArr.size()>0){
+        SumFlow = Arith.add(SumFlow, SumErrorFlow_D);
+        if (InEffectArr != null && InEffectArr.size() > 0) {
             for (int i = 0; i < InEffectArr.size(); i++) {
-                Map<String,Object> Pobj = InEffectArr.get(i);
+                Map<String, Object> Pobj = InEffectArr.get(i);
                 Double true_flow = Double.parseDouble(Pobj.get("true_flow").toString());
-                SumFlow = Arith.add(SumFlow,true_flow);
+                SumFlow = Arith.add(SumFlow, true_flow);
             }
 
-        }else{
+        } else {
 
-            //查询该卡是否已经订购过资费计划 且  时间有效状态失效
+            // 查询该卡是否已经订购过资费计划 且 时间有效状态失效
 
-            //获取时间有效状态失效的资费计划 总量 和 已使用总量
-            Map<String,Object> iMap =  yzCardFlowMapper.findInvalidationSum(findMap);
-            if(iMap!=null){
-                sumTrue_flow = iMap.get("sumTrue_flow")!=null?Double.parseDouble(iMap.get("sumTrue_flow").toString()):sumTrue_flow;
-                sumUse_so_flow = iMap.get("sumUse_so_flow")!=null?Double.parseDouble(iMap.get("sumUse_so_flow").toString()):sumUse_so_flow;
-                DseFlow = Arith.add(sumUse_so_flow,Arith.mul(cl_Used,xiShu));//目前用量 = 已记录已用加上最近一个 资费计划 系数 * 接口减去已订购失效 真实用量 剩余用量
-                SumFlow = sumTrue_flow;//总用量 =  时间有效状态失效 sum（True_flow）
-            }else {
-                //查询 累计包类型 年包 有年包类型时不做累加
+            // 获取时间有效状态失效的资费计划 总量 和 已使用总量
+            Map<String, Object> iMap = yzCardFlowMapper.findInvalidationSum(findMap);
+            if (iMap != null) {
+                sumTrue_flow = iMap.get("sumTrue_flow") != null
+                        ? Double.parseDouble(iMap.get("sumTrue_flow").toString())
+                        : sumTrue_flow;
+                sumUse_so_flow = iMap.get("sumUse_so_flow") != null
+                        ? Double.parseDouble(iMap.get("sumUse_so_flow").toString())
+                        : sumUse_so_flow;
+                DseFlow = Arith.add(sumUse_so_flow, Arith.mul(cl_Used, xiShu));// 目前用量 = 已记录已用加上最近一个 资费计划 系数 * 接口减去已订购失效
+                                                                               // 真实用量 剩余用量
+                SumFlow = sumTrue_flow;// 总用量 = 时间有效状态失效 sum（True_flow）
+            } else {
+                // 查询 累计包类型 年包 有年包类型时不做累加
                 String SumErrorFlow_Year = yzCardFlowMapper.findInvalidationSumErrorFlow_Year(findMap);
-                Double SumErrorFlow_Year_D = SumErrorFlow_Year!=null && SumErrorFlow_Year.length()>0?Double.parseDouble(SumErrorFlow_Year):0.0;
-                if(SumErrorFlow_Year_D == 0.0){
-                    //未订购过资费计划  但是接口有用量 返回时   主表 账期 已用 += 接口用量 * 系数
-                    if(cl_Used>0.0){
-                        DseFlow = Arith.add(DseFlow,Arith.mul(cl_Used,xiShu));
+                Double SumErrorFlow_Year_D = SumErrorFlow_Year != null && SumErrorFlow_Year.length() > 0
+                        ? Double.parseDouble(SumErrorFlow_Year)
+                        : 0.0;
+                if (SumErrorFlow_Year_D == 0.0) {
+                    // 未订购过资费计划 但是接口有用量 返回时 主表 账期 已用 += 接口用量 * 系数
+                    if (cl_Used > 0.0) {
+                        DseFlow = Arith.add(DseFlow, Arith.mul(cl_Used, xiShu));
                     }
                 }
             }
         }
 
+        // 返回数据
+        Rmap.put("SumFlow", SumFlow);
+        Rmap.put("total_show_flow", DseFlow);
+        Rmap.put("used", DseFlow);
 
-
-        //返回数据
-        Rmap.put("SumFlow",SumFlow);
-        Rmap.put("total_show_flow",DseFlow);
-        Rmap.put("used",DseFlow);
-
-        Rmap.put("bool_info",bool_info);
-        Rmap.put("bool_flowHis",bool_flowHis);
-        Rmap.put("bool_flow",bool_flow);
-        return  Rmap;
+        Rmap.put("bool_info", bool_info);
+        Rmap.put("bool_flowHis", bool_flowHis);
+        Rmap.put("bool_flow", bool_flow);
+        return Rmap;
     }
 
-    //判断 上月流量周期 是否存在(A方法)
+    // 判断 上月流量周期 是否存在(A方法)
     /**
      * 判断 上月流量周期 是否存在
      * 否 通过API接口获取 上月流量周期
@@ -499,21 +531,20 @@ public class CardFlowSyn {
         }
     }
 
-
-    //判断前月末总流量是否存在(B方法)
-    //否 判断 从 Redis 获取上月27 - 当天号数 = 共有几天 是否存在
-    //否 否 调用 C方法
-    //否 是 截至当天的当月总流量 / 总天数 = 每天平均用量
-    //否 是 计算 上月27 ~ 上月月末 天数
-    //否 是 平均用量 * 上月27 ~ 上月月末天数 = 前月末总流量
-    //否 是 前月末总流量 存入MySQL
-    //否 是 前月末总流量 存入Map
-    //是 是 通过C方法 获取 总天数
-    //是 是 通过MySQL 获取 前月末总流量
-    //是 是 判断 获取截至昨天的当月总流量 是否存在
-    //是 是 否 总天数 - 1 = 昨天天数
-    //是 是 否 平均用量 * 昨天天数 = 截至昨天的当月总流量
-    //返回所有数值
+    // 判断前月末总流量是否存在(B方法)
+    // 否 判断 从 Redis 获取上月27 - 当天号数 = 共有几天 是否存在
+    // 否 否 调用 C方法
+    // 否 是 截至当天的当月总流量 / 总天数 = 每天平均用量
+    // 否 是 计算 上月27 ~ 上月月末 天数
+    // 否 是 平均用量 * 上月27 ~ 上月月末天数 = 前月末总流量
+    // 否 是 前月末总流量 存入MySQL
+    // 否 是 前月末总流量 存入Map
+    // 是 是 通过C方法 获取 总天数
+    // 是 是 通过MySQL 获取 前月末总流量
+    // 是 是 判断 获取截至昨天的当月总流量 是否存在
+    // 是 是 否 总天数 - 1 = 昨天天数
+    // 是 是 否 平均用量 * 昨天天数 = 截至昨天的当月总流量
+    // 返回所有数值
     private Map<String, Object> getFlowCounting(String iccid, Double apiUsed) {
         double avgDayFlow = 0.00;
         int countingDate = 0;
@@ -530,7 +561,8 @@ public class CardFlowSyn {
             System.out.println("Error in isChickDate: " + e.getMessage());
         }
 
-        if (countingDate <= 0) countingDate = 0;
+        if (countingDate <= 0)
+            countingDate = 0;
 
         try {
             yyyyAndMmShortEnd = VeDate.getYyyyAndMmShortEnd();
@@ -607,7 +639,7 @@ public class CardFlowSyn {
         return map;
     }
 
-    //计算天数(C方法)
+    // 计算天数(C方法)
 
     /**
      * 计算天数
@@ -616,13 +648,16 @@ public class CardFlowSyn {
      */
     private int isChickDate() {
         try {
-        Object cacheObject = redisCache.getCacheObject(CardFlowSyn.isChickDateValue);
-        if (cacheObject != null) return (int) cacheObject;
+            Object cacheObject = redisCache.getCacheObject(CardFlowSyn.isChickDateValue);
+            if (cacheObject != null)
+                return (int) cacheObject;
 
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-        int between = (int) ChronoUnit.DAYS.between(LocalDate.parse(VeDate.getStringDateShortCycle(), formatter), LocalDate.parse(VeDate.getStringDateShort(), formatter));
-        setDailyExpiryKey(CardFlowSyn.isChickDateValue, between);
-        return between;
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+            int between = (int) ChronoUnit.DAYS.between(LocalDate.parse(VeDate.getStringDateShortCycle(), formatter),
+                    LocalDate.parse(VeDate.getStringDateShort(), formatter));
+            int inclusiveDays = between + 1;
+            setDailyExpiryKey(CardFlowSyn.isChickDateValue, inclusiveDays);
+            return inclusiveDays;
         } catch (DateTimeParseException e) {
             // 处理日期解析异常
             System.out.println("isChickDate方法抛出 日期格式解析异常: " + e);
@@ -638,22 +673,22 @@ public class CardFlowSyn {
      * 设置Redis键值对，并使该键在当天23:59:00失效。
      */
     private void setDailyExpiryKey(String key, Object value) {
-        try{
-        // 获取当前时间和当天23:59:00的时间点
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime endOfDay = now.withHour(23).withMinute(59).withSecond(0).withNano(0);
+        try {
+            // 获取当前时间和当天23:59:00的时间点
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime endOfDay = now.withHour(23).withMinute(59).withSecond(0).withNano(0);
 
-        // 如果当前时间已经过了23:59:00，则设置为次日的23:59:00
-        if (now.isAfter(endOfDay)) {
-            endOfDay = endOfDay.plusDays(1);
-        }
+            // 如果当前时间已经过了23:59:00，则设置为次日的23:59:00
+            if (now.isAfter(endOfDay)) {
+                endOfDay = endOfDay.plusDays(1);
+            }
 
-        // 计算当前时间和当天23:59:00之间的时间差，单位为秒
-        Duration duration = Duration.between(now, endOfDay);
-        int ttlInSeconds = (int) duration.getSeconds();
+            // 计算当前时间和当天23:59:00之间的时间差，单位为秒
+            Duration duration = Duration.between(now, endOfDay);
+            int ttlInSeconds = (int) duration.getSeconds();
 
-        // 存储结果到Redis，并设置TTL
-        redisCache.setCacheObject(key, value, ttlInSeconds, TimeUnit.SECONDS);
+            // 存储结果到Redis，并设置TTL
+            redisCache.setCacheObject(key, value, ttlInSeconds, TimeUnit.SECONDS);
         } catch (DateTimeException e) {
             // 处理日期时间相关的异常
             throw new RuntimeException("setDailyExpiryKey方法抛出 日期时间计算异常", e);

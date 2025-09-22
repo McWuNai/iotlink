@@ -623,8 +623,9 @@ public class CardFlowSyn {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
             int between = (int) ChronoUnit.DAYS.between(LocalDate.parse(VeDate.getStringDateShortCycle(), formatter),
                     LocalDate.parse(VeDate.getStringDateShort(), formatter));
-            setDailyExpiryKey(CardFlowSyn.isChickDateValue, between);
-            return between;
+            int inclusiveDays = between + 1;
+            setDailyExpiryKey(CardFlowSyn.isChickDateValue, inclusiveDays);
+            return inclusiveDays;
         } catch (DateTimeParseException e) {
             // 处理日期解析异常
             System.out.println("isChickDate方法抛出 日期格式解析异常: " + e);
