@@ -1,773 +1,949 @@
 [
-  {
-    "card_queueName": "admin_DistributeCardOne_queue",
-    "card_exchangeName": "admin_exchange",
-    "card_routingKey": "admin.DistributeCardOne.queue"
-  },{
-  "card_queueName": "admin_CardImportSelImei_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.CardImportSelImei.queue"
-}, {
-  "card_queueName": "admin_CardImportSet_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.CardImportSet.queue"
-}, {
-  "is_noDxl": "1",
-  "card_queueName": "admin_saveCard_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.saveCard.queue"
-}, {
-  "is_noDxl": "1",
-  "card_queueName": "admin_DistributeCard_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.DistributeCard.queue"
-}, {
-  "is_noDxl": "1",
-  "card_queueName": "admin_OutCard_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin_OutCard_queue"
-}, {
-  "is_noDxl": "1",
-  "card_queueName": "admin_BackupsyzSysLogs_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.BackupsyzSysLogs.queue"
-}, {
-  "is_noDxl": "1",
-  "card_queueName": "admin_BackupsGenTable_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.BackupsGenTable.queue"
-}, {
-  "is_noDxl": "1",
-  "card_queueName": "polling_card_activatedate",
-  "card_exchangeName": "polling_card",
-  "card_routingKey": "polling.card.activatedate"
-}, {
-  "is_noDxl": "1",
-  "card_queueName": "polling_card_flow",
-  "card_exchangeName": "polling_card",
-  "card_routingKey": "polling.card.flow"
-}, {
-  "is_noDxl": "1",
-  "card_queueName": "polling_card_status",
-  "card_exchangeName": "polling_card",
-  "card_routingKey": "polling.card.status"
-}, {
-  "is_noDxl": "1",
-  "card_queueName": "polling_card_stop",
-  "card_exchangeName": "polling_card",
-  "card_routingKey": "polling.card.stop"
-}, {
-  "card_queueName": "admin_OrderImportRecharge_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.OrderImportRecharge.queue"
-}, {
-  "card_queueName": "p_addPackage_card",
-  "card_exchangeName": "polling_addPackage_card",
-  "card_routingKey": "p.addPackage.card"
-}, {
-  "card_queueName": "admin_CardUpd_queue",
-  "card_exchangeName": "admin_card_exchange",
-  "card_routingKey": "admin.CardUpd.queue"
-}, {
-  "card_queueName": "admin_WxWebOrder_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.WxWebOrder.queue"
-}, {
-  "is_noDxl": "1",
-  "card_queueName": "polling_card_disconnected",
-  "card_exchangeName": "polling_card",
-  "card_routingKey": "polling.card.disconnected"
-}, {
-  "card_queueName": "admin_CardDiagnosis_queue",
-  "card_exchangeName": "admin_card_exchange",
-  "card_routingKey": "admin.CardDiagnosis.queue"
-}, {
-  "card_queueName": "admin_CardImportBatch_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.CardImportBatch.queue"
-}, {
-  "card_queueName": "admin_importSetCardInfo_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.importSetCardInfo.queue"
-}, {
-  "card_queueName": "admin_MonthFirstday_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.MonthFirstday.queue"
-}, {
-  "card_queueName": "admin_CEndValue_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.CEndValue.queue"
-}, {
-  "card_queueName": "admin_WxShopping_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.WxShopping.queue"
-}, {
-  "card_queueName": "admin_ShoppingEmail_queue",
-  "card_exchangeName": "admin_CC_exchange",
-  "card_routingKey": "admin.ShoppingEmail.queue"
-}, {
-  "is_noDxl": "1",
-  "card_queueName": "admin_Exportallorders_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.Exportallorders.queue"
-}, {
-  "is_noDxl": "1",
-  "card_queueName": "admin_Shoppingexport_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.Shoppingexport.queue"
-}, {
-  "card_queueName": "admin_Consumption_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.Consumption.queue"
-}, {
-  "card_queueName": "admin_Stopped_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.Stopped.queue"
-}, {
-  "card_queueName": "admin_PublicMethod_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.PublicMethod.queue"
-}, {
-  "card_queueName": "admin_ConsumptionAndState_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.ConsumptionAndState.queue"
-}, {
-  "card_queueName": "admin_DueExpireTime_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.DueExpireTim.queue"
-}, {
-  "card_queueName": "admin_ImportStock_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.ImportStock.queue"
-}, {
-  "card_queueName": "admin_OpenNetwork_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.OpenNetwork.queue"
-}, {
-  "card_queueName": "admin_DisconnectNetwork_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.DisconnectNetwork.queue"
-}, {
-  "card_queueName": "admin_OpenNetwork_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.OpenNetwork.queue"
-}, {
-  "card_queueName": "admin_Machine_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.Machine.queue"
-}, {
-  "card_queueName": "admin_ExportFlow_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.ExportFlow.queue"
-}, {
-  "card_queueName": "admin_ExportFlowHis_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.ExportFlowHis.queue"
-}, {
-  "card_queueName": "admin_uploadCustomer_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.uploadCustomer.queue"
-}, {
-  "card_queueName": "admin_IndexDataGenerate_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.IndexDataGenerate.queue"
-}, {
-  "card_queueName": "admin_getSynActivateDate_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.getSynActivateDate.queue"
-}, {
-  "card_queueName": "admin_ApiSynCardUsed_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.ApiSynCardUsed.queue"
-}, {
-  "card_queueName": "admin_ApiSynCardStatus_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.ApiSynCardStatus.queue"
-}, {
-  "card_queueName": "admin_ApiSynUpdCardStatus_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.ApiSynUpdCardStatus.queue"
-}, {
-  "card_queueName": "admin_ApiSynUpdCardConnectionStatus_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.ApiSynUpdCardConnectionStatus.queue"
-}, {
-  "card_queueName": "admin_ExportDetails_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.ExportDetails.queue"
-}, {
-  "card_queueName": "admin_CardCancelrealname_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.CardCancelrealname.queue"
-}, {
-  "card_queueName": "admin_ExportRemittance_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.ExportRemittance.queue"
-}, {
-  "card_queueName": "admin_ExportIncome_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.ExportIncome.queue"
-}, {
-  "card_queueName": "admin_updDeptAmount_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.updDeptAmount.queue"
-}, {
-  "card_queueName": "admin_insertMoneyChangeRecord_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.insertMoneyChangeRecord.queue"
-}, {
-  "card_queueName": "admin_UpdDepositAmount_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.UpdDepositAmount.queue"
-}, {
-  "card_queueName": "admin_CardImportReplace_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.CardImportReplace.queue"
-}, {
-  "card_queueName": "admin_uploadDetails_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.uploadDetails.queue"
-}, {
-  "card_queueName": "admin_fileFlexible_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.fileFlexible.queue"
-}, {
-  "card_queueName": "admin_ImportCard_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.ImportCard.queue"
-}, {
-  "card_queueName": "admin_sendSynUsageReminder_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.sendSynUsageReminder.queue"
-}, {
-  "card_queueName": "admin_sendSynApiOfferinginfolist_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.sendSynApiOfferinginfolist.queue"
-}, {
-  "card_queueName": "admin_cardSynOffering_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.cardSynOffering.queue"
-}, {
-  "card_queueName": "admin_usageMail_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.usageMail.queue"
-}, {
-  "card_queueName": "polling_cardCardFlowLessThanZero_queue",
-  "card_exchangeName": "polling_cardCardFlow_exchange",
-  "card_routingKey": "polling.cardCardFlowLessThanZero.routingKey"
-}, {
-  "card_queueName": "admin_DivideInventorydetails_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.DivideInventorydetails.queue"
-}, {
-  "card_queueName": "admin_usageMail_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.usageMail.queue"
-}, {
-  "card_queueName": "admin_CardGetOpenDate_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.CardGetOpenDate.queue"
-}, {
-  "card_queueName": "admin_sendQuerFlowError_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.sendQuerFlowError.queue"
-}, {
-  "card_queueName": "polling_cardCardBreakNetwork_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "polling.cardCardBreakNetwork.queue"
-}, {
-  "card_queueName": "admin_ExportaBusiness_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.ExportaBusiness.queue"
-}, {
-  "card_queueName": "admin_ExportaAge_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.ExportaAge.queue"
-}, {
-  "card_queueName": "admin_ExportPlatform_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.ExportPlatform.queue"
-}, {
-  "card_queueName": "admin_Unsubscribe_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.Unsubscribe.queue"
-}, {
-  "card_queueName": "admin_EmaiApiSynError_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.EmaiApiSynError.queue"
-}, {
-  "card_queueName": "admin_RetryCC_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.RetryCC.queue"
-}, {
-  "card_queueName": "admin_CardConsumption_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.CardConsumption.queue"
-}, {
-  "card_queueName": "admin_CCCardAbnormalStatus_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.CCCardAbnormalStatus.queue"
-}, {
-  "card_queueName": "admin_RetryCCStatus_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.RetryCCStatus.queue"
-}, {
-  "card_queueName": "admin_CCShopping_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.CCShopping.queue"
-}, {
-  "card_queueName": "admin_Passageway_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.Passageway.queue"
-}, {
-  "card_queueName": "admin_PassagewayCount_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.PassagewayCount.queue"
-}, {
-  "card_queueName": "admin_PayGroup_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.PayGroup.queue"
-}, {
-  "card_queueName": "admin_PayGroupCount_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.PayGroupCount.queue"
-}, {
-  "card_queueName": "admin_Reminder_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.Reminder.queue"
-}, {
-  "card_queueName": "admin_ReminderCount_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.ReminderCount.queue"
-}, {
-  "card_queueName": "admin_rollbackError_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.rollbackError.queue"
-}, {
-  "card_queueName": "admin_synchronization_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.synchronization.queue"
-}, {
-  "card_queueName": "admin_synchronizationP_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.synchronizationP.queue"
-}, {
-  "card_queueName": "admin_CleanUp_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.CleanUp.queue"
-}, {
-  "card_queueName": "admin_pollingActivateDateIntelligent_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.pollingActivateDateIntelligent.queue"
-}, {
-  "card_queueName": "admin_pollingActivateDate_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.pollingActivateDate.queue"
-}, {
-  "card_queueName": "admin_pollingActivateDateCompensate_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.pollingActivateDateCompensate.queue"
-}, {
-  "card_queueName": "admin_pollingCardFlow_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.pollingCardFlow.queue"
-}, {
-  "card_queueName": "admin_pollingCardFlowSilencePeriod_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.pollingCardFlowSilencePeriod.queue"
-}, {
-  "card_queueName": "admin_pollingCardFlowNotRecord_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.pollingCardFlowNotRecord.queue"
-}, {
-  "card_queueName": "admin_pollingCardStatus_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.pollingCardStatus.queue"
-}, {
-  "card_queueName": "admin_pollingCardTask_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.pollingCardTask.queue"
-}, {
-  "card_queueName": "admin_pollingCardStatusNull_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.pollingCardStatusNull.queue"
-}, {
-  "card_queueName": "admin_CardActivate_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.CardActivate.queue"
-}, {
-  "card_queueName": "admin_pollingActivateTime_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.pollingActivateTime.queue"
-}, {
-  "card_queueName": "admin_pollingCardBreakNetwork_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.pollingCardBreakNetwork.queue"
-}, {
-  "card_queueName": "admin_pollingCardDisconnected_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.pollingCardDisconnected.queue"
-}, {
-  "card_queueName": "admin_CardDisconnectedTest_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.CardDisconnectedTest.queue"
-}, {
-  "card_queueName": "admin_pollingCardFlowLessThanZero_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.pollingCardFlowLessThanZero.queue"
-}, {
-  "card_queueName": "admin_pollingCardFlowTest_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.pollingCardFlowTest.queue"
-}, {
-  "card_queueName": "admin_pollingCardStatusTest_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.pollingCardStatusTest.queue"
-}, {
-  "card_queueName": "admin_CardStop_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.CardStop.queue"
-}, {
-  "card_queueName": "admin_channelType_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.channelType.queue"
-}, {
-  "card_queueName": "admin_pollingActivateDateTest_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.pollingActivateDateTest.queue"
-}, {
-  "card_queueName": "admin_pollingCardStatusTime_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.pollingCardStatusTime.queue"
-}, {
-  "card_queueName": "admin_channelTime_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.channelTime.queue"
-}, {
-  "card_queueName": "admin_channelFindPercentage_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.channelFindPercentage.queue"
-}, {
-  "card_queueName": "admin_CardStatusTest_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.CardStatusTest.queue"
-}, {
-  "card_queueName": "admin_SynChannel_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.SynChannel.queue"
-}, {
-  "card_queueName": "admin_cleanRedisChannel_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.cleanRedisChannel.queue"
-}, {
-  "card_queueName": "admin_RebootFlowPolling_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.RebootFlowPolling.queue"
-}, {
-  "card_queueName": "admin_RebootCardStop_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.RebootCardStop.queue"
-}, {
-  "card_queueName": "admin_RebootCardDisconnected_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.RebootCardDisconnected.queue"
-}, {
-  "card_queueName": "admin_SynOfferinginfo_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.SynOfferinginfo.queue"
-}, {
-  "card_queueName": "admin_SynOfferinginfoTest_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.SynOfferinginfoTest.queue"
-}, {
-  "card_queueName": "admin_SynOfferinginfoMQ_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.SynOfferinginfoMQ.queue"
-}, {
-  "card_queueName": "admin_addPackageProduction_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.addPackageProduction.queue"
-}, {
-  "card_queueName": "admin_activationAddPackageProductionAndActivateDate_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.activationAddPackageProductionAndActivateDate.queue"
-}, {
-  "card_queueName": "admin_updStatusShowId_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.updStatusShowId.queue"
-}, {
-  "card_queueName": "admin_activationAddPackageProduction_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.activationAddPackageProduction.queue"
-}, {
-  "card_queueName": "admin_CreateExchange_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.CreateExchange.queue"
-}, {
-  "card_queueName": "admin_pollingCardStop_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.pollingCardStop.queue"
-}, {
-  "card_queueName": "admin_BatchByBatchAdd_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.BatchByBatchAdd.queue"
-}, {
-  "card_queueName": "admin_cleanExecutionTaskFlie_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.cleanExecutionTaskFlie.queue"
-}, {
-  "card_queueName": "admin_RenewalToGenerateOrder_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.RenewalToGenerateOrder.queue"
-}, {
-  "card_queueName": "admin_UpdOrderStatus_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.UpdOrderStatus.queue"
-}, {
-  "card_queueName": "admin_emailCCRenewal_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.emailCCRenewal.queue"
-}, {
-  "card_queueName": "admin_synchronizationCount_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.synchronizationCount.queue"
-}, {
-  "card_queueName": "admin_AssetDetails_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.AssetDetails.queue"
-}, {
-  "card_queueName": "admin_cardInfoChange_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.cardInfoChange.queue"
-}, {
-  "card_queueName": "pollingOther_cardCardStatus_queue",
-  "card_exchangeName": "polling_cardCardStatus_exchange",
-  "card_routingKey": "pollingOther.cardCardStatus.queue"
-}, {
-  "card_queueName": "pollingOther_cardCardActivateDate_queue",
-  "card_exchangeName": "polling_cardCardActivateDate_exchange",
-  "card_routingKey": "pollingOther.cardCardActivateDate.queue"
-}, {
-  "card_queueName": "admin_AgentAssetDetails_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.AgentAssetDetails.queue"
-}, {
-  "card_queueName": "admin_LogClear_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.LogClear.queue"
-}, {
-  "card_queueName": "admin_cardPacketCount_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.cardPacketCount.queue"
-}, {
-  "card_queueName": "admin_ExportPacket_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.ExportPacket.queue"
-}, {
-  "card_queueName": "admin_OrderTextRecharge_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.OrderTextRecharge.queue"
-}, {
-  "card_queueName": "admin_CardDueSoon_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin_CardDueSoon_queue"
-}, {
-  "card_queueName": "admin_smsCC_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.smsCC.queue"
-}, {
-  "card_queueName": "admin_cardSmsExecution_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.cardSmsExecution.queue"
-}, {
-  "card_queueName": "admin_SynUpstreamMember_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.SynUpstreamMember.queue"
-}, {
-  "card_queueName": "admin_SynCardInfo_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.SynCardInfo.queue"
-}, {
-  "card_queueName": "admin_synCardIccid_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.synCardIccid.queue"
-}, {
-  "card_queueName": "admin_emailServiceOperationCount_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.emailServiceOperationCount.queue"
-}, {
-  "card_queueName": "admin_synCardToPrimaryTable_queue",
-  "card_exchangeName": "admin_exchange",
-  "card_routingKey": "admin.synCardToPrimaryTable.queue"
-},{
-    "card_exchangeName": "admin_exchange",
-    "card_queueName": "admin_CardDataComparison_queue",
-    "card_routingKey": "admin.CardDataComparison.queue"
-  },
-  {
-    "card_exchangeName": "admin_exchange",
-    "card_queueName": "admin_emailServiceOperation_queue",
-    "card_routingKey": "admin.emailServiceOperation.queue"
-  },
-  {
-    "card_exchangeName": "admin_exchange",
-    "card_queueName": "admin_synCardInfoSel_queue",
-    "card_routingKey": "admin.synCardInfoSel.queue"
-  },
-  {
-    "card_queueName": "admin_OutMemberGroup_queue",
-    "card_exchangeName": "admin_exchange",
-    "card_routingKey": "admin.OutMemberGroup.queue"
-  },
-  {
-    "card_queueName": "admin_OutUpStream_queue",
-    "card_exchangeName": "admin_exchange",
-    "card_routingKey": "admin.OutUpStream.queue"
-  }, {
-  "card_exchangeName": "admin_exchange",
-  "card_queueName": "admin_emailServiceOperation_queue",
-  "card_routingKey": "admin.emailServiceOperation.queue"
-}, {
-  "card_exchangeName": "admin_exchange",
-  "card_queueName": "admin_synCardInfoSel_queue",
-  "card_routingKey": "admin.synCardInfoSel.queue"
-},{
-  "card_exchangeName": "admin_exchange",
-  "card_queueName": "admin_synChannelUpstreamCardCount_queue",
-  "card_routingKey": "admin.synChannelUpstreamCardCount.queue"
-},{
-  "card_exchangeName": "admin_exchange",
-  "card_queueName": "admin_cardSynInfoUpdDetect_queue",
-  "card_routingKey": "admin.cardSynInfoUpdDetect.queue"
-},{
-  "card_exchangeName": "admin_exchange",
-  "card_queueName": "admin_cardSynInfoAddDetect_queue",
-  "card_routingKey": "admin.cardSynInfoAddDetect.queue"
-},{
-  "card_exchangeName": "admin_exchange",
-  "card_queueName": "admin_EmaiSynCardInfo_queue",
-  "card_routingKey": "admin.EmaiSynCardInfo.queue"
-},{
-  "card_exchangeName": "admin_exchange",
-  "card_queueName": "admin_updOrderAudit_queue",
-  "card_routingKey": "admin.updOrderAudit.queue"
-},{
-  "card_exchangeName": "admin_exchange",
-  "card_queueName": "admin_automationNetworkCallback_queue",
-  "card_routingKey": "admin.automationNetworkCallback.queue"
-},{
-  "card_exchangeName": "admin_exchange",
-  "card_queueName": "admin_orderCardDiagnosis_queue",
-  "card_routingKey": "admin.orderCardDiagnosis.queue"
-},{
-    "card_exchangeName": "admin_exchange",
-    "card_queueName": "admin_orderCardApiRequest_queue",
-    "card_routingKey": "admin.orderCardApiRequest.queue"
-},{
-  "card_exchangeName": "admin_exchange",
-  "card_queueName": "admin_FlowCompensateSend_queue",
-  "card_routingKey": "admin.FlowCompensateSend.queue"
-},
-  {
-  "card_exchangeName": "admin_exchange",
-  "card_queueName": "admin_EmaiApiSynSend_queue",
-  "card_routingKey": "admin.EmaiApiSynSend.queue"
-},
-  {
-  "card_exchangeName": "admin_exchange",
-  "card_queueName": "polling_FlowCompensate_queue",
-  "card_routingKey": "polling.FlowCompensate.queue"
-},{
-  "card_exchangeName": "admin_exchange",
-  "card_queueName": "admin_StateCompensateSend_queue",
-  "card_routingKey": "admin.StateCompensateSend.queue"
-},{
-  "card_exchangeName": "admin_exchange",
-  "card_queueName": "polling_StateCompensate_queue",
-  "card_routingKey": "polling.StateCompensate.queue"
-},{
-  "card_exchangeName": "admin_exchange",
-  "card_queueName": "compensate_CardFlow_queue",
-  "card_routingKey": "compensate.CardFlow.queue"
-},{
-  "card_exchangeName": "admin_exchange",
-  "card_queueName": "compensate_CardStasus_queue",
-  "card_routingKey": "compensate.CardStasus.queue"
-},{
-  "card_exchangeName": "admin_exchange",
-  "card_queueName": "admin_TdTest_queue",
-  "card_routingKey": "admin.TdTest.queue"
-},{
-  "card_exchangeName": "admin_exchange",
-  "card_queueName": "admin_migrateCardFlowHis_queue",
-  "card_routingKey": "admin.migrateCardFlowHis.queue"
-},{
-  "card_exchangeName": "admin_exchange",
-  "card_queueName": "admin_migrateEx_queue",
-  "card_routingKey": "admin.migrateEx.queue"
-},{
-  "card_exchangeName": "admin_exchange",
-  "card_queueName": "admin_OrdIndexDataGenerate_queue",
-  "card_routingKey": "admin.OrdIndexDataGenerate.queue"
-},{
-  "card_exchangeName": "admin_exchange",
-  "card_queueName": "admin_CompensateGenerateTask_queue",
-  "card_routingKey": "admin.CompensateGenerateTask.queue"
-},{
-  "card_exchangeName": "admin_exchange",
-  "card_queueName": "admin_smsCCTextField_queue",
-  "card_routingKey": "admin.smsCCTextField.queue"
-},{
-    "card_exchangeName": "admin_exchange",
-    "card_queueName": "admin_applyUseSend_queue",
-    "card_routingKey": "admin.applyUseSend.queue"
-},{
-  "card_exchangeName": "admin_exchange",
-  "card_queueName": "admin_applyCardReviewed_queue",
-  "card_routingKey": "admin.applyCardReviewed.queue"
-},{
-  "card_exchangeName": "admin_exchange",
-  "card_queueName": "admin_RetryCCApplyCardReviewed_queue",
-  "card_routingKey": "admin.RetryCCApplyCardReviewed.queue"
-},{
-  "card_exchangeName": "admin_exchange",
-  "card_queueName": "admin_NBExceed_queue",
-  "card_routingKey": "admin.NBExceed.queue"
-},{
-  "card_exchangeName": "admin_exchange",
-  "card_queueName": "admin_clearEecordNBExceed_queue",
-  "card_routingKey": "admin.clearEecordNBExceed.queue"
-},
-  {
-    "card_exchangeName": "admin_exchange",
-    "card_queueName": "admin_applyUseCardOut_queue",
-    "card_routingKey": "admin.applyUseCardOut.queue"
-  },
-  {
-    "card_exchangeName": "admin_exchange",
-    "card_queueName": "admin_Bill_queue",
-    "card_routingKey": "admin.Bill.queue"
-  },
-  {
-    "card_exchangeName": "admin_exchange",
-    "card_queueName":  "admin_exportBill_queue",
-    "card_routingKey": "admin.exportBill.queue"
-  },
-  {
-    "card_exchangeName": "admin_exchange",
-    "card_queueName":  "admin_cardPollingCzc_queue",
-    "card_routingKey": "admin.cardPollingCzc.queue"
-  },
-  {
-    "card_exchangeName": "admin_exchange",
-    "card_queueName":  "admin_pollingCardByUser_queue",
-    "card_routingKey": "admin.pollingCardByUser.queue"
-  },
-  {
-    "card_exchangeName": "admin_exchange",
-    "card_queueName":  "admin_autoPollingCzc_queue",
-    "card_routingKey": "admin.autoPollingCzc.queue"
-  }
-
+    {
+        "card_queueName": "admin_DistributeCardOne_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.DistributeCardOne.queue"
+    },
+    {
+        "card_queueName": "admin_CardImportSelImei_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.CardImportSelImei.queue"
+    },
+    {
+        "card_queueName": "admin_CardImportSet_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.CardImportSet.queue"
+    },
+    {
+        "is_noDxl": "1",
+        "card_queueName": "admin_saveCard_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.saveCard.queue"
+    },
+    {
+        "is_noDxl": "1",
+        "card_queueName": "admin_DistributeCard_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.DistributeCard.queue"
+    },
+    {
+        "is_noDxl": "1",
+        "card_queueName": "admin_OutCard_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin_OutCard_queue"
+    },
+    {
+        "is_noDxl": "1",
+        "card_queueName": "admin_BackupsyzSysLogs_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.BackupsyzSysLogs.queue"
+    },
+    {
+        "is_noDxl": "1",
+        "card_queueName": "admin_BackupsGenTable_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.BackupsGenTable.queue"
+    },
+    {
+        "is_noDxl": "1",
+        "card_queueName": "polling_card_activatedate",
+        "card_exchangeName": "polling_card",
+        "card_routingKey": "polling.card.activatedate"
+    },
+    {
+        "is_noDxl": "1",
+        "card_queueName": "polling_card_flow",
+        "card_exchangeName": "polling_card",
+        "card_routingKey": "polling.card.flow"
+    },
+    {
+        "is_noDxl": "1",
+        "card_queueName": "polling_card_status",
+        "card_exchangeName": "polling_card",
+        "card_routingKey": "polling.card.status"
+    },
+    {
+        "is_noDxl": "1",
+        "card_queueName": "polling_card_stop",
+        "card_exchangeName": "polling_card",
+        "card_routingKey": "polling.card.stop"
+    },
+    {
+        "card_queueName": "admin_OrderImportRecharge_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.OrderImportRecharge.queue"
+    },
+    {
+        "card_queueName": "p_addPackage_card",
+        "card_exchangeName": "polling_addPackage_card",
+        "card_routingKey": "p.addPackage.card"
+    },
+    {
+        "card_queueName": "admin_CardUpd_queue",
+        "card_exchangeName": "admin_card_exchange",
+        "card_routingKey": "admin.CardUpd.queue"
+    },
+    {
+        "card_queueName": "admin_WxWebOrder_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.WxWebOrder.queue"
+    },
+    {
+        "is_noDxl": "1",
+        "card_queueName": "polling_card_disconnected",
+        "card_exchangeName": "polling_card",
+        "card_routingKey": "polling.card.disconnected"
+    },
+    {
+        "card_queueName": "admin_CardDiagnosis_queue",
+        "card_exchangeName": "admin_card_exchange",
+        "card_routingKey": "admin.CardDiagnosis.queue"
+    },
+    {
+        "card_queueName": "admin_CardImportBatch_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.CardImportBatch.queue"
+    },
+    {
+        "card_queueName": "admin_importSetCardInfo_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.importSetCardInfo.queue"
+    },
+    {
+        "card_queueName": "admin_MonthFirstday_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.MonthFirstday.queue"
+    },
+    {
+        "card_queueName": "admin_CEndValue_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.CEndValue.queue"
+    },
+    {
+        "card_queueName": "admin_WxShopping_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.WxShopping.queue"
+    },
+    {
+        "card_queueName": "admin_ShoppingEmail_queue",
+        "card_exchangeName": "admin_CC_exchange",
+        "card_routingKey": "admin.ShoppingEmail.queue"
+    },
+    {
+        "is_noDxl": "1",
+        "card_queueName": "admin_Exportallorders_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.Exportallorders.queue"
+    },
+    {
+        "is_noDxl": "1",
+        "card_queueName": "admin_Shoppingexport_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.Shoppingexport.queue"
+    },
+    {
+        "card_queueName": "admin_Consumption_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.Consumption.queue"
+    },
+    {
+        "card_queueName": "admin_Stopped_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.Stopped.queue"
+    },
+    {
+        "card_queueName": "admin_PublicMethod_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.PublicMethod.queue"
+    },
+    {
+        "card_queueName": "admin_ConsumptionAndState_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.ConsumptionAndState.queue"
+    },
+    {
+        "card_queueName": "admin_DueExpireTime_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.DueExpireTim.queue"
+    },
+    {
+        "card_queueName": "admin_ImportStock_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.ImportStock.queue"
+    },
+    {
+        "card_queueName": "admin_OpenNetwork_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.OpenNetwork.queue"
+    },
+    {
+        "card_queueName": "admin_DisconnectNetwork_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.DisconnectNetwork.queue"
+    },
+    {
+        "card_queueName": "admin_OpenNetwork_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.OpenNetwork.queue"
+    },
+    {
+        "card_queueName": "admin_Machine_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.Machine.queue"
+    },
+    {
+        "card_queueName": "admin_ExportFlow_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.ExportFlow.queue"
+    },
+    {
+        "card_queueName": "admin_ExportFlowHis_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.ExportFlowHis.queue"
+    },
+    {
+        "card_queueName": "admin_uploadCustomer_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.uploadCustomer.queue"
+    },
+    {
+        "card_queueName": "admin_IndexDataGenerate_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.IndexDataGenerate.queue"
+    },
+    {
+        "card_queueName": "admin_getSynActivateDate_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.getSynActivateDate.queue"
+    },
+    {
+        "card_queueName": "admin_ApiSynCardUsed_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.ApiSynCardUsed.queue"
+    },
+    {
+        "card_queueName": "admin_ApiSynCardStatus_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.ApiSynCardStatus.queue"
+    },
+    {
+        "card_queueName": "admin_ApiSynUpdCardStatus_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.ApiSynUpdCardStatus.queue"
+    },
+    {
+        "card_queueName": "admin_ApiSynUpdCardConnectionStatus_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.ApiSynUpdCardConnectionStatus.queue"
+    },
+    {
+        "card_queueName": "admin_ExportDetails_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.ExportDetails.queue"
+    },
+    {
+        "card_queueName": "admin_CardCancelrealname_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.CardCancelrealname.queue"
+    },
+    {
+        "card_queueName": "admin_ExportRemittance_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.ExportRemittance.queue"
+    },
+    {
+        "card_queueName": "admin_ExportIncome_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.ExportIncome.queue"
+    },
+    {
+        "card_queueName": "admin_updDeptAmount_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.updDeptAmount.queue"
+    },
+    {
+        "card_queueName": "admin_insertMoneyChangeRecord_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.insertMoneyChangeRecord.queue"
+    },
+    {
+        "card_queueName": "admin_UpdDepositAmount_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.UpdDepositAmount.queue"
+    },
+    {
+        "card_queueName": "admin_CardImportReplace_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.CardImportReplace.queue"
+    },
+    {
+        "card_queueName": "admin_uploadDetails_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.uploadDetails.queue"
+    },
+    {
+        "card_queueName": "admin_fileFlexible_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.fileFlexible.queue"
+    },
+    {
+        "card_queueName": "admin_ImportCard_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.ImportCard.queue"
+    },
+    {
+        "card_queueName": "admin_sendSynUsageReminder_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.sendSynUsageReminder.queue"
+    },
+    {
+        "card_queueName": "admin_sendSynApiOfferinginfolist_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.sendSynApiOfferinginfolist.queue"
+    },
+    {
+        "card_queueName": "admin_cardSynOffering_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.cardSynOffering.queue"
+    },
+    {
+        "card_queueName": "admin_usageMail_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.usageMail.queue"
+    },
+    {
+        "card_queueName": "polling_cardCardFlowLessThanZero_queue",
+        "card_exchangeName": "polling_cardCardFlow_exchange",
+        "card_routingKey": "polling.cardCardFlowLessThanZero.routingKey"
+    },
+    {
+        "card_queueName": "admin_DivideInventorydetails_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.DivideInventorydetails.queue"
+    },
+    {
+        "card_queueName": "admin_usageMail_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.usageMail.queue"
+    },
+    {
+        "card_queueName": "admin_CardGetOpenDate_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.CardGetOpenDate.queue"
+    },
+    {
+        "card_queueName": "admin_sendQuerFlowError_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.sendQuerFlowError.queue"
+    },
+    {
+        "card_queueName": "polling_cardCardBreakNetwork_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "polling.cardCardBreakNetwork.queue"
+    },
+    {
+        "card_queueName": "admin_ExportaBusiness_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.ExportaBusiness.queue"
+    },
+    {
+        "card_queueName": "admin_ExportaAge_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.ExportaAge.queue"
+    },
+    {
+        "card_queueName": "admin_ExportPlatform_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.ExportPlatform.queue"
+    },
+    {
+        "card_queueName": "admin_Unsubscribe_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.Unsubscribe.queue"
+    },
+    {
+        "card_queueName": "admin_EmaiApiSynError_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.EmaiApiSynError.queue"
+    },
+    {
+        "card_queueName": "admin_RetryCC_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.RetryCC.queue"
+    },
+    {
+        "card_queueName": "admin_CardConsumption_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.CardConsumption.queue"
+    },
+    {
+        "card_queueName": "admin_CCCardAbnormalStatus_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.CCCardAbnormalStatus.queue"
+    },
+    {
+        "card_queueName": "admin_RetryCCStatus_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.RetryCCStatus.queue"
+    },
+    {
+        "card_queueName": "admin_CCShopping_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.CCShopping.queue"
+    },
+    {
+        "card_queueName": "admin_Passageway_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.Passageway.queue"
+    },
+    {
+        "card_queueName": "admin_PassagewayCount_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.PassagewayCount.queue"
+    },
+    {
+        "card_queueName": "admin_PayGroup_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.PayGroup.queue"
+    },
+    {
+        "card_queueName": "admin_PayGroupCount_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.PayGroupCount.queue"
+    },
+    {
+        "card_queueName": "admin_Reminder_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.Reminder.queue"
+    },
+    {
+        "card_queueName": "admin_ReminderCount_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.ReminderCount.queue"
+    },
+    {
+        "card_queueName": "admin_rollbackError_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.rollbackError.queue"
+    },
+    {
+        "card_queueName": "admin_synchronization_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.synchronization.queue"
+    },
+    {
+        "card_queueName": "admin_synchronizationP_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.synchronizationP.queue"
+    },
+    {
+        "card_queueName": "admin_CleanUp_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.CleanUp.queue"
+    },
+    {
+        "card_queueName": "admin_pollingActivateDateIntelligent_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.pollingActivateDateIntelligent.queue"
+    },
+    {
+        "card_queueName": "admin_pollingActivateDate_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.pollingActivateDate.queue"
+    },
+    {
+        "card_queueName": "admin_pollingActivateDateCompensate_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.pollingActivateDateCompensate.queue"
+    },
+    {
+        "card_queueName": "admin_pollingCardFlow_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.pollingCardFlow.queue"
+    },
+    {
+        "card_queueName": "admin_pollingCardFlowSilencePeriod_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.pollingCardFlowSilencePeriod.queue"
+    },
+    {
+        "card_queueName": "admin_pollingCardFlowNotRecord_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.pollingCardFlowNotRecord.queue"
+    },
+    {
+        "card_queueName": "admin_pollingCardStatus_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.pollingCardStatus.queue"
+    },
+    {
+        "card_queueName": "admin_pollingCardTask_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.pollingCardTask.queue"
+    },
+    {
+        "card_queueName": "admin_pollingCardStatusNull_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.pollingCardStatusNull.queue"
+    },
+    {
+        "card_queueName": "admin_CardActivate_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.CardActivate.queue"
+    },
+    {
+        "card_queueName": "admin_pollingActivateTime_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.pollingActivateTime.queue"
+    },
+    {
+        "card_queueName": "admin_pollingCardBreakNetwork_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.pollingCardBreakNetwork.queue"
+    },
+    {
+        "card_queueName": "admin_pollingCardDisconnected_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.pollingCardDisconnected.queue"
+    },
+    {
+        "card_queueName": "admin_CardDisconnectedTest_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.CardDisconnectedTest.queue"
+    },
+    {
+        "card_queueName": "admin_pollingCardFlowLessThanZero_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.pollingCardFlowLessThanZero.queue"
+    },
+    {
+        "card_queueName": "admin_pollingCardFlowTest_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.pollingCardFlowTest.queue"
+    },
+    {
+        "card_queueName": "admin_pollingCardStatusTest_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.pollingCardStatusTest.queue"
+    },
+    {
+        "card_queueName": "admin_CardStop_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.CardStop.queue"
+    },
+    {
+        "card_queueName": "admin_channelType_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.channelType.queue"
+    },
+    {
+        "card_queueName": "admin_pollingActivateDateTest_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.pollingActivateDateTest.queue"
+    },
+    {
+        "card_queueName": "admin_pollingCardStatusTime_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.pollingCardStatusTime.queue"
+    },
+    {
+        "card_queueName": "admin_channelTime_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.channelTime.queue"
+    },
+    {
+        "card_queueName": "admin_channelFindPercentage_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.channelFindPercentage.queue"
+    },
+    {
+        "card_queueName": "admin_CardStatusTest_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.CardStatusTest.queue"
+    },
+    {
+        "card_queueName": "admin_SynChannel_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.SynChannel.queue"
+    },
+    {
+        "card_queueName": "admin_cleanRedisChannel_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.cleanRedisChannel.queue"
+    },
+    {
+        "card_queueName": "admin_RebootFlowPolling_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.RebootFlowPolling.queue"
+    },
+    {
+        "card_queueName": "admin_RebootCardStop_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.RebootCardStop.queue"
+    },
+    {
+        "card_queueName": "admin_RebootCardDisconnected_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.RebootCardDisconnected.queue"
+    },
+    {
+        "card_queueName": "admin_SynOfferinginfo_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.SynOfferinginfo.queue"
+    },
+    {
+        "card_queueName": "admin_SynOfferinginfoTest_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.SynOfferinginfoTest.queue"
+    },
+    {
+        "card_queueName": "admin_SynOfferinginfoMQ_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.SynOfferinginfoMQ.queue"
+    },
+    {
+        "card_queueName": "admin_addPackageProduction_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.addPackageProduction.queue"
+    },
+    {
+        "card_queueName": "admin_activationAddPackageProductionAndActivateDate_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.activationAddPackageProductionAndActivateDate.queue"
+    },
+    {
+        "card_queueName": "admin_updStatusShowId_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.updStatusShowId.queue"
+    },
+    {
+        "card_queueName": "admin_activationAddPackageProduction_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.activationAddPackageProduction.queue"
+    },
+    {
+        "card_queueName": "admin_CreateExchange_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.CreateExchange.queue"
+    },
+    {
+        "card_queueName": "admin_pollingCardStop_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.pollingCardStop.queue"
+    },
+    {
+        "card_queueName": "admin_BatchByBatchAdd_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.BatchByBatchAdd.queue"
+    },
+    {
+        "card_queueName": "admin_cleanExecutionTaskFlie_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.cleanExecutionTaskFlie.queue"
+    },
+    {
+        "card_queueName": "admin_RenewalToGenerateOrder_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.RenewalToGenerateOrder.queue"
+    },
+    {
+        "card_queueName": "admin_UpdOrderStatus_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.UpdOrderStatus.queue"
+    },
+    {
+        "card_queueName": "admin_emailCCRenewal_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.emailCCRenewal.queue"
+    },
+    {
+        "card_queueName": "admin_synchronizationCount_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.synchronizationCount.queue"
+    },
+    {
+        "card_queueName": "admin_AssetDetails_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.AssetDetails.queue"
+    },
+    {
+        "card_queueName": "admin_cardInfoChange_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.cardInfoChange.queue"
+    },
+    {
+        "card_queueName": "pollingOther_cardCardStatus_queue",
+        "card_exchangeName": "polling_cardCardStatus_exchange",
+        "card_routingKey": "pollingOther.cardCardStatus.queue"
+    },
+    {
+        "card_queueName": "pollingOther_cardCardActivateDate_queue",
+        "card_exchangeName": "polling_cardCardActivateDate_exchange",
+        "card_routingKey": "pollingOther.cardCardActivateDate.queue"
+    },
+    {
+        "card_queueName": "admin_AgentAssetDetails_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.AgentAssetDetails.queue"
+    },
+    {
+        "card_queueName": "admin_LogClear_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.LogClear.queue"
+    },
+    {
+        "card_queueName": "admin_cardPacketCount_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.cardPacketCount.queue"
+    },
+    {
+        "card_queueName": "admin_ExportPacket_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.ExportPacket.queue"
+    },
+    {
+        "card_queueName": "admin_OrderTextRecharge_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.OrderTextRecharge.queue"
+    },
+    {
+        "card_queueName": "admin_CardDueSoon_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin_CardDueSoon_queue"
+    },
+    {
+        "card_queueName": "admin_smsCC_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.smsCC.queue"
+    },
+    {
+        "card_queueName": "admin_cardSmsExecution_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.cardSmsExecution.queue"
+    },
+    {
+        "card_queueName": "admin_SynUpstreamMember_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.SynUpstreamMember.queue"
+    },
+    {
+        "card_queueName": "admin_SynCardInfo_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.SynCardInfo.queue"
+    },
+    {
+        "card_queueName": "admin_synCardIccid_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.synCardIccid.queue"
+    },
+    {
+        "card_queueName": "admin_emailServiceOperationCount_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.emailServiceOperationCount.queue"
+    },
+    {
+        "card_queueName": "admin_synCardToPrimaryTable_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.synCardToPrimaryTable.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_CardDataComparison_queue",
+        "card_routingKey": "admin.CardDataComparison.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_emailServiceOperation_queue",
+        "card_routingKey": "admin.emailServiceOperation.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_synCardInfoSel_queue",
+        "card_routingKey": "admin.synCardInfoSel.queue"
+    },
+    {
+        "card_queueName": "admin_OutMemberGroup_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.OutMemberGroup.queue"
+    },
+    {
+        "card_queueName": "admin_OutUpStream_queue",
+        "card_exchangeName": "admin_exchange",
+        "card_routingKey": "admin.OutUpStream.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_emailServiceOperation_queue",
+        "card_routingKey": "admin.emailServiceOperation.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_synCardInfoSel_queue",
+        "card_routingKey": "admin.synCardInfoSel.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_synChannelUpstreamCardCount_queue",
+        "card_routingKey": "admin.synChannelUpstreamCardCount.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_cardSynInfoUpdDetect_queue",
+        "card_routingKey": "admin.cardSynInfoUpdDetect.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_cardSynInfoAddDetect_queue",
+        "card_routingKey": "admin.cardSynInfoAddDetect.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_EmaiSynCardInfo_queue",
+        "card_routingKey": "admin.EmaiSynCardInfo.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_updOrderAudit_queue",
+        "card_routingKey": "admin.updOrderAudit.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_automationNetworkCallback_queue",
+        "card_routingKey": "admin.automationNetworkCallback.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_orderCardDiagnosis_queue",
+        "card_routingKey": "admin.orderCardDiagnosis.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_orderCardApiRequest_queue",
+        "card_routingKey": "admin.orderCardApiRequest.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_FlowCompensateSend_queue",
+        "card_routingKey": "admin.FlowCompensateSend.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_EmaiApiSynSend_queue",
+        "card_routingKey": "admin.EmaiApiSynSend.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "polling_FlowCompensate_queue",
+        "card_routingKey": "polling.FlowCompensate.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_StateCompensateSend_queue",
+        "card_routingKey": "admin.StateCompensateSend.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "polling_StateCompensate_queue",
+        "card_routingKey": "polling.StateCompensate.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "compensate_CardFlow_queue",
+        "card_routingKey": "compensate.CardFlow.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "compensate_CardStasus_queue",
+        "card_routingKey": "compensate.CardStasus.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_TdTest_queue",
+        "card_routingKey": "admin.TdTest.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_migrateCardFlowHis_queue",
+        "card_routingKey": "admin.migrateCardFlowHis.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_migrateEx_queue",
+        "card_routingKey": "admin.migrateEx.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_OrdIndexDataGenerate_queue",
+        "card_routingKey": "admin.OrdIndexDataGenerate.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_CompensateGenerateTask_queue",
+        "card_routingKey": "admin.CompensateGenerateTask.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_smsCCTextField_queue",
+        "card_routingKey": "admin.smsCCTextField.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_applyUseSend_queue",
+        "card_routingKey": "admin.applyUseSend.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_applyCardReviewed_queue",
+        "card_routingKey": "admin.applyCardReviewed.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_RetryCCApplyCardReviewed_queue",
+        "card_routingKey": "admin.RetryCCApplyCardReviewed.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_NBExceed_queue",
+        "card_routingKey": "admin.NBExceed.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_clearEecordNBExceed_queue",
+        "card_routingKey": "admin.clearEecordNBExceed.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_applyUseCardOut_queue",
+        "card_routingKey": "admin.applyUseCardOut.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_Bill_queue",
+        "card_routingKey": "admin.Bill.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_exportBill_queue",
+        "card_routingKey": "admin.exportBill.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_cardPollingCzc_queue",
+        "card_routingKey": "admin.cardPollingCzc.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_pollingCardByUser_queue",
+        "card_routingKey": "admin.pollingCardByUser.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_autoPollingCzc_queue",
+        "card_routingKey": "admin.autoPollingCzc.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_ModuleImportData_queue",
+        "card_routingKey": "admin.ModuleImportData.queue"
+    }
 ]
-

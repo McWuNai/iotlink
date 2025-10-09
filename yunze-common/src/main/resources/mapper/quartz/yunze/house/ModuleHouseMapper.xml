@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.house.ModuleHouseMapper">
+    <delete id="del">
+        delete from sy_module_house where serial_number = #{serialNumber}
+    </delete>
+
+    <select id="selMapCount" parameterType="java.util.Map" resultType="java.lang.Integer">
+        select
+        count(*)
+        from
+        sy_module_house
+        <if test="value!=null and value!=''">
+            where
+            <if test="type == 1">
+                serial_number =#{value}
+            </if>
+            <if test="type == 2">
+                sn =#{value}
+            </if>
+        </if>
+    </select>
+    <select id="list" resultType="java.util.Map" parameterType="java.util.Map">
+        select *
+        from sy_module_house
+        <if test="value !='' and value != null">
+            where
+            <if test="type == 1">
+                serial_number =#{value}
+            </if>
+            <if test="type == 2">
+                sn =#{value}
+            </if>
+        </if>
+        LIMIT #{pageNum} , #{pageSize}
+    </select>
+    <select id="selectModuleBySerialNumber" resultType="java.util.Map">
+        select * from sy_module_house where serial_number = #{serialNumber}
+    </select>
+
+    <select id="isExistence" parameterType="java.util.HashMap" resultType="java.lang.String">
+        SELECT
+         serial_number
+        FROM
+        sy_module_house
+        <where>
+            <if test="serialNumbers != null and serialNumbers.size() &gt; 0">
+                serial_number IN
+                <foreach item="sn" collection="serialNumbers" index="index" separator="," open="(" close=")">
+                    #{sn}
+                </foreach>
+            </if>
+        </where>
+    </select>
+
+
+    <select id="selectModuleBySN" resultType="java.util.Map" parameterType="com.yunze.common.core.domain.entity.ModuleHouse">
+        select * from sy_module_house where sn = #{sn}
+    </select>
+    <insert id="ins" parameterType="com.yunze.common.core.domain.entity.ModuleHouse">
+        INSERT INTO sy_module_house (
+            serial_number,
+            salesperson,
+            customer_name,
+            sales_order_number,
+            delivery_order_number,
+            delivery_time,
+            customer_sales_order_number,
+            end_customer,
+            logistics_number,
+            consignee,
+            consignee_phone,
+            delivery_address,
+            material_code,
+            material_name,
+            model,
+            middle_box_number,
+            device_serial,
+            device_id,
+            sn,
+            original_sn,
+            mac,
+            iccid,
+            imsi,
+            reel_number,
+            firmware_version,
+            create_by,
+            create_time,
+            update_by,
+            update_time,
+            remark
+        )
+        VALUES (
+                   #{serialNumber},
+                   #{salesperson},
+                   #{customerName},
+                   #{salesOrderNumber},
+                   #{deliveryOrderNumber},
+                   #{deliveryTime},
+                   #{customerSalesOrderNumber},
+                   #{endCustomer},
+                   #{logisticsNumber},
+                   #{consignee},
+                   #{consigneePhone},
+                   #{deliveryAddress},
+                   #{materialCode},
+                   #{materialName},
+                   #{model},
+                   #{middleBoxNumber},
+                   #{deviceSerial},
+                   #{deviceID},
+                   #{sn},
+                   #{originalSN},
+                   #{mac},
+                   #{iccid},
+                   #{imsi},
+                   #{reelNumber},
+                   #{firmwareVersion},
+                   #{createBy},
+                   now(),
+                   #{updateBy},
+                   now(),
+                   #{remark}
+               )
+    </insert>
+
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
