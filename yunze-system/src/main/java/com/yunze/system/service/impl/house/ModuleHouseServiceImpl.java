@@ -73,7 +73,7 @@ public class ModuleHouseServiceImpl implements IModuleHouseService {
         task_map.put("task_name", task_name);
         task_map.put("url", SaveUrl);
         task_map.put("agent_id", User.getDeptId());
-        task_map.put("type", "15");
+        task_map.put("type", "40");
         yzExecutionTaskMapper.add(task_map);// 添加执行 任务表
 
         try {

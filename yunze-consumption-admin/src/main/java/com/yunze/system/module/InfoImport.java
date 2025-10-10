@@ -247,6 +247,8 @@ public class InfoImport {
                         entity.setImsi(Objects.toString(m.get("IMSI"), ""));
                         entity.setReelNumber(Objects.toString(m.get("卷盘号"), ""));
                         entity.setFirmwareVersion(Objects.toString(m.get("固件版本"), ""));
+                        entity.setCreateBy(Objects.toString(m.get("createBy"), Pmap.get("user_id").toString()));
+                        entity.setUpdateBy(Objects.toString(m.get("updateBy"), Pmap.get("user_id").toString()));
                         moduleHouseMapper.ins(entity);
                     } catch (Exception e) {
                         msg = e.getMessage();

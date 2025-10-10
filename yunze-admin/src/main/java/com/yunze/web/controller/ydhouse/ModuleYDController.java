@@ -88,6 +88,7 @@ public class ModuleYDController extends MyBaseController {
         SysUser User = loginUser.getUser();
         Parammap.put("User", User);
         Parammap.put("agent_id", User.getDeptId());
+        Parammap.put("user_id", User.getUserId());
         ExcelUtil<ModuleHouse> util = new ExcelUtil<>(ModuleHouse.class);
         //List<ModuleHouse> List = util.importExcel(file.getInputStream());;
         try {

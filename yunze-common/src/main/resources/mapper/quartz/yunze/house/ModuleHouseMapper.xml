@@ -55,10 +55,10 @@
         </where>
     </select>
 
-
     <select id="selectModuleBySN" resultType="java.util.Map" parameterType="com.yunze.common.core.domain.entity.ModuleHouse">
         select * from sy_module_house where sn = #{sn}
     </select>
+
     <insert id="ins" parameterType="com.yunze.common.core.domain.entity.ModuleHouse">
         INSERT INTO sy_module_house (
             serial_number,
