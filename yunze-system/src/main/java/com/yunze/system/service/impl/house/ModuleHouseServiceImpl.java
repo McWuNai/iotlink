@@ -1,6 +1,5 @@
 package com.yunze.system.service.impl.house;
 
-
 import com.alibaba.fastjson.JSON;
 import com.yunze.common.core.domain.entity.SysDept;
 import com.yunze.common.core.domain.entity.SysUser;
@@ -8,6 +7,7 @@ import com.yunze.common.exception.CustomException;
 import com.yunze.common.mapper.yunze.YzExecutionTaskMapper;
 import com.yunze.common.mapper.yunze.house.ModuleHouseMapper;
 import com.yunze.common.utils.StringUtils;
+import com.yunze.common.utils.yunze.PageUtil;
 import com.yunze.common.utils.yunze.Upload;
 import com.yunze.system.service.house.IModuleHouseService;
 import com.yunze.common.core.domain.entity.ModuleHouse;
@@ -36,14 +36,29 @@ public class ModuleHouseServiceImpl implements IModuleHouseService {
 
     @Override
     public Map<String, Object> list(Map<String, Object> map) {
-        Map<String, Object> rMap = new HashMap<String, Object>();
+        Map<String, Object> rMap = new HashMap<>();
+
+        // 获取分页参数
+        Integer currenPage = map.get("pageNum") != null ? Integer.parseInt(map.get("pageNum").toString()) : 1;
+        Integer pageSize = map.get("pageSize") != null ? Integer.parseInt(map.get("pageSize").toString()) : 10;
+
+        // 查询总数
         Integer total = moduleHouseMapper.selMapCount(map);
-        rMap.put("total",total);
-        int pageNum = (int) map.get("pageNum");
-        map.put("pageNum",pageNum-1);
+        total = total != null ? total : 0;
+
+        // 使用PageUtil处理分页
+        PageUtil pu = new PageUtil(total, currenPage, pageSize);
+        map.put("StarRow", pu.getStarRow());
+        map.put("PageSize", pu.getPageSize());
+
+        // 查询数据
         List<Map<String, Object>> list = moduleHouseMapper.list(map);
-        rMap.put("data",list);
-//        test();
+
+        // 返回结果
+        rMap.put("Pu", pu);
+        rMap.put("Data", list);
+        rMap.put("total", total);
+
         return rMap;
     }
 
@@ -112,45 +127,103 @@ public class ModuleHouseServiceImpl implements IModuleHouseService {
         }
         return "批量更新卡信息 指令 已发送，更新卡信息 详细信息请在 【执行日志管理】查询！";
 
-        /*if (StringUtils.isNull(list) || list.size() == 0) {
-            throw new CustomException("导入轮询数据不能为空！");
+        /*
+         * if (StringUtils.isNull(list) || list.size() == 0) {
+         * throw new CustomException("导入轮询数据不能为空！");
+         * }
+         * int successNum = 0;
+         * int failureNum = 0;
+         * StringBuilder successMsg = new StringBuilder();
+         * StringBuilder failureMsg = new StringBuilder();
+         * for (ModuleHouse moduleHouse : list) {
+         * try {
+         * // 验证是否存在这个序列号
+         * Map<String,Object> moduleHouseMap =
+         * moduleHouseMapper.selectModuleBySerialNumber(moduleHouse);
+         * if (StringUtils.isNull(moduleHouseMap)) {//库中不存在这个序列号
+         * Map<String,Object> serialNumberMap =
+         * moduleHouseMapper.selectModuleBySN(moduleHouse);
+         * if (serialNumberMap==null) {
+         * moduleHouse.setCreateBy(String.valueOf(userId));
+         * moduleHouse.setUpdateBy(String.valueOf(userId));
+         * moduleHouseMapper.ins(moduleHouse);
+         * successNum++;
+         * successMsg.append("<br/>" + successNum + "、序列号 " +
+         * moduleHouse.getSerialNumber() + " 导入成功");
+         * }else {
+         * failureNum++;
+         * failureMsg.append("<br/>" + failureNum + "、序列号 " +
+         * moduleHouse.getSerialNumber() + " 已存在");
+         * }
+         * } else {
+         * failureNum++;
+         * failureMsg.append("<br/>" + failureNum + "、序列号 " +
+         * moduleHouse.getSerialNumber() + " 已存在");
+         * }
+         * } catch (Exception e) {
+         * failureNum++;
+         * String msg = "<br/>" + failureNum + "、序列号 " + moduleHouse.getSerialNumber() +
+         * " 导入失败：";
+         * failureMsg.append(msg + e.getMessage());
+         * }
+         * }
+         * if (failureNum > 0) {
+         * failureMsg.insert(0, "很抱歉，导入失败！共 " + failureNum + " 条数据格式不正确，错误如下：");
+         * throw new CustomException(failureMsg.toString());
+         * } else {
+         * successMsg.insert(0, "恭喜您，数据已全部导入成功！共 " + successNum + " 条，数据如下：");
+         * }
+         * return successMsg.toString();
+         */
+    }
+
+    @Override
+    public String exportModule(Map<String, Object> map, SysUser currentUser) {
+        // 移除分页参数
+        map.remove("pageNum");
+        map.remove("pageSize");
+
+        String create_by = " [ " + currentUser.getDept().getDeptName() + " ] - " + " [ " + currentUser.getUserName()
+                + " ] ";
+        String newName = UUID.randomUUID().toString().replace("-", "") + "_ModuleHouseOut";
+        String agent_id = currentUser.getDept().getDeptId().toString();
+
+        String task_name = "模组信息 [导出] ";
+        String SaveUrl = "/getcsv/" + newName + ".csv";
+
+        Map<String, Object> task_map = new HashMap<String, Object>();
+        task_map.put("auth", create_by);
+        task_map.put("task_name", task_name);
+        task_map.put("url", SaveUrl);
+        task_map.put("agent_id", agent_id);
+        task_map.put("type", "4");
+
+        // 发送队列
+        String polling_queueName = "admin_ModuleHouseExport_queue";
+        String polling_routingKey = "admin.ModuleHouseExport.queue";
+        String polling_exchangeName = "admin_exchange";// 路由
+
+        try {
+            yzExecutionTaskMapper.add(task_map);// 添加执行 任务表
+            Map<String, Object> start_type = new HashMap<>();
+            start_type.put("type", "exportModuleHouse");// 启动类型
+            start_type.put("newName", newName);// 输出文件名
+            start_type.put("task_map", task_map);//
+            start_type.put("create_by", create_by);//
+            start_type.put("User", currentUser);
+            start_type.put("map", map);
+
+            rabbitTemplate.convertAndSend(polling_exchangeName, polling_routingKey, JSON.toJSONString(start_type),
+                    message -> {
+                        // 设置消息过期时间 30 分钟 过期
+                        message.getMessageProperties().setExpiration("" + (30 * 1000 * 60));
+                        return message;
+                    });
+        } catch (Exception e) {
+            System.out.println("导出 模组信息 失败 " + e.getMessage().toString());
+            return "导出 模组信息 操作失败！";
         }
-        int successNum = 0;
-        int failureNum = 0;
-        StringBuilder successMsg = new StringBuilder();
-        StringBuilder failureMsg = new StringBuilder();
-        for (ModuleHouse moduleHouse : list) {
-            try {
-                // 验证是否存在这个序列号
-                Map<String,Object> moduleHouseMap = moduleHouseMapper.selectModuleBySerialNumber(moduleHouse);
-                if (StringUtils.isNull(moduleHouseMap)) {//库中不存在这个序列号
-                    Map<String,Object> serialNumberMap = moduleHouseMapper.selectModuleBySN(moduleHouse);
-                    if (serialNumberMap==null) {
-                        moduleHouse.setCreateBy(String.valueOf(userId));
-                        moduleHouse.setUpdateBy(String.valueOf(userId));
-                        moduleHouseMapper.ins(moduleHouse);
-                        successNum++;
-                        successMsg.append("<br/>" + successNum + "、序列号 " + moduleHouse.getSerialNumber() + " 导入成功");
-                    }else {
-                        failureNum++;
-                        failureMsg.append("<br/>" + failureNum + "、序列号 " + moduleHouse.getSerialNumber() + " 已存在");
-                    }
-                }  else {
-                    failureNum++;
-                    failureMsg.append("<br/>" + failureNum + "、序列号 " + moduleHouse.getSerialNumber() + " 已存在");
-                }
-            } catch (Exception e) {
-                failureNum++;
-                String msg = "<br/>" + failureNum + "、序列号 " + moduleHouse.getSerialNumber() + " 导入失败：";
-                failureMsg.append(msg + e.getMessage());
-            }
-        }
-        if (failureNum > 0) {
-            failureMsg.insert(0, "很抱歉，导入失败！共 " + failureNum + " 条数据格式不正确，错误如下：");
-            throw new CustomException(failureMsg.toString());
-        } else {
-            successMsg.insert(0, "恭喜您，数据已全部导入成功！共 " + successNum + " 条，数据如下：");
-        }
-        return successMsg.toString();*/
+
+        return "已下发执行日志可在【系统管理】》【日志管理】》【执行日志】查看";
     }
 }

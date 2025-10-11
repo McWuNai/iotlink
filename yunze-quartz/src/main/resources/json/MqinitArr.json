@@ -945,5 +945,10 @@
         "card_exchangeName": "admin_exchange",
         "card_queueName": "admin_ModuleImportData_queue",
         "card_routingKey": "admin.ModuleImportData.queue"
+    },
+    {
+        "card_exchangeName": "admin_exchange",
+        "card_queueName": "admin_ModuleHouseExport_queue",
+        "card_routingKey": "admin.ModuleHouseExport.queue"
     }
 ]

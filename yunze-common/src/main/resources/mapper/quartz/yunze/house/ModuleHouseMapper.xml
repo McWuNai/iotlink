@@ -12,29 +12,253 @@
         count(*)
         from
         sy_module_house
-        <if test="value!=null and value!=''">
-            where
-            <if test="type == 1">
+        <where>
+            <if test="value!=null and value!=''">
+                <if test="type == 0">
+                salesperson =#{value}
+                </if>
+                <if test="type == 1">
+                customer_name =#{value}
+                </if>
+                <if test="type == 2">
+                sales_order_number =#{value}
+                </if>
+                <if test="type == 3">
+                delivery_order_number =#{value}
+                </if>
+                <if test="type == 4">
+                customer_sales_order_number =#{value}
+                </if>
+                <if test="type == 5">
+                end_customer =#{value}
+                </if>
+                <if test="type == 6">
+                logistics_number =#{value}
+                </if>
+                <if test="type == 7">
+                consignee =#{value}
+                </if>
+                <if test="type == 8">
+                consignee_phone =#{value}
+                </if>
+                <if test="type == 9">
+                delivery_address =#{value}
+                </if>
+                <if test="type == 10">
+                material_code =#{value}
+                </if>
+                <if test="type == 11">
+                material_name =#{value}
+                </if>
+                <if test="type == 12">
+                model =#{value}
+                </if>
+                <if test="type == 13">
                 serial_number =#{value}
-            </if>
-            <if test="type == 2">
+                </if>
+                <if test="type == 14">
+                middle_box_number =#{value}
+                </if>
+                <if test="type == 15">
+                device_serial =#{value}
+                </if>
+                <if test="type == 16">
+                device_id =#{value}
+                </if>
+                <if test="type == 17">
                 sn =#{value}
+                </if>
+                <if test="type == 18">
+                original_sn =#{value}
+                </if>
+                <if test="type == 19">
+                mac =#{value}
+                </if>
+                <if test="type == 20">
+                iccid =#{value}
+                </if>
+                <if test="type == 21">
+                imsi =#{value}
+                </if>
+                <if test="type == 22">
+                reel_number =#{value}
+                </if>
+                <if test="type == 23">
+                firmware_version =#{value}
+                </if>
             </if>
-        </if>
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+                AND
+                <if test="timetype == 1">
+                    create_time
+                </if>
+                <if test="timetype == 2">
+                    delivery_time
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
+            </if>
+            <if test="StartAndEndtype != null  and StartAndEndtype != '' and StartValue!=null and EndValue!=null">
+                AND
+                <if test="StartAndEndtype == 0">
+                    serial_number
+                </if>
+                <if test="StartAndEndtype == 1">
+                    middle_box_number
+                </if>
+                <if test="StartAndEndtype == 2">
+                    device_serial
+                </if>
+                <if test="StartAndEndtype == 3">
+                    device_id
+                </if>
+                <if test="StartAndEndtype == 4">
+                    sn
+                </if>
+                <if test="StartAndEndtype == 5">
+                    original_sn
+                </if>
+                <if test="StartAndEndtype == 6">
+                    mac
+                </if>
+                <if test="StartAndEndtype == 7">
+                    iccid
+                </if>
+                <if test="StartAndEndtype == 8">
+                    imsi
+                </if>
+                <if test="StartAndEndtype == 9">
+                    reel_number
+                </if>
+                BETWEEN #{StartValue} AND #{EndValue}
+            </if>
+        </where>
     </select>
     <select id="list" resultType="java.util.Map" parameterType="java.util.Map">
         select *
         from sy_module_house
-        <if test="value !='' and value != null">
-            where
-            <if test="type == 1">
-                serial_number =#{value}
+        <where>
+            <if test="value!=null and value!=''">
+                <if test="type == 0">
+                    salesperson =#{value}
+                </if>
+                <if test="type == 1">
+                    customer_name =#{value}
+                </if>
+                <if test="type == 2">
+                    sales_order_number =#{value}
+                </if>
+                <if test="type == 3">
+                    delivery_order_number =#{value}
+                </if>
+                <if test="type == 4">
+                    customer_sales_order_number =#{value}
+                </if>
+                <if test="type == 5">
+                    end_customer =#{value}
+                </if>
+                <if test="type == 6">
+                    logistics_number =#{value}
+                </if>
+                <if test="type == 7">
+                    consignee =#{value}
+                </if>
+                <if test="type == 8">
+                    consignee_phone =#{value}
+                </if>
+                <if test="type == 9">
+                    delivery_address =#{value}
+                </if>
+                <if test="type == 10">
+                    material_code =#{value}
+                </if>
+                <if test="type == 11">
+                    material_name =#{value}
+                </if>
+                <if test="type == 12">
+                    model =#{value}
+                </if>
+                <if test="type == 13">
+                    serial_number =#{value}
+                </if>
+                <if test="type == 14">
+                    middle_box_number =#{value}
+                </if>
+                <if test="type == 15">
+                    device_serial =#{value}
+                </if>
+                <if test="type == 16">
+                    device_id =#{value}
+                </if>
+                <if test="type == 17">
+                    sn =#{value}
+                </if>
+                <if test="type == 18">
+                    original_sn =#{value}
+                </if>
+                <if test="type == 19">
+                    mac =#{value}
+                </if>
+                <if test="type == 20">
+                    iccid =#{value}
+                </if>
+                <if test="type == 21">
+                    imsi =#{value}
+                </if>
+                <if test="type == 22">
+                    reel_number =#{value}
+                </if>
+                <if test="type == 23">
+                    firmware_version =#{value}
+                </if>
             </if>
-            <if test="type == 2">
-                sn =#{value}
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+                AND
+                <if test="timetype == 1">
+                    create_time
+                </if>
+                <if test="timetype == 2">
+                    delivery_time
+                </if>
+                BETWEEN #{staTime} AND #{endTime}
             </if>
+            <if test="StartAndEndtype != null  and StartAndEndtype != '' and StartValue!=null and EndValue!=null">
+                AND
+                <if test="StartAndEndtype == 0">
+                    serial_number
+                </if>
+                <if test="StartAndEndtype == 1">
+                    middle_box_number
+                </if>
+                <if test="StartAndEndtype == 2">
+                    device_serial
+                </if>
+                <if test="StartAndEndtype == 3">
+                    device_id
+                </if>
+                <if test="StartAndEndtype == 4">
+                    sn
+                </if>
+                <if test="StartAndEndtype == 5">
+                    original_sn
+                </if>
+                <if test="StartAndEndtype == 6">
+                    mac
+                </if>
+                <if test="StartAndEndtype == 7">
+                    iccid
+                </if>
+                <if test="StartAndEndtype == 8">
+                    imsi
+                </if>
+                <if test="StartAndEndtype == 9">
+                    reel_number
+                </if>
+                BETWEEN #{StartValue} AND #{EndValue}
+            </if>
+        </where>
+        <if test="StarRow != null and PageSize != null">
+            LIMIT #{StarRow} , #{PageSize}
         </if>
-        LIMIT #{pageNum} , #{pageSize}
     </select>
     <select id="selectModuleBySerialNumber" resultType="java.util.Map">
         select * from sy_module_house where serial_number = #{serialNumber}

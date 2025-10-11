@@ -302,4 +302,172 @@ public class InfoImport {
         }
         return sb.toString();
     }
+
+    /**
+     * 导出模组信息
+     * 
+     * @param msg
+     * @param channel
+     */
+    @RabbitHandler
+    @RabbitListener(queues = "admin_ModuleHouseExport_queue")
+    public void exportModuleHouse(String msg, Channel channel) {
+        try {
+            if (StringUtils.isEmpty(msg)) {
+                return;
+            }
+            Map<String, Object> map = JSON.parseObject(msg);
+            String type = map.get("type").toString();
+            String newName = map.get("newName").toString();
+            Map<String, Object> task_map = (Map<String, Object>) map.get("task_map");
+            String create_by = map.get("create_by").toString();
+            Map<String, Object> User = (Map<String, Object>) map.get("User");
+            Map<String, Object> queryMap = (Map<String, Object>) map.get("map");
+
+            String prefix = "admin_ModuleHouseExport_queue";
+            // 执行前判断 redis 是否存在 执行数据 存在时 不执行
+            Object isExecute = redisCache.getCacheObject(prefix + ":" + newName);
+            if (isExecute == null) {
+                redisCache.setCacheObject(prefix + ":" + newName, "1", 30, TimeUnit.MINUTES);
+                exportModuleData(queryMap, User, newName, task_map, create_by);
+            }
+        } catch (Exception e) {
+            log.error(">>错误 - 模组信息导出 消费者:{}<<", e.getMessage().toString());
+        }
+    }
+
+    /**
+     * 导出模组数据
+     */
+    private void exportModuleData(Map<String, Object> queryMap, Map<String, Object> User, String newName,
+            Map<String, Object> task_map, String create_by) {
+        try {
+            // 先查询总数
+            Integer totalCount = moduleHouseMapper.selMapCount(queryMap);
+            if (totalCount == null || totalCount == 0) {
+                log.info("模组信息导出：没有数据可导出");
+                yzExecutionTaskMapper.set_end_time(task_map);
+                return;
+            }
+
+            log.info("模组信息导出开始，总数据量: {} 条", totalCount);
+
+            // 导出列定义
+            String[] exportColumns = { "销售员", "客户名称", "销售订单号", "发货单单号", "发货时间", "客户销售订单号", "最终客户", "物流单号", "收件人",
+                    "客户收件人电话", "收件地址", "物料编码", "物料名称", "型号", "序列号", "中箱号", "串号", "设备号", "SN", "原SN", "MAC", "ICCID",
+                    "IMSI", "卷盘号", "固件版本" };
+
+            String[] exportKeys = { "salesperson", "customer_name", "sales_order_number", "delivery_order_number",
+                    "delivery_time",
+                    "customer_sales_order_number", "end_customer", "logistics_number", "consignee", "consignee_phone",
+                    "delivery_address", "material_code", "material_name", "model", "serial_number", "middle_box_number",
+                    "device_serial", "device_id", "sn", "original_sn", "mac", "iccid", "imsi", "reel_number",
+                    "firmware_version" };
+
+            // 分批次处理参数
+            int batchSize = 1000; // 每批次处理1000条数据
+            int totalBatches = (totalCount + batchSize - 1) / batchSize; // 计算总批次数
+            int exportedCount = 0;
+            boolean isFirstBatch = true;
+
+            for (int batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+                try {
+                    // 设置当前批次的分页参数
+                    int startRow = batchIndex * batchSize;
+                    queryMap.put("StarRow", startRow);
+                    queryMap.put("PageSize", batchSize);
+
+                    // 查询当前批次数据
+                    List<Map<String, Object>> batchData = moduleHouseMapper.list(queryMap);
+
+                    if (batchData != null && !batchData.isEmpty()) {
+                        // 格式化日期字段
+                        formatDateFieldsForExport(batchData);
+
+                        // 写入CSV文件（第一次写入表头，后续追加）
+                        if (isFirstBatch) {
+                            writeCSV.Write(newName, batchData, exportColumns, null, exportKeys);
+                            isFirstBatch = false;
+                        } else {
+                            // 追加写入，不包含表头
+                            writeCSV.Write(newName, batchData, null, null, exportKeys);
+                        }
+
+                        exportedCount += batchData.size();
+                        log.info("模组信息导出进度: {}/{} 批次完成，已导出 {} 条记录",
+                                batchIndex + 1, totalBatches, exportedCount);
+                    }
+
+                    // 移除分页参数，为下一批次准备
+                    queryMap.remove("StarRow");
+                    queryMap.remove("PageSize");
+
+                } catch (Exception batchException) {
+                    log.error("第 {} 批次导出失败: {}", batchIndex + 1, batchException.getMessage(), batchException);
+                    throw batchException;
+                }
+            }
+
+            log.info("模组信息导出完成，共导出 {} 条记录", exportedCount);
+            yzExecutionTaskMapper.set_end_time(task_map);
+
+        } catch (Exception e) {
+            log.error("模组信息导出异常: {}", e.getMessage(), e);
+            yzExecutionTaskMapper.set_end_time(task_map);
+        }
+    }
+
+    /**
+     * 为导出格式化日期字段
+     */
+    private void formatDateFieldsForExport(List<Map<String, Object>> dataList) {
+        for (Map<String, Object> item : dataList) {
+            // 格式化发货时间字段
+            if (item.containsKey("delivery_time")) {
+                Object deliveryTime = item.get("delivery_time");
+                if (deliveryTime != null) {
+                    try {
+                        if (deliveryTime instanceof java.sql.Timestamp) {
+                            java.sql.Timestamp timestamp = (java.sql.Timestamp) deliveryTime;
+                            String formatted = com.yunze.common.utils.DateUtils.parseDateToStr(
+                                    com.yunze.common.utils.DateUtils.YYYY_MM_DD_HH_MM_SS, timestamp);
+                            item.put("delivery_time", formatted);
+                        } else if (deliveryTime instanceof Long) {
+                            java.util.Date date = new java.util.Date((Long) deliveryTime);
+                            String formatted = com.yunze.common.utils.DateUtils.parseDateToStr(
+                                    com.yunze.common.utils.DateUtils.YYYY_MM_DD_HH_MM_SS, date);
+                            item.put("delivery_time", formatted);
+                        }
+                    } catch (Exception e) {
+                        // 格式化失败时保持原值
+                    }
+                }
+            }
+
+            // 格式化其他日期字段
+            String[] dateFields = { "create_time", "update_time" };
+            for (String field : dateFields) {
+                if (item.containsKey(field)) {
+                    Object dateValue = item.get(field);
+                    if (dateValue != null) {
+                        try {
+                            if (dateValue instanceof java.sql.Timestamp) {
+                                java.sql.Timestamp timestamp = (java.sql.Timestamp) dateValue;
+                                String formatted = com.yunze.common.utils.DateUtils.parseDateToStr(
+                                        com.yunze.common.utils.DateUtils.YYYY_MM_DD_HH_MM_SS, timestamp);
+                                item.put(field, formatted);
+                            } else if (dateValue instanceof Long) {
+                                java.util.Date date = new java.util.Date((Long) dateValue);
+                                String formatted = com.yunze.common.utils.DateUtils.parseDateToStr(
+                                        com.yunze.common.utils.DateUtils.YYYY_MM_DD_HH_MM_SS, date);
+                                item.put(field, formatted);
+                            }
+                        } catch (Exception e) {
+                            // 格式化失败时保持原值
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

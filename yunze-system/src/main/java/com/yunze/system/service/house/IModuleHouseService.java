@@ -1,6 +1,7 @@
 package com.yunze.system.service.house;
 
 import com.yunze.common.core.domain.entity.ModuleHouse;
+import com.yunze.common.core.domain.entity.SysUser;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
@@ -9,10 +10,11 @@ import java.util.Map;
 
 public interface IModuleHouseService {
 
-    Map<String,Object> list(Map<String,Object> map);
-
+    Map<String, Object> list(Map<String, Object> map);
 
     void del(Map<String, Object> parammap);
 
     String importModule(MultipartFile file, HashMap<String, Object> map);
+
+    String exportModule(Map<String, Object> map, SysUser currentUser);
 }
