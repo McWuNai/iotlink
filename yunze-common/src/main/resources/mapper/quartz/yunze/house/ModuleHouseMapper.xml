@@ -131,6 +131,9 @@
                 </if>
                 BETWEEN #{StartValue} AND #{EndValue}
             </if>
+            <if test="status != null and status != ''">
+                AND status = #{status}
+            </if>
         </where>
     </select>
     <select id="list" resultType="java.util.Map" parameterType="java.util.Map">
@@ -254,6 +257,9 @@
                     reel_number
                 </if>
                 BETWEEN #{StartValue} AND #{EndValue}
+            </if>
+            <if test="status != null and status != ''">
+                AND status = #{status}
             </if>
         </where>
         <if test="StarRow != null and PageSize != null">
