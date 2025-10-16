@@ -289,6 +289,84 @@
         select * from sy_module_house where sn = #{sn}
     </select>
 
+    <select id="validateBoxOrReelInStock" resultType="java.util.Map" parameterType="java.util.Map">
+        SELECT 
+            middle_box_number,
+            reel_number,
+            status,
+            serial_number,
+            material_name,
+            model
+        FROM sy_module_house 
+        WHERE status = '0' 
+        AND (
+        <if test="boxNumber != null and boxNumber != ''">
+                middle_box_number IN 
+            <foreach item="box" collection="boxNumberList" open="(" separator="," close=")">
+                    #{box}
+            </foreach>
+        </if>
+        <if test="boxNumber != null and boxNumber != '' and reelNumber != null and reelNumber != ''">
+                OR
+        </if>
+        <if test="reelNumber != null and reelNumber != ''">
+                reel_number IN 
+            <foreach item="reel" collection="reelNumberList" open="(" separator="," close=")">
+                    #{reel}
+            </foreach>
+        </if>
+        )
+        LIMIT 1
+    </select>
+
+    <update id="updateModuleStatusToOutbound" parameterType="java.util.Map">
+        UPDATE sy_module_house 
+        SET status = '1', 
+            update_by = #{updateBy}, 
+            update_time = NOW()
+        WHERE status = '0' 
+        AND (
+        <if test="boxNumberList != null and boxNumberList.size() > 0">
+                middle_box_number IN 
+            <foreach item="box" collection="boxNumberList" open="(" separator="," close=")">
+                    #{box}
+            </foreach>
+        </if>
+        <if test="boxNumberList != null and boxNumberList.size() > 0 and reelNumberList != null and reelNumberList.size() > 0">
+                OR
+        </if>
+        <if test="reelNumberList != null and reelNumberList.size() > 0">
+                reel_number IN 
+            <foreach item="reel" collection="reelNumberList" open="(" separator="," close=")">
+                    #{reel}
+            </foreach>
+        </if>
+        )
+    </update>
+
+    <select id="countModulesInStock" resultType="java.lang.Integer" parameterType="java.util.Map">
+        SELECT COUNT(*)
+        FROM sy_module_house 
+        WHERE status = '0' 
+        AND (
+        <if test="boxNumberList != null and boxNumberList.size() > 0">
+                middle_box_number IN 
+            <foreach item="box" collection="boxNumberList" open="(" separator="," close=")">
+                    #{box}
+            </foreach>
+        </if>
+        <if test="boxNumberList != null and boxNumberList.size() > 0 and reelNumberList != null and reelNumberList.size() > 0">
+                OR
+        </if>
+        <if test="reelNumberList != null and reelNumberList.size() > 0">
+                reel_number IN 
+            <foreach item="reel" collection="reelNumberList" open="(" separator="," close=")">
+                    #{reel}
+            </foreach>
+        </if>
+        )
+    </select>
+
     <insert id="ins" parameterType="com.yunze.common.core.domain.entity.ModuleHouse">
         INSERT INTO sy_module_house (
             serial_number,
@@ -356,6 +434,81 @@
                )
     </insert>
 
+    <!-- 根据中箱号或卷盘号查询模组明细数据 -->
+    <select id="selectModulesByBoxOrReel" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT 
+            serial_number,
+            middle_box_number,
+            reel_number,
+            salesperson,
+            customer_name,
+            sales_order_number,
+            delivery_order_number,
+            delivery_time,
+            customer_sales_order_number,
+            end_customer,
+            logistics_number,
+            consignee,
+            consignee_phone,
+            delivery_address,
+            material_code,
+            material_name,
+            model,
+            device_serial,
+            device_id,
+            sn,
+            original_sn,
+            mac,
+            iccid,
+            imsi,
+            firmware_version,
+            status
+        FROM sy_module_house
+        <where>
+            <if test="boxNumberList != null and boxNumberList.size() > 0">
+                AND middle_box_number IN
+                <foreach item="boxNumber" collection="boxNumberList" index="index" open="(" separator="," close=")">
+                    #{boxNumber}
+                </foreach>
+            </if>
+            <if test="reelNumberList != null and reelNumberList.size() > 0">
+                AND reel_number IN
+                <foreach item="reelNumber" collection="reelNumberList" index="index" open="(" separator="," close=")">
+                    #{reelNumber}
+                </foreach>
+            </if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 将中箱号或卷盘号在模组明细库中的状态修改为在库状态 -->
+    <update id="updateModuleStatusToInStock" parameterType="java.util.HashMap">
+        UPDATE sy_module_house
+        <set>
+            status = #{status},
+            <if test="update_by != null and update_by != ''">
+                update_by = #{update_by},
+            </if>
+            <if test="update_time != null">
+                update_time = #{update_time},
+            </if>
+            update_time = now()
+        </set>
+        <where>
+            <if test="boxNumberList != null and boxNumberList.size() > 0">
+                AND middle_box_number IN
+                <foreach item="boxNumber" collection="boxNumberList" index="index" open="(" separator="," close=")">
+                    #{boxNumber}
+                </foreach>
+            </if>
+            <if test="reelNumberList != null and reelNumberList.size() > 0">
+                AND reel_number IN
+                <foreach item="reelNumber" collection="reelNumberList" index="index" open="(" separator="," close=")">
+                    #{reelNumber}
+                </foreach>
+            </if>
+        </where>
+    </update>
 
 </mapper>
 

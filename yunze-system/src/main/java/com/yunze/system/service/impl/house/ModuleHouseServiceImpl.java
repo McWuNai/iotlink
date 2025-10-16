@@ -3,20 +3,20 @@ package com.yunze.system.service.impl.house;
 import com.alibaba.fastjson.JSON;
 import com.yunze.common.core.domain.entity.SysDept;
 import com.yunze.common.core.domain.entity.SysUser;
-import com.yunze.common.exception.CustomException;
 import com.yunze.common.mapper.yunze.YzExecutionTaskMapper;
 import com.yunze.common.mapper.yunze.house.ModuleHouseMapper;
 import com.yunze.common.utils.StringUtils;
 import com.yunze.common.utils.yunze.PageUtil;
 import com.yunze.common.utils.yunze.Upload;
 import com.yunze.system.service.house.IModuleHouseService;
-import com.yunze.common.core.domain.entity.ModuleHouse;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -196,7 +196,7 @@ public class ModuleHouseServiceImpl implements IModuleHouseService {
         task_map.put("task_name", task_name);
         task_map.put("url", SaveUrl);
         task_map.put("agent_id", agent_id);
-        task_map.put("type", "4");
+        task_map.put("type", "41");
 
         // 发送队列
         String polling_queueName = "admin_ModuleHouseExport_queue";
@@ -225,5 +225,235 @@ public class ModuleHouseServiceImpl implements IModuleHouseService {
         }
 
         return "已下发执行日志可在【系统管理】》【日志管理】》【执行日志】查看";
+    }
+
+    @Override
+    public Map<String, Object> validateBoxOrReelInStock(String boxNumber, String reelNumber) {
+        Map<String, Object> result = new HashMap<>();
+
+        // 检查参数
+        if (StringUtils.isEmpty(boxNumber) && StringUtils.isEmpty(reelNumber)) {
+            result.put("valid", false);
+            result.put("message", "中箱号和卷盘号不能同时为空");
+            return result;
+        }
+
+        List<String> allNumbers = new ArrayList<>();
+        List<String> failedNumbers = new ArrayList<>();
+        List<String> successNumbers = new ArrayList<>();
+
+        try {
+            // 处理中箱号（可能包含多个值，用逗号分隔）
+            if (StringUtils.isNotEmpty(boxNumber)) {
+                String[] boxNumbers = boxNumber.split(",");
+                for (String box : boxNumbers) {
+                    String trimmedBox = box.trim();
+                    if (StringUtils.isNotEmpty(trimmedBox)) {
+                        allNumbers.add("中箱号:" + trimmedBox);
+                        // 验证单个中箱号
+                        Map<String, Object> boxQueryMap = new HashMap<>();
+                        boxQueryMap.put("boxNumber", trimmedBox);
+                        boxQueryMap.put("boxNumberList", Arrays.asList(trimmedBox));
+
+                        Map<String, Object> boxResult = moduleHouseMapper.validateBoxOrReelInStock(boxQueryMap);
+                        if (boxResult != null && !boxResult.isEmpty()) {
+                            successNumbers.add("中箱号:" + trimmedBox);
+                        } else {
+                            failedNumbers.add("中箱号:" + trimmedBox + "(不存在或状态不是库存)");
+                        }
+                    }
+                }
+            }
+
+            // 处理卷盘号（可能包含多个值，用逗号分隔）
+            if (StringUtils.isNotEmpty(reelNumber)) {
+                String[] reelNumbers = reelNumber.split(",");
+                for (String reel : reelNumbers) {
+                    String trimmedReel = reel.trim();
+                    if (StringUtils.isNotEmpty(trimmedReel)) {
+                        allNumbers.add("卷盘号:" + trimmedReel);
+                        // 验证单个卷盘号
+                        Map<String, Object> reelQueryMap = new HashMap<>();
+                        reelQueryMap.put("reelNumber", trimmedReel);
+                        reelQueryMap.put("reelNumberList", Arrays.asList(trimmedReel));
+
+                        Map<String, Object> reelResult = moduleHouseMapper.validateBoxOrReelInStock(reelQueryMap);
+                        if (reelResult != null && !reelResult.isEmpty()) {
+                            successNumbers.add("卷盘号:" + trimmedReel);
+                        } else {
+                            failedNumbers.add("卷盘号:" + trimmedReel + "(不存在或状态不是库存)");
+                        }
+                    }
+                }
+            }
+
+            // 判断验证结果
+            if (failedNumbers.isEmpty()) {
+                // 所有号码都验证通过
+                result.put("valid", true);
+                result.put("message", "所有号码验证通过，共" + successNumbers.size() + "个号码");
+                result.put("successNumbers", successNumbers);
+            } else {
+                // 有号码验证失败
+                result.put("valid", false);
+                StringBuilder message = new StringBuilder();
+                message.append("验证失败，共").append(failedNumbers.size()).append("个号码不满足要求：");
+                for (String failed : failedNumbers) {
+                    message.append("\n- ").append(failed);
+                }
+                if (!successNumbers.isEmpty()) {
+                    message.append("\n验证通过的号码：");
+                    for (String success : successNumbers) {
+                        message.append("\n- ").append(success);
+                    }
+                }
+                result.put("message", message.toString());
+                result.put("failedNumbers", failedNumbers);
+                result.put("successNumbers", successNumbers);
+            }
+        } catch (Exception e) {
+            result.put("valid", false);
+            result.put("message", "验证过程中发生异常: " + e.getMessage());
+        }
+
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> updateModuleStatusToOutbound(String boxNumber, String reelNumber, String updateBy) {
+        Map<String, Object> result = new HashMap<>();
+
+        // 检查参数
+        if (StringUtils.isEmpty(boxNumber) && StringUtils.isEmpty(reelNumber)) {
+            result.put("success", false);
+            result.put("message", "中箱号和卷盘号不能同时为空");
+            return result;
+        }
+
+        List<String> boxNumberList = new ArrayList<>();
+        List<String> reelNumberList = new ArrayList<>();
+        int totalUpdated = 0;
+
+        try {
+            // 处理中箱号（可能包含多个值，用逗号分隔）
+            if (StringUtils.isNotEmpty(boxNumber)) {
+                String[] boxNumbers = boxNumber.split(",");
+                for (String box : boxNumbers) {
+                    String trimmedBox = box.trim();
+                    if (StringUtils.isNotEmpty(trimmedBox)) {
+                        boxNumberList.add(trimmedBox);
+                    }
+                }
+            }
+
+            // 处理卷盘号（可能包含多个值，用逗号分隔）
+            if (StringUtils.isNotEmpty(reelNumber)) {
+                String[] reelNumbers = reelNumber.split(",");
+                for (String reel : reelNumbers) {
+                    String trimmedReel = reel.trim();
+                    if (StringUtils.isNotEmpty(trimmedReel)) {
+                        reelNumberList.add(trimmedReel);
+                    }
+                }
+            }
+
+            // 构建更新参数
+            Map<String, Object> updateMap = new HashMap<>();
+            updateMap.put("updateBy", updateBy);
+
+            if (!boxNumberList.isEmpty()) {
+                updateMap.put("boxNumberList", boxNumberList);
+            }
+            if (!reelNumberList.isEmpty()) {
+                updateMap.put("reelNumberList", reelNumberList);
+            }
+
+            // 执行更新操作
+            totalUpdated = moduleHouseMapper.updateModuleStatusToOutbound(updateMap);
+
+            if (totalUpdated > 0) {
+                result.put("success", true);
+                result.put("message", "成功更新" + totalUpdated + "条记录的状态为出库");
+                result.put("updatedCount", totalUpdated);
+                result.put("boxNumbers", boxNumberList);
+                result.put("reelNumbers", reelNumberList);
+            } else {
+                result.put("success", false);
+                result.put("message", "没有找到需要更新的记录，可能所有号码都已出库或不存在");
+                result.put("updatedCount", 0);
+            }
+        } catch (Exception e) {
+            result.put("success", false);
+            result.put("message", "更新状态过程中发生异常: " + e.getMessage());
+            result.put("updatedCount", 0);
+        }
+
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> countModulesInStock(String boxNumber, String reelNumber) {
+        Map<String, Object> result = new HashMap<>();
+
+        // 检查参数
+        if (StringUtils.isEmpty(boxNumber) && StringUtils.isEmpty(reelNumber)) {
+            result.put("success", false);
+            result.put("message", "中箱号和卷盘号不能同时为空");
+            result.put("count", 0);
+            return result;
+        }
+
+        List<String> boxNumberList = new ArrayList<>();
+        List<String> reelNumberList = new ArrayList<>();
+
+        try {
+            // 处理中箱号（可能包含多个值，用逗号分隔）
+            if (StringUtils.isNotEmpty(boxNumber)) {
+                String[] boxNumbers = boxNumber.split(",");
+                for (String box : boxNumbers) {
+                    String trimmedBox = box.trim();
+                    if (StringUtils.isNotEmpty(trimmedBox)) {
+                        boxNumberList.add(trimmedBox);
+                    }
+                }
+            }
+
+            // 处理卷盘号（可能包含多个值，用逗号分隔）
+            if (StringUtils.isNotEmpty(reelNumber)) {
+                String[] reelNumbers = reelNumber.split(",");
+                for (String reel : reelNumbers) {
+                    String trimmedReel = reel.trim();
+                    if (StringUtils.isNotEmpty(trimmedReel)) {
+                        reelNumberList.add(trimmedReel);
+                    }
+                }
+            }
+
+            // 构建查询参数
+            Map<String, Object> queryMap = new HashMap<>();
+
+            if (!boxNumberList.isEmpty()) {
+                queryMap.put("boxNumberList", boxNumberList);
+            }
+            if (!reelNumberList.isEmpty()) {
+                queryMap.put("reelNumberList", reelNumberList);
+            }
+
+            // 执行统计查询
+            int totalCount = moduleHouseMapper.countModulesInStock(queryMap);
+
+            result.put("success", true);
+            result.put("message", "统计完成");
+            result.put("count", totalCount);
+            result.put("boxNumbers", boxNumberList);
+            result.put("reelNumbers", reelNumberList);
+
+        } catch (Exception e) {
+            result.put("success", false);
+            result.put("message", "统计过程中发生异常: " + e.getMessage());
+            result.put("count", 0);
+        }
+
+        return result;
     }
 }

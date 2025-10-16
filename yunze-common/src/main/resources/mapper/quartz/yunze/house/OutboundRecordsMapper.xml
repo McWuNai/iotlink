@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunze.common.mapper.yunze.house.OutboundRecordsMapper">
+
+    <select id="selectOutboundRecordsById" parameterType="Long" resultType="java.util.Map">
+        select id, receiving_unit, receiving_address, product_name, specification_model, box_number, reel_number, unit, quantity, shipping_date, contact_phone, remarks, courier_number, supplier_unit, supplier_contact_person, supplier_contact_phone, create_by, create_time, update_by, update_time 
+        from sy_outbound_records 
+        where id = #{id}
+    </select>
+
+    <select id="selectOutboundRecordsList" parameterType="java.util.Map" resultType="java.util.Map">
+        select id, receiving_unit, receiving_address, product_name, specification_model, box_number, reel_number, unit, quantity, shipping_date, contact_phone, remarks, courier_number, supplier_unit, supplier_contact_person, supplier_contact_phone, create_by, create_time, update_by, update_time 
+        from sy_outbound_records
+        <where>
+            <if test="receivingUnit != null  and receivingUnit != ''"> and receiving_unit like concat('%', #{receivingUnit}, '%')</if>
+            <if test="receivingAddress != null  and receivingAddress != ''"> and receiving_address like concat('%', #{receivingAddress}, '%')</if>
+            <if test="productName != null  and productName != ''"> and product_name like concat('%', #{productName}, '%')</if>
+            <if test="specificationModel != null  and specificationModel != ''"> and specification_model like concat('%', #{specificationModel}, '%')</if>
+            <if test="boxNumber != null  and boxNumber != ''"> and box_number like concat('%', #{boxNumber}, '%')</if>
+            <if test="reelNumber != null  and reelNumber != ''"> and reel_number like concat('%', #{reelNumber}, '%')</if>
+            <if test="unit != null  and unit != ''"> and unit = #{unit}</if>
+            <if test="quantity != null "> and quantity = #{quantity}</if>
+            <if test="shippingDate != null "> and shipping_date = #{shippingDate}</if>
+            <if test="contactPhone != null  and contactPhone != ''"> and contact_phone like concat('%', #{contactPhone}, '%')</if>
+            <if test="remarks != null  and remarks != ''"> and remarks like concat('%', #{remarks}, '%')</if>
+            <if test="courierNumber != null  and courierNumber != ''"> and courier_number like concat('%', #{courierNumber}, '%')</if>
+            <if test="supplierUnit != null  and supplierUnit != ''"> and supplier_unit like concat('%', #{supplierUnit}, '%')</if>
+            <if test="supplierContactPerson != null  and supplierContactPerson != ''"> and supplier_contact_person like concat('%', #{supplierContactPerson}, '%')</if>
+            <if test="supplierContactPhone != null  and supplierContactPhone != ''"> and supplier_contact_phone like concat('%', #{supplierContactPhone}, '%')</if>
+            <!-- 日期范围查询 -->
+            <if test="shippingDateStart != null and shippingDateStart != ''"> and shipping_date >= #{shippingDateStart}</if>
+            <if test="shippingDateEnd != null and shippingDateEnd != ''"> and shipping_date &lt;= #{shippingDateEnd}</if>
+            <!-- 通用查询条件 -->
+            <if test="type != null and value != null and value != ''">
+                <if test="type == 0"> and receiving_unit like concat('%', #{value}, '%')</if>
+                <if test="type == 1"> and product_name like concat('%', #{value}, '%')</if>
+                <if test="type == 2"> and box_number like concat('%', #{value}, '%')</if>
+                <if test="type == 3"> and reel_number like concat('%', #{value}, '%')</if>
+                <if test="type == 4"> and courier_number like concat('%', #{value}, '%')</if>
+                <if test="type == 5"> and supplier_unit like concat('%', #{value}, '%')</if>
+                <if test="type == 6"> and contact_phone like concat('%', #{value}, '%')</if>
+                <if test="type == 7"> and supplier_contact_person like concat('%', #{value}, '%')</if>
+                <if test="type == 8"> and supplier_contact_phone like concat('%', #{value}, '%')</if>
+            </if>
+        </where>
+        order by create_time desc
+    </select>
+
+    <select id="selectOutboundRecordsListWithPage" parameterType="java.util.Map" resultType="java.util.Map">
+        select id, receiving_unit, receiving_address, product_name, specification_model, box_number, reel_number, unit, quantity, shipping_date, contact_phone, remarks, courier_number, supplier_unit, supplier_contact_person, supplier_contact_phone, create_by, create_time, update_by, update_time 
+        from sy_outbound_records
+        <where>
+            <if test="receivingUnit != null  and receivingUnit != ''"> and receiving_unit like concat('%', #{receivingUnit}, '%')</if>
+            <if test="receivingAddress != null  and receivingAddress != ''"> and receiving_address like concat('%', #{receivingAddress}, '%')</if>
+            <if test="productName != null  and productName != ''"> and product_name like concat('%', #{productName}, '%')</if>
+            <if test="specificationModel != null  and specificationModel != ''"> and specification_model like concat('%', #{specificationModel}, '%')</if>
+            <if test="boxNumber != null  and boxNumber != ''"> and box_number like concat('%', #{boxNumber}, '%')</if>
+            <if test="reelNumber != null  and reelNumber != ''"> and reel_number like concat('%', #{reelNumber}, '%')</if>
+            <if test="unit != null  and unit != ''"> and unit = #{unit}</if>
+            <if test="quantity != null "> and quantity = #{quantity}</if>
+            <if test="shippingDate != null "> and shipping_date = #{shippingDate}</if>
+            <if test="contactPhone != null  and contactPhone != ''"> and contact_phone like concat('%', #{contactPhone}, '%')</if>
+            <if test="remarks != null  and remarks != ''"> and remarks like concat('%', #{remarks}, '%')</if>
+            <if test="courierNumber != null  and courierNumber != ''"> and courier_number like concat('%', #{courierNumber}, '%')</if>
+            <if test="supplierUnit != null  and supplierUnit != ''"> and supplier_unit like concat('%', #{supplierUnit}, '%')</if>
+            <if test="supplierContactPerson != null  and supplierContactPerson != ''"> and supplier_contact_person like concat('%', #{supplierContactPerson}, '%')</if>
+            <if test="supplierContactPhone != null  and supplierContactPhone != ''"> and supplier_contact_phone like concat('%', #{supplierContactPhone}, '%')</if>
+            <!-- 日期范围查询 -->
+            <if test="shippingDateStart != null and shippingDateStart != ''"> and shipping_date >= #{shippingDateStart}</if>
+            <if test="shippingDateEnd != null and shippingDateEnd != ''"> and shipping_date &lt;= #{shippingDateEnd}</if>
+            <!-- 通用查询条件 -->
+            <if test="type != null and value != null and value != ''">
+                <if test="type == 0"> and receiving_unit like concat('%', #{value}, '%')</if>
+                <if test="type == 1"> and product_name like concat('%', #{value}, '%')</if>
+                <if test="type == 2"> and box_number like concat('%', #{value}, '%')</if>
+                <if test="type == 3"> and reel_number like concat('%', #{value}, '%')</if>
+                <if test="type == 4"> and courier_number like concat('%', #{value}, '%')</if>
+                <if test="type == 5"> and supplier_unit like concat('%', #{value}, '%')</if>
+                <if test="type == 6"> and contact_phone like concat('%', #{value}, '%')</if>
+                <if test="type == 7"> and supplier_contact_person like concat('%', #{value}, '%')</if>
+                <if test="type == 8"> and supplier_contact_phone like concat('%', #{value}, '%')</if>
+            </if>
+        </where>
+        order by create_time desc
+        <if test="StarRow != null and PageSize != null">
+            LIMIT #{StarRow} , #{PageSize}
+        </if>
+    </select>
+
+    <select id="selectOutboundRecordsCount" parameterType="java.util.Map" resultType="java.lang.Integer">
+        select count(*)
+        from sy_outbound_records
+        <where>
+            <if test="receivingUnit != null  and receivingUnit != ''"> and receiving_unit like concat('%', #{receivingUnit}, '%')</if>
+            <if test="receivingAddress != null  and receivingAddress != ''"> and receiving_address like concat('%', #{receivingAddress}, '%')</if>
+            <if test="productName != null  and productName != ''"> and product_name like concat('%', #{productName}, '%')</if>
+            <if test="specificationModel != null  and specificationModel != ''"> and specification_model like concat('%', #{specificationModel}, '%')</if>
+            <if test="boxNumber != null  and boxNumber != ''"> and box_number like concat('%', #{boxNumber}, '%')</if>
+            <if test="reelNumber != null  and reelNumber != ''"> and reel_number like concat('%', #{reelNumber}, '%')</if>
+            <if test="unit != null  and unit != ''"> and unit = #{unit}</if>
+            <if test="quantity != null "> and quantity = #{quantity}</if>
+            <if test="shippingDate != null "> and shipping_date = #{shippingDate}</if>
+            <if test="contactPhone != null  and contactPhone != ''"> and contact_phone like concat('%', #{contactPhone}, '%')</if>
+            <if test="remarks != null  and remarks != ''"> and remarks like concat('%', #{remarks}, '%')</if>
+            <if test="courierNumber != null  and courierNumber != ''"> and courier_number like concat('%', #{courierNumber}, '%')</if>
+            <if test="supplierUnit != null  and supplierUnit != ''"> and supplier_unit like concat('%', #{supplierUnit}, '%')</if>
+            <if test="supplierContactPerson != null  and supplierContactPerson != ''"> and supplier_contact_person like concat('%', #{supplierContactPerson}, '%')</if>
+            <if test="supplierContactPhone != null  and supplierContactPhone != ''"> and supplier_contact_phone like concat('%', #{supplierContactPhone}, '%')</if>
+            <!-- 日期范围查询 -->
+            <if test="shippingDateStart != null and shippingDateStart != ''"> and shipping_date >= #{shippingDateStart}</if>
+            <if test="shippingDateEnd != null and shippingDateEnd != ''"> and shipping_date &lt;= #{shippingDateEnd}</if>
+            <!-- 通用查询条件 -->
+            <if test="type != null and value != null and value != ''">
+                <if test="type == 0"> and receiving_unit like concat('%', #{value}, '%')</if>
+                <if test="type == 1"> and product_name like concat('%', #{value}, '%')</if>
+                <if test="type == 2"> and box_number like concat('%', #{value}, '%')</if>
+                <if test="type == 3"> and reel_number like concat('%', #{value}, '%')</if>
+                <if test="type == 4"> and courier_number like concat('%', #{value}, '%')</if>
+                <if test="type == 5"> and supplier_unit like concat('%', #{value}, '%')</if>
+                <if test="type == 6"> and contact_phone like concat('%', #{value}, '%')</if>
+                <if test="type == 7"> and supplier_contact_person like concat('%', #{value}, '%')</if>
+                <if test="type == 8"> and supplier_contact_phone like concat('%', #{value}, '%')</if>
+            </if>
+        </where>
+    </select>
+
+    <insert id="insertOutboundRecords" parameterType="java.util.Map">
+        insert into sy_outbound_records
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="receivingUnit != null and receivingUnit != ''">receiving_unit,</if>
+            <if test="receivingAddress != null and receivingAddress != ''">receiving_address,</if>
+            <if test="productName != null and productName != ''">product_name,</if>
+            <if test="specificationModel != null">specification_model,</if>
+            <if test="boxNumber != null">box_number,</if>
+            <if test="reelNumber != null">reel_number,</if>
+            <if test="unit != null and unit != ''">unit,</if>
+            <if test="quantity != null">quantity,</if>
+            <if test="shippingDate != null">shipping_date,</if>
+            <if test="contactPhone != null and contactPhone != ''">contact_phone,</if>
+            <if test="remarks != null">remarks,</if>
+            <if test="courierNumber != null">courier_number,</if>
+            <if test="supplierUnit != null and supplierUnit != ''">supplier_unit,</if>
+            <if test="supplierContactPerson != null and supplierContactPerson != ''">supplier_contact_person,</if>
+            <if test="supplierContactPhone != null and supplierContactPhone != ''">supplier_contact_phone,</if>
+            create_by,
+            create_time,
+            update_by,
+            update_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="receivingUnit != null and receivingUnit != ''">#{receivingUnit},</if>
+            <if test="receivingAddress != null and receivingAddress != ''">#{receivingAddress},</if>
+            <if test="productName != null and productName != ''">#{productName},</if>
+            <if test="specificationModel != null">#{specificationModel},</if>
+            <if test="boxNumber != null">#{boxNumber},</if>
+            <if test="reelNumber != null">#{reelNumber},</if>
+            <if test="unit != null and unit != ''">#{unit},</if>
+            <if test="quantity != null">#{quantity},</if>
+            <if test="shippingDate != null">#{shippingDate},</if>
+            <if test="contactPhone != null and contactPhone != ''">#{contactPhone},</if>
+            <if test="remarks != null">#{remarks},</if>
+            <if test="courierNumber != null">#{courierNumber},</if>
+            <if test="supplierUnit != null and supplierUnit != ''">#{supplierUnit},</if>
+            <if test="supplierContactPerson != null and supplierContactPerson != ''">#{supplierContactPerson},</if>
+            <if test="supplierContactPhone != null and supplierContactPhone != ''">#{supplierContactPhone},</if>
+            #{createBy},
+            now(),
+            #{updateBy},
+            now()
+        </trim>
+    </insert>
+
+    <update id="updateOutboundRecords" parameterType="java.util.Map">
+        update sy_outbound_records
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="receivingUnit != null and receivingUnit != ''">receiving_unit = #{receivingUnit},</if>
+            <if test="receivingAddress != null and receivingAddress != ''">receiving_address = #{receivingAddress},</if>
+            <if test="productName != null and productName != ''">product_name = #{productName},</if>
+            <if test="specificationModel != null">specification_model = #{specificationModel},</if>
+            <if test="unit != null and unit != ''">unit = #{unit},</if>
+            <if test="shippingDate != null">shipping_date = #{shippingDate},</if>
+            <if test="contactPhone != null and contactPhone != ''">contact_phone = #{contactPhone},</if>
+            <if test="remarks != null">remarks = #{remarks},</if>
+            <if test="courierNumber != null">courier_number = #{courierNumber},</if>
+            <if test="supplierUnit != null and supplierUnit != ''">supplier_unit = #{supplierUnit},</if>
+            <if test="supplierContactPerson != null and supplierContactPerson != ''">supplier_contact_person = #{supplierContactPerson},</if>
+            <if test="supplierContactPhone != null and supplierContactPhone != ''">supplier_contact_phone = #{supplierContactPhone},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            update_time = now()
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteOutboundRecordsById" parameterType="Long">
+        delete from sy_outbound_records where id = #{id}
+    </delete>
+
+    <delete id="deleteOutboundRecordsByIds" parameterType="String">
+        delete from sy_outbound_records where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>
