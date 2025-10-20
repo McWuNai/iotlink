@@ -66,7 +66,6 @@ public class ModuleYDController extends MyBaseController {
     private ModuleHouseMapper moduleHouseMapper;
 
     @PostMapping(value = "/list", produces = { "application/json;charset=UTF-8" })
-    @PreAuthorize("@ss.hasPermi('house:module:list')")
     public String getList(@RequestBody String Pstr) {
 
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
@@ -187,7 +186,6 @@ public class ModuleYDController extends MyBaseController {
      * 查询出库记录列表
      */
     @PostMapping(value = "/outbound/list", produces = { "application/json;charset=UTF-8" })
-    @PreAuthorize("@ss.hasPermi('house:module:outbound:list')")
     public String getOutboundRecordsList(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
         if (Pstr != null) {
@@ -272,7 +270,6 @@ public class ModuleYDController extends MyBaseController {
      * 导出模组信息
      */
     @Log(title = "模组信息", businessType = BusinessType.EXPORT)
-    @PreAuthorize("@ss.hasPermi('house:module:export')")
     @PostMapping(value = "/export", produces = { "application/json;charset=utf-8" })
     public String export(@RequestBody String Pstr) {
         HashMap<String, Object> Parammap = new HashMap<String, Object>();
