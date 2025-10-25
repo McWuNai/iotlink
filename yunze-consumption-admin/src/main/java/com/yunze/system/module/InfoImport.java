@@ -227,7 +227,7 @@ public class InfoImport {
                         entity.setCustomerName(Objects.toString(m.get("客户名称"), ""));
                         entity.setSalesOrderNumber(Objects.toString(m.get("销售订单号"), ""));
                         entity.setDeliveryOrderNumber(Objects.toString(m.get("发货单单号"), ""));
-                        entity.setDeliveryTime(Objects.toString(m.get("发货时间"), ""));
+                        entity.setDeliveryTime(handleDateTimeField(Objects.toString(m.get("发货时间"), "")));
                         entity.setCustomerSalesOrderNumber(Objects.toString(m.get("客户销售订单号"), ""));
                         entity.setEndCustomer(Objects.toString(m.get("最终客户"), ""));
                         entity.setLogisticsNumber(Objects.toString(m.get("物流单号"), ""));
@@ -415,6 +415,21 @@ public class InfoImport {
             log.error("模组信息导出异常: {}", e.getMessage(), e);
             yzExecutionTaskMapper.set_end_time(task_map);
         }
+    }
+
+    /**
+     * 处理日期时间字段，将空字符串转换为null
+     * 
+     * @param dateTimeStr 日期时间字符串
+     * @return 处理后的字符串，空字符串返回null
+     */
+    private String handleDateTimeField(String dateTimeStr) {
+        if (dateTimeStr == null || dateTimeStr.trim().isEmpty() ||
+                "null".equals(dateTimeStr) || "NULL".equals(dateTimeStr) ||
+                "".equals(dateTimeStr.trim())) {
+            return null;
+        }
+        return dateTimeStr.trim();
     }
 
     /**
