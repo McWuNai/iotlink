@@ -406,7 +406,8 @@
                    #{customerName},
                    #{salesOrderNumber},
                    #{deliveryOrderNumber},
-                   #{deliveryTime},
+        <if test="deliveryTime != null and deliveryTime != ''">#{deliveryTime}</if>
+        <if test="deliveryTime == null or deliveryTime == ''">NULL</if>,
                    #{customerSalesOrderNumber},
                    #{endCustomer},
                    #{logisticsNumber},
