@@ -22,8 +22,8 @@ public class RateLimiterUtil {
         this.tokenCountMap.put("queryCardActiveTime", 5.0);
         this.tokenCountMap.put("queryFlowHis", 5.0);
         this.tokenCountMap.put("queryCardStatus", 5.0);
-        this.tokenCountMap.put("changeCardStatus", 10.0);
-        this.tokenCountMap.put("changeCardStatusFlexible", 10.0);
+        this.tokenCountMap.put("changeCardStatus", 5.0);
+        this.tokenCountMap.put("changeCardStatusFlexible", 5.0);
         this.tokenCountMap.put("queryRealNameStatus", 5.0);
         this.tokenCountMap.put("queryAPNInfo", 5.0);
         this.tokenCountMap.put("SpeedLimit", 5.0);
@@ -31,8 +31,8 @@ public class RateLimiterUtil {
         this.tokenCountMap.put("MachineCardBinding", 5.0);
         this.tokenCountMap.put("realNameRemove", 5.0);
         this.tokenCountMap.put("queryBatchFlow", 5.0);
-        this.tokenCountMap.put("wsQueryIdByName", 10.0);
-        this.tokenCountMap.put("addRatePlan", 10.0);
+        this.tokenCountMap.put("wsQueryIdByName", 5.0);
+        this.tokenCountMap.put("addRatePlan", 5.0);
 
         System.out.println("tokenCountMap 初始化完成");
     }
@@ -50,7 +50,7 @@ public class RateLimiterUtil {
         if (isMethodName) {
             return specificMethodRateLimiters.computeIfAbsent(compositeKey, k -> RateLimiter.create(tokenCountMap.get(methodName)));
         } else {
-            throw new RuntimeException("错误: 未配置方法对应的限流器");
+            throw new RuntimeException("错误: 方法 " + compositeKey + "未配置方法对应的限流器");
         }
     }
 
