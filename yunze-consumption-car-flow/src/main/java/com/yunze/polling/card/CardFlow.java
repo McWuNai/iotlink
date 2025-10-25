@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.amqp.rabbit.annotation.RabbitHandler;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PreDestroy;
@@ -46,6 +47,9 @@ public class CardFlow {
 
     @Resource
     YzCardMapper yzCardMapper;
+
+    @Resource
+    private RabbitTemplate rabbitTemplate;
 
     // 使用单线程执行器
     private final ExecutorService singleThreadExecutor = Executors.newSingleThreadExecutor();
@@ -189,6 +193,12 @@ public class CardFlow {
                                         .parseInt(getShowStatIdArr.GetShowStatId(status_id.toString()));
                                 info.put("status_ShowId", status_ShowId);
                                 yzCardMapper.updStatusId(info);
+                                if (info.get("realNameStatus").toString() != null && Integer.parseInt(info.get("realNameStatus").toString()) != 1) {
+                                    info.put("realNameStatus", 0);
+                                }
+                                yzCardMapper.updRealNameStatus(info);
+
+                                //超量停机处理
                                 if (Double.parseDouble(RMap.get("remaining").toString()) <= 0.00) {
                                     if (status_ShowId != 5) {
                                         Map<String, Object> map1 = new HashMap<>();
@@ -211,6 +221,36 @@ public class CardFlow {
                 }
             } else {
                 log.info(">>API - 卡用量轮询消费者 未获取到批量卡用量:{} | {}<<", polling_id, Rmap);
+
+                if (Rmap.get("Message").toString().equals("内部接收消息，解析数据异常！")) {
+                    //清空轮询记录
+                    for (String iccid : iccids) {
+                        if (is_Record) {
+                            polling_id = map.get("polling_id").toString();
+                            // 检查是否已存在相同的轮询记录
+                            String pollingKey = polling_id + ":" + iccid;
+                            Object existingPolling = redisCache.getCacheObject(pollingKey);
+                            if (existingPolling != null) {
+                                redisCache.deleteObject(pollingKey);
+                            }
+                        }
+                    }
+
+                    //重新入队
+                    try {
+                        rabbitTemplate.invoke(operations -> {
+                            operations.convertAndSend("polling_cardBatchCardFlow_exchange", "polling.cardBatchCardFlow.routingKey", msg,
+                                    message -> {
+                                        message.getMessageProperties().setExpiration("" + (30 * 1000 * 60));
+                                        return message;
+                                    });
+                            return null;
+                        });
+                    } catch (Exception e) {
+                        log.error("重新入队消息失败: {}", e.getMessage());
+                        throw new RuntimeException("重新入队消息失败", e);
+                    }
+                }
             }
         } catch (Exception e) {
             log.error(">>错误 - 卡用量轮询消费者:{}<<", e.getMessage());
@@ -238,7 +278,7 @@ public class CardFlow {
                 String pollingKey = polling_id + ":" + iccid;
                 Object existingPolling = redisCache.getCacheObject(pollingKey);
                 if (existingPolling != null) {
-                    log.info(">>重复轮询111 - 卡号:{} 已在轮询中，跳过本次轮询<<", iccid);
+                    log.info(">>重复轮询 - 卡号:{} 已在轮询中，跳过本次轮询<<", iccid);
                     return;
                 }
                 redisCache.setCacheObject(pollingKey, msg, 30, TimeUnit.MINUTES);

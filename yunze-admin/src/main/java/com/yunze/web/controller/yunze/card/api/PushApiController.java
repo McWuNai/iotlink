@@ -125,6 +125,38 @@ public class PushApiController {
         yzCardMapper.updStatusId(Upd_Map);
     }
 
+    @PostMapping ("/trueRealStatus")
+    public void trueRealStatus(@RequestBody Map<String, Object> requestBody) {
+        Map<String, Object> data = objectToMap(requestBody.get("data"));
+        /*Map<String, Object> outData = new HashMap<>();
+        outData.put("iccid", data.get("iccid"));
+        outData.put("currentState", data.get("currentState"));
+        outData.put("api_type", 2);
+        yzCardServiceImpl.pushApi(outData);
+
+        String status_id = data.get("currentState").toString();*/
+        Map<String, Object> Upd_Map = new HashMap<>();
+        Upd_Map.put("iccid",data.get("iccid"));
+        Upd_Map.put("realNameStatus", 0);
+        yzCardMapper.updRealNameStatus(Upd_Map);
+    }
+
+    @PostMapping ("/falseRealStatus")
+    public void falseRealStatus(@RequestBody Map<String, Object> requestBody) {
+        Map<String, Object> data = objectToMap(requestBody.get("data"));
+        /*Map<String, Object> outData = new HashMap<>();
+        outData.put("iccid", data.get("iccid"));
+        outData.put("currentState", data.get("currentState"));
+        outData.put("api_type", 2);
+        yzCardServiceImpl.pushApi(outData);
+
+        String status_id = data.get("currentState").toString();*/
+        Map<String, Object> Upd_Map = new HashMap<>();
+        Upd_Map.put("iccid",data.get("iccid"));
+        Upd_Map.put("realNameStatus", 1);
+        yzCardMapper.updRealNameStatus(Upd_Map);
+    }
+
     private Map<String, Object> objectToMap (Object dataObj) {
         // 因为"data"字段是嵌套对象，所以需要用Map来接收
         if(dataObj instanceof String){

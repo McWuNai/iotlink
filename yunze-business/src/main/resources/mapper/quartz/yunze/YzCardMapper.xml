@@ -57,6 +57,18 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			dict_type = #{dict_type}
 	</select>
 
+	<!-- 修改 卡实名状态-->
+	<update id="updRealNameStatus" parameterType="java.util.HashMap">
+		UPDATE yz_card_info
+		<set>
+			real_name_status = #{realNameStatus}
+		</set>
+		<where>
+			iccid = #{iccid}
+			AND real_name_status != #{realNameStatus}
+		</where>
+	</update>
+
 	<!--查询 卡号 分配 通道 状态  -->
 	<select id="findRoute" resultType="java.util.HashMap">
 		SELECT

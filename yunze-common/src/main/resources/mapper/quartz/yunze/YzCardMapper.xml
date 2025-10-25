@@ -354,7 +354,10 @@
 					</foreach>
 				</if>
 			</if>
-
+			<!-- 实名状态搜索条件 -->
+			<if test="real_name_status != null and real_name_status != ''">
+				and real_name_status = #{real_name_status}
+			</if>
 		</where>
 	</sql>
 
@@ -434,6 +437,7 @@
 		used,
 		balance,
 		remaining,
+		real_name_status,
 		customize_grouping,
 		DATE_FORMAT( deliver_date, "%Y-%m-%d" ) AS deliver_date,
 		DATE_FORMAT( stateTime, "%Y-%m-%d %H:%i:%S" ) AS stateTime,
@@ -1110,6 +1114,17 @@
 		card_no
 	</select>
 
+	<!-- 修改 卡实名状态-->
+	<update id="updRealNameStatus" parameterType="java.util.HashMap">
+		UPDATE yz_card_info
+		<set>
+			real_name_status = #{realNameStatus}
+		</set>
+		<where>
+			iccid = #{iccid}
+			AND real_name_status != #{realNameStatus}
+		</where>
+	</update>
 
 	<!--通道下 所属卡 设置达量停机的卡   and iccid = '8986111924708527178'  -->
 	<select id="findChannelIdCarStop" parameterType="java.util.HashMap" resultType="java.util.HashMap">

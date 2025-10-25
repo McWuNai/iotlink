@@ -66,4 +66,6 @@ public interface YzCardMapper
      * @return
      */
     public Map<String, Object> findRoute(Map<String, Object> map);
+
+    int updRealNameStatus(Map<String, Object> rmap);
 }

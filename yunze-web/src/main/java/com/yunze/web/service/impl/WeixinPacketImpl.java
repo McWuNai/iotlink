@@ -96,16 +96,16 @@ public class WeixinPacketImpl implements IWeixinPacket {
     public Map<String, Object> queryFlowInfo(Map<String, Object> Pmap) {
         Map<String, Object> Rmap = new HashMap<>();
         Rmap.put("code", "200");
-        String openid = Pmap.get("openid").toString();
+        //String openid = Pmap.get("openid").toString();
         Map<String, Object> IccidMap = yzCardServiceImpl.findIccid(Pmap);
 
         if (IccidMap.get("iccid") != null && IccidMap.get("iccid").toString().length() > 0) {
             String iccid = IccidMap.get("iccid").toString();
             Rmap.put("iccid", iccid);
             String EndTime;
-            String redisFlowKey = queryFlowInfo_Key + iccid + ":" + openid;
-            Map<Object, Object> obj = redisUtilYz.redisTemplate.opsForHash().entries(redisFlowKey);
-            if (obj.size() != 0) {
+            //String redisFlowKey = queryFlowInfo_Key + iccid + ":" + openid;
+            //Map<Object, Object> obj = redisUtilYz.redisTemplate.opsForHash().entries(redisFlowKey);
+            /*if (obj.size() != 0) {
                 Double used = IccidMap.get("used") == null ? 0.00 : Double.parseDouble(IccidMap.get("used").toString());
                 Double remain = IccidMap.get("remaining") == null ? 0.00 : Double.parseDouble(IccidMap.get("remaining").toString());
                 Rmap.put("used", used);
@@ -128,82 +128,87 @@ public class WeixinPacketImpl implements IWeixinPacket {
                     Rmap.put("cardStatus", cardStatus);
                 }
                 return Rmap;
-            } else {
-                EndTime = yzCardFlowMapper.findEndTime(IccidMap);
+            } else {*/
+            EndTime = yzCardFlowMapper.findEndTime(IccidMap);
 
-                Double R_used = 0.0;
-                Double R_remain = 0.0;
-                Double total = 0.0;
-                String realNameStatus = "";
-                Object channel_id = IccidMap.get("channel_id");
-                if (channel_id != null && channel_id.toString().length() > 0) {
-                    Map<String, Object> Route = yzCardRouteMapper.find_route(Rmap);
-                    if (Route != null) {
-                        String cd_status = Route.get("cd_status").toString();
-                        if (cd_status != null && cd_status != "" && cd_status.equals("1")) {
-                            Map<String, Object> synMap = synCardFlow(iccid, Route);
-                            if (IccidMap.get("status_id") != null) {
-                                //获取字典卡状态
-                                String synCardStatus = synCardStatus(iccid, Route);
-                                String cardStatus = getdictLabel("yunze_card_status_ShowId", synCardStatus == null ? IccidMap.get("status_id").toString() : synCardStatus);
-                                cardStatus = cardStatus != null ? cardStatus : "未知";
-                                Rmap.put("cardStatus", cardStatus);
+            Double R_used = 0.0;
+            Double R_remain = 0.0;
+            Double total = 0.0;
+            String realNameStatus = "";
+            Object channel_id = IccidMap.get("channel_id");
+            if (channel_id != null && channel_id.toString().length() > 0) {
+                Map<String, Object> Route = yzCardRouteMapper.find_route(Rmap);
+                if (Route != null) {
+                    String cd_status = Route.get("cd_status").toString();
+                    if (cd_status != null && cd_status != "" && cd_status.equals("1")) {
+                        Map<String, Object> synMap = synCardFlow(iccid, Route);
+                        if (IccidMap.get("status_id") != null) {
+                            //获取字典卡状态
+                            String synCardStatus = synCardStatus(iccid, Route);
+                            String cardStatus = getdictLabel("yunze_card_status_ShowId", synCardStatus == null ? IccidMap.get("status_id").toString() : synCardStatus);
+                            cardStatus = cardStatus != null ? cardStatus : "未知";
+                            Rmap.put("cardStatus", cardStatus);
+                        }
+                        if (synMap != null) {
+                            if (synMap.get("used") != null) {
+                                R_used = Double.parseDouble(synMap.get("used").toString());
                             }
-                            if (synMap != null) {
-                                if (synMap.get("used") != null) {
-                                    R_used = Double.parseDouble(synMap.get("used").toString());
-                                }
-                                if (synMap.get("remaining") != null) {
-                                    R_remain = Double.parseDouble(synMap.get("remaining").toString());
-                                }
-                                if (synMap.get("SumFlow") != null) {
-                                    total = Double.parseDouble(synMap.get("SumFlow").toString());
-                                }
+                            if (synMap.get("remaining") != null) {
+                                R_remain = Double.parseDouble(synMap.get("remaining").toString());
+                            }
+                            if (synMap.get("SumFlow") != null) {
+                                total = Double.parseDouble(synMap.get("SumFlow").toString());
+                            }
+
+                            if (R_remain > 0.00) {
+                                Map<String, Object> stringObjectMap = yzCardMapper.find(IccidMap);
+                                // 提前获取status_ShowId
+                                Object statusShowIdObj = stringObjectMap.get("status_ShowId");
+                                Integer status_ShowId = statusShowIdObj instanceof Integer ? (Integer) statusShowIdObj : null;
+
                                 if (synMap.get("realNameStatus") != null) {
                                     realNameStatus = synMap.get("realNameStatus").toString();
                                 }
-                                if (R_remain > 0.00) {
-                                    Map<String, Object> stringObjectMap = yzCardMapper.find(IccidMap);
-                                    // 提前获取status_ShowId
-                                    Object statusShowIdObj = stringObjectMap.get("status_ShowId");
-                                    Integer status_ShowId = statusShowIdObj instanceof Integer ? (Integer) statusShowIdObj : null;
-                                    // 只有当status_ShowId存在且等于5时，才进行后续操作
-                                    if (status_ShowId != null && status_ShowId == 5) {
-                                        Map<String, Object> map = new HashMap<>();
-                                        map.put("iccid", iccid);
-                                        map.put("status_ShowId", "1");
-                                        yzCardServiceImpl.singleState(map);
-                                    }
-                                    if (IccidMap.get("package_id") != null && IccidMap.get("package_id") != "") {
-                                        String packageName = yzCardFlowMapper.findPackageNameById(IccidMap.get("package_id").toString());
-                                        Rmap.put("packetName", packageName);
-                                    }
-                                    if (stringObjectMap.get("activate_date") != null && stringObjectMap.get("activate_date") != "") {
-                                        Rmap.put("activateDate", stringObjectMap.get("activate_date"));
-                                    }
+                                // 只有当status_ShowId存在且等于5时，才进行后续操作
+
+                                /*if (status_ShowId != null && status_ShowId == 5 && Integer.parseInt(realNameStatus) != 1) {
+                                    Map<String, Object> map = new HashMap<>();
+                                    map.put("iccid", iccid);
+                                    map.put("status_ShowId", "1");
+                                    yzCardServiceImpl.singleState(map);
+                                }*/
+
+
+                                if (IccidMap.get("package_id") != null && IccidMap.get("package_id") != "") {
+                                    String packageName = yzCardFlowMapper.findPackageNameById(IccidMap.get("package_id").toString());
+                                    Rmap.put("packetName", packageName);
                                 }
-                            } else {
-                                Rmap.put("Message", "同步数据 上游返回异常，稍后重试 ");
+                                if (stringObjectMap.get("activate_date") != null && stringObjectMap.get("activate_date") != "") {
+                                    Rmap.put("activateDate", stringObjectMap.get("activate_date"));
+                                }
                             }
                         } else {
-                            String statusVal = cd_status.equals("2") ? "已停用" : cd_status.equals("3") ? "已删除" : "状态未知";
-                            Rmap.put("Message", "同步数据 取消 通道 " + statusVal);
-                            return Rmap;
+                            Rmap.put("Message", "同步数据 上游返回异常，稍后重试 ");
                         }
+                    } else {
+                        String statusVal = cd_status.equals("2") ? "已停用" : cd_status.equals("3") ? "已删除" : "状态未知";
+                        Rmap.put("Message", "同步数据 取消 通道 " + statusVal);
+                        return Rmap;
                     }
                 }
-
-                Rmap.put("EndTime", EndTime);
-                Rmap.put("used", R_used);
-                Rmap.put("remain", R_remain);
-                Rmap.put("total", total);
-                Rmap.put("realNameStatus", realNameStatus);
-                Rmap.put("imsi", IccidMap.get("vid") != null ? IccidMap.get("vid") : "--");
-                Rmap.put("code", "200");
-                Rmap.put("activateDate", IccidMap.get("activate_date") != null ? IccidMap.get("activate_date") : "--");
-                redisUtilYz.redisTemplate.opsForHash().putAll(redisFlowKey, Rmap);
-                redisUtilYz.redisTemplate.expire(redisFlowKey, 60, TimeUnit.SECONDS);
             }
+
+            Rmap.put("EndTime", EndTime);
+            Rmap.put("used", R_used);
+            Rmap.put("remain", R_remain);
+            Rmap.put("total", total);
+            Rmap.put("realNameStatus", realNameStatus);
+            Rmap.put("imsi", IccidMap.get("vid") != null ? IccidMap.get("vid") : "--");
+            Rmap.put("code", "200");
+            Rmap.put("activateDate", IccidMap.get("activate_date") != null ? IccidMap.get("activate_date") : "--");
+            //redisUtilYz.redisTemplate.opsForHash().putAll(redisFlowKey, Rmap);
+            //redisUtilYz.redisTemplate.expire(redisFlowKey, 60, TimeUnit.SECONDS);
+            //}
         } else {
             Rmap.put("code", "500");
             Rmap.put("Message", "未找到号码！信息同步取消！");
@@ -364,7 +369,7 @@ public class WeixinPacketImpl implements IWeixinPacket {
         //判断是否存在并获取
         Map<Object, Object> obj = redisUtilYz.redisTemplate.opsForHash().entries(key);
         if (obj.size() > 0) {
-            dataMap =  obj.entrySet().stream()
+            dataMap = obj.entrySet().stream()
                     .collect(Collectors.toMap(
                             entry -> entry.getKey().toString(), // 将键转换为 String
                             Map.Entry::getValue // 保持值不变
@@ -471,7 +476,7 @@ public class WeixinPacketImpl implements IWeixinPacket {
         // 假设 redisTemplate 已经被正确配置和注入
         redisUtilYz.redisTemplate.opsForHash().putAll(key, dataMap);
 
-        if(actualTTL > 0) { // 确保TTL是正值
+        if (actualTTL > 0) { // 确保TTL是正值
             // 设置TTL
             redisUtilYz.redisTemplate.expire(key, actualTTL, TimeUnit.SECONDS);
         } else {
@@ -1192,15 +1197,21 @@ public class WeixinPacketImpl implements IWeixinPacket {
                         try {
                             Map<String, Object> RMap = cardFlowSyn.CalculationFlow(iccid, Use, find_card_route_map);
 
+                            if (Integer.parseInt(Rmap.get("realNameStatus").toString()) != 1) {
+                                Rmap.put("realNameStatus", 0);
+                            }
+                            Rmap.put("iccid", iccid);
+                            yzCardMapper.updRealNameStatus(Rmap);
+
                             RMap.put("realNameStatus", Rmap.get("realNameStatus").toString());
 
                             int status_ShowId = (int) yzCardMapper.find(Parammap).get("status_ShowId");
-                            if (Double.parseDouble(RMap.get("remaining").toString()) > 0.00) {
+                            if (Double.parseDouble(RMap.get("remaining").toString()) > 0.00 && Integer.parseInt(RMap.get("realNameStatus").toString()) != 1) {
                                 if (status_ShowId == 5) {
-                                Map<String, Object> map = new HashMap<>();
-                                map.put("iccid", Parammap.get("iccid").toString());
-                                map.put("status_ShowId", "1");
-                                yzCardServiceImpl.singleState(map);
+                                    Map<String, Object> map = new HashMap<>();
+                                    map.put("iccid", Parammap.get("iccid").toString());
+                                    map.put("status_ShowId", "1");
+                                    yzCardServiceImpl.singleState(map);
                                 }
                             } else if (Double.parseDouble(RMap.get("remaining").toString()) <= 0.00) {
                                 if (status_ShowId != 5) {

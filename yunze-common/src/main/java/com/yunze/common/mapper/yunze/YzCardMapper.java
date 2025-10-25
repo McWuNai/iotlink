@@ -235,6 +235,13 @@ public interface YzCardMapper
      */
     public int updUsed(Map<String, Object> map);
 
+    /**
+     * 修改 卡实名状态
+     * @param map
+     * @return
+     */
+    public int updRealNameStatus(Map<String, Object> map);
+
 
     /**
      * 通道下 所属卡 设置达量停机的卡
