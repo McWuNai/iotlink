@@ -116,13 +116,16 @@ public class InfoImport {
      */
     public void execution(String filePath, String ReadName, Map<String, Object> Pmap, Map<String, Object> User,
             Map<String, Object> task_map, String newName, String UpdBackupName) {
-        // 1.读取 上传文件
+        // 1.读取 上传文件 - 优化内存使用
         String path = filePath + ReadName;
         ExcelConfig excelConfig = new ExcelConfig();
         String columns[] = { "销售员", "客户名称", "销售订单号", "发货单单号", "发货时间", "客户销售订单号", "最终客户", "物流单号", "收件人", "客户收件人电话",
                 "收件地址", "物料编码", "物料名称", "型号", "序列号", "中箱号", "串号", "设备号", "SN", "原SN", "MAC", "ICCID", "IMSI", "卷盘号",
                 "固件版本" };
+
+        log.info("开始读取Excel文件: {}", path);
         List<Map<String, Object>> list = excelConfig.getExcelListMap(path, columns);
+        log.info("Excel文件读取完成，数据量: {}", list != null ? list.size() : 0);
         Map<String, String> Dept = (Map<String, String>) User.get("dept");
         String create_by = " [ " + Dept.get("deptName") + " ] - " + " [ " + User.get("userName") + " ] ";
 
@@ -146,10 +149,14 @@ public class InfoImport {
         String lie = "序列号";
 
         if (list != null && list.size() > 0) {
+            log.info("开始处理数据，总数据量: {}", list.size());
+
             // 1) 批内重复（按 序列号）
             Map<String, Object> getNotRepeatingMap = Different.getNotRepeating(list, lie);
             List<Map<String, Object>> Rlist = (List<Map<String, Object>>) getNotRepeatingMap.get("Rlist");
             List<Map<String, Object>> Repeatlist = (List<Map<String, Object>>) getNotRepeatingMap.get("Repeatlist");
+
+            log.info("重复数据检查完成，重复数量: {}", Repeatlist != null ? Repeatlist.size() : 0);
             if (Repeatlist.size() > 0) {
                 // 输出重复记录
                 String[] outKeysWithResult = { "销售员", "客户名称", "销售订单号", "发货单单号", "发货时间", "客户销售订单号", "最终客户", "物流单号",
@@ -209,64 +216,103 @@ public class InfoImport {
                 writeCSV.OutCSVObj(existsList, newName, Outcolumns, outKeysWithResult, defOutcolumns, OutSize);
             }
 
-            // 3) 执行插入
+            // 3) 执行插入 - 分批处理避免内存溢出
             if (toInsert != null && toInsert.size() > 0) {
-                List<Map<String, Object>> outArr = new ArrayList<>();
-                for (int i = 0; i < toInsert.size(); i++) {
-                    Map<String, Object> m = toInsert.get(i);
-                    String msg = "";
-                    String result = "操作成功";
-                    try {
-                        String serial = normalizeSerial(m);
-                        if (serial == null || serial.isEmpty()) {
-                            throw new IllegalArgumentException("序列号为空（或未找到列：序列号/SN）");
+                int batchSize = 100; // 每批处理100条数据
+                int totalSize = toInsert.size();
+                int totalBatches = (totalSize + batchSize - 1) / batchSize;
+
+                log.info("开始分批处理数据，总数据量: {}, 批次数: {}, 每批大小: {}", totalSize, totalBatches, batchSize);
+
+                for (int batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+                    int startIndex = batchIndex * batchSize;
+                    int endIndex = Math.min(startIndex + batchSize, totalSize);
+
+                    List<Map<String, Object>> batchData = toInsert.subList(startIndex, endIndex);
+                    List<Map<String, Object>> outArr = new ArrayList<>();
+
+                    log.info("处理第 {}/{} 批数据，范围: {}-{}", batchIndex + 1, totalBatches, startIndex, endIndex - 1);
+
+                    for (Map<String, Object> m : batchData) {
+                        String msg = "";
+                        String result = "操作成功";
+                        try {
+                            String serial = normalizeSerial(m);
+                            if (serial == null || serial.isEmpty()) {
+                                throw new IllegalArgumentException("序列号为空（或未找到列：序列号/SN）");
+                            }
+                            ModuleHouse entity = new ModuleHouse();
+                            entity.setSerialNumber(serial);
+                            entity.setSalesperson(Objects.toString(m.get("销售员"), ""));
+                            entity.setCustomerName(Objects.toString(m.get("客户名称"), ""));
+                            entity.setSalesOrderNumber(Objects.toString(m.get("销售订单号"), ""));
+                            entity.setDeliveryOrderNumber(Objects.toString(m.get("发货单单号"), ""));
+                            entity.setDeliveryTime(handleDateTimeField(Objects.toString(m.get("发货时间"), "")));
+                            entity.setCustomerSalesOrderNumber(Objects.toString(m.get("客户销售订单号"), ""));
+                            entity.setEndCustomer(Objects.toString(m.get("最终客户"), ""));
+                            entity.setLogisticsNumber(Objects.toString(m.get("物流单号"), ""));
+                            entity.setConsignee(Objects.toString(m.get("收件人"), ""));
+                            entity.setConsigneePhone(Objects.toString(m.get("客户收件人电话"), ""));
+                            entity.setDeliveryAddress(Objects.toString(m.get("收件地址"), ""));
+                            entity.setMaterialCode(Objects.toString(m.get("物料编码"), ""));
+                            entity.setMaterialName(Objects.toString(m.get("物料名称"), ""));
+                            entity.setModel(Objects.toString(m.get("型号"), ""));
+                            entity.setMiddleBoxNumber(Objects.toString(m.get("中箱号"), ""));
+                            entity.setDeviceSerial(Objects.toString(m.get("串号"), ""));
+                            entity.setDeviceID(Objects.toString(m.get("设备号"), ""));
+                            entity.setSn(Objects.toString(m.get("SN"), ""));
+                            entity.setOriginalSN(Objects.toString(m.get("原SN"), ""));
+                            entity.setMac(Objects.toString(m.get("MAC"), ""));
+                            entity.setIccid(Objects.toString(m.get("ICCID"), ""));
+                            entity.setImsi(Objects.toString(m.get("IMSI"), ""));
+                            entity.setReelNumber(Objects.toString(m.get("卷盘号"), ""));
+                            entity.setFirmwareVersion(Objects.toString(m.get("固件版本"), ""));
+                            entity.setCreateBy(Objects.toString(m.get("createBy"), Pmap.get("user_id").toString()));
+                            entity.setUpdateBy(Objects.toString(m.get("updateBy"), Pmap.get("user_id").toString()));
+                            moduleHouseMapper.ins(entity);
+                        } catch (Exception e) {
+                            msg = e.getMessage();
+                            msg = msg != null && msg.length() > 100 ? msg.substring(0, 100) : msg;
+                            result = "操作失败";
                         }
-                        ModuleHouse entity = new ModuleHouse();
-                        entity.setSerialNumber(serial);
-                        entity.setSalesperson(Objects.toString(m.get("销售员"), ""));
-                        entity.setCustomerName(Objects.toString(m.get("客户名称"), ""));
-                        entity.setSalesOrderNumber(Objects.toString(m.get("销售订单号"), ""));
-                        entity.setDeliveryOrderNumber(Objects.toString(m.get("发货单单号"), ""));
-                        entity.setDeliveryTime(handleDateTimeField(Objects.toString(m.get("发货时间"), "")));
-                        entity.setCustomerSalesOrderNumber(Objects.toString(m.get("客户销售订单号"), ""));
-                        entity.setEndCustomer(Objects.toString(m.get("最终客户"), ""));
-                        entity.setLogisticsNumber(Objects.toString(m.get("物流单号"), ""));
-                        entity.setConsignee(Objects.toString(m.get("收件人"), ""));
-                        entity.setConsigneePhone(Objects.toString(m.get("客户收件人电话"), ""));
-                        entity.setDeliveryAddress(Objects.toString(m.get("收件地址"), ""));
-                        entity.setMaterialCode(Objects.toString(m.get("物料编码"), ""));
-                        entity.setMaterialName(Objects.toString(m.get("物料名称"), ""));
-                        entity.setModel(Objects.toString(m.get("型号"), ""));
-                        entity.setMiddleBoxNumber(Objects.toString(m.get("中箱号"), ""));
-                        entity.setDeviceSerial(Objects.toString(m.get("串号"), ""));
-                        entity.setDeviceID(Objects.toString(m.get("设备号"), ""));
-                        entity.setSn(Objects.toString(m.get("SN"), ""));
-                        entity.setOriginalSN(Objects.toString(m.get("原SN"), ""));
-                        entity.setMac(Objects.toString(m.get("MAC"), ""));
-                        entity.setIccid(Objects.toString(m.get("ICCID"), ""));
-                        entity.setImsi(Objects.toString(m.get("IMSI"), ""));
-                        entity.setReelNumber(Objects.toString(m.get("卷盘号"), ""));
-                        entity.setFirmwareVersion(Objects.toString(m.get("固件版本"), ""));
-                        entity.setCreateBy(Objects.toString(m.get("createBy"), Pmap.get("user_id").toString()));
-                        entity.setUpdateBy(Objects.toString(m.get("updateBy"), Pmap.get("user_id").toString()));
-                        moduleHouseMapper.ins(entity);
-                    } catch (Exception e) {
-                        msg = e.getMessage();
-                        msg = msg != null && msg.length() > 100 ? msg.substring(0, 100) : msg;
-                        result = "操作失败";
+                        m.put("message", msg);
+                        m.put("agentName", create_by);
+                        m.put("result", result);
+                        outArr.add(m);
                     }
-                    m.put("message", msg);
-                    m.put("agentName", create_by);
-                    m.put("result", result);
-                    outArr.add(m);
+
+                    // 分批写入CSV文件
+                    String[] outKeysWithResult = { "销售员", "客户名称", "销售订单号", "发货单单号", "发货时间", "客户销售订单号", "最终客户", "物流单号",
+                            "收件人", "客户收件人电话", "收件地址", "物料编码", "物料名称", "型号", "序列号", "中箱号", "串号", "设备号", "SN", "原SN",
+                            "MAC",
+                            "ICCID", "IMSI", "卷盘号", "固件版本", "message", "agentName", "result" };
+
+                    // 第一次写入包含表头，后续追加
+                    if (batchIndex == 0) {
+                        writeCSV.OutCSVObj(outArr, newName, Outcolumns, outKeysWithResult, null, OutSize);
+                    } else {
+                        writeCSV.OutCSVObj(outArr, newName, null, outKeysWithResult, null, OutSize);
+                    }
+
+                    // 强制垃圾回收，释放内存
+                    if (batchIndex % 10 == 0) {
+                        System.gc();
+                        log.info("执行垃圾回收，当前批次: {}", batchIndex + 1);
+                    }
                 }
-                String[] outKeysWithResult = { "销售员", "客户名称", "销售订单号", "发货单单号", "发货时间", "客户销售订单号", "最终客户", "物流单号",
-                        "收件人", "客户收件人电话", "收件地址", "物料编码", "物料名称", "型号", "序列号", "中箱号", "串号", "设备号", "SN", "原SN", "MAC",
-                        "ICCID", "IMSI", "卷盘号", "固件版本", "message", "agentName", "result" };
-                writeCSV.OutCSVObj(outArr, newName, Outcolumns, outKeysWithResult, null, OutSize);
+
+                log.info("分批处理完成，总数据量: {}", totalSize);
             }
 
             yzExecutionTaskMapper.set_end_time(task_map);// 任务结束
+
+            // 清理内存
+            if (list != null) {
+                list.clear();
+                list = null;
+            }
+            System.gc();
+            log.info("任务完成，内存清理完成");
         } else {
             log.error("admin_CardImportReplace_queue-消费者 上传表格无数据！无需执行");
         }
