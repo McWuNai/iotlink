@@ -141,7 +141,7 @@ public class WeixinPacketImpl implements IWeixinPacket {
                 if (Route != null) {
                     String cd_status = Route.get("cd_status").toString();
                     if (cd_status != null && cd_status != "" && cd_status.equals("1")) {
-                        Map<String, Object> synMap = synCardFlow(iccid, Route);
+                        //Map<String, Object> synMap = synCardFlow(iccid, Route);
                         if (IccidMap.get("status_id") != null) {
                             //获取字典卡状态
                             String synCardStatus = synCardStatus(iccid, Route);
@@ -149,15 +149,15 @@ public class WeixinPacketImpl implements IWeixinPacket {
                             cardStatus = cardStatus != null ? cardStatus : "未知";
                             Rmap.put("cardStatus", cardStatus);
                         }
-                        if (synMap != null) {
-                            if (synMap.get("used") != null) {
-                                R_used = Double.parseDouble(synMap.get("used").toString());
+                        //if (IccidMap != null) {
+                            if (IccidMap.get("used") != null) {
+                                R_used = Double.parseDouble(IccidMap.get("used").toString());
                             }
-                            if (synMap.get("remaining") != null) {
-                                R_remain = Double.parseDouble(synMap.get("remaining").toString());
+                            if (IccidMap.get("remaining") != null) {
+                                R_remain = Double.parseDouble(IccidMap.get("remaining").toString());
                             }
-                            if (synMap.get("SumFlow") != null) {
-                                total = Double.parseDouble(synMap.get("SumFlow").toString());
+                            if (IccidMap.get("remaining") != null && IccidMap.get("used") != null) {
+                                total = Double.parseDouble(IccidMap.get("remaining").toString()) + Double.parseDouble(IccidMap.get("used").toString());
                             }
 
                             if (R_remain > 0.00) {
@@ -166,8 +166,8 @@ public class WeixinPacketImpl implements IWeixinPacket {
                                 Object statusShowIdObj = stringObjectMap.get("status_ShowId");
                                 Integer status_ShowId = statusShowIdObj instanceof Integer ? (Integer) statusShowIdObj : null;
 
-                                if (synMap.get("realNameStatus") != null) {
-                                    realNameStatus = synMap.get("realNameStatus").toString();
+                                if (IccidMap.get("real_name_status") != null) {
+                                    realNameStatus = IccidMap.get("real_name_status").toString();
                                 }
                                 // 只有当status_ShowId存在且等于5时，才进行后续操作
 
@@ -186,10 +186,17 @@ public class WeixinPacketImpl implements IWeixinPacket {
                                 if (stringObjectMap.get("activate_date") != null && stringObjectMap.get("activate_date") != "") {
                                     Rmap.put("activateDate", stringObjectMap.get("activate_date"));
                                 }
+                            } else {
+                                if (Integer.parseInt(IccidMap.get("status_id").toString()) != 5) {
+                                    Map<String, Object> map1 = new HashMap<>();
+                                    map1.put("iccid", iccid);
+                                    map1.put("status_ShowId", "0");
+                                    yzCardServiceImpl.singleState(map1);
+                                }
                             }
-                        } else {
+                        /*} else {
                             Rmap.put("Message", "同步数据 上游返回异常，稍后重试 ");
-                        }
+                        }*/
                     } else {
                         String statusVal = cd_status.equals("2") ? "已停用" : cd_status.equals("3") ? "已删除" : "状态未知";
                         Rmap.put("Message", "同步数据 取消 通道 " + statusVal);
