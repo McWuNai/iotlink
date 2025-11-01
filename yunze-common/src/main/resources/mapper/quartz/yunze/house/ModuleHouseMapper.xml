@@ -437,7 +437,7 @@
 
     <!-- 根据中箱号或卷盘号查询模组明细数据 -->
     <select id="selectModulesByBoxOrReel" parameterType="java.util.HashMap" resultType="java.util.HashMap">
-        SELECT 
+        SELECT
             serial_number,
             middle_box_number,
             reel_number,
@@ -467,13 +467,13 @@
         FROM sy_module_house
         <where>
             <if test="boxNumberList != null and boxNumberList.size() > 0">
-                AND middle_box_number IN
+                    middle_box_number IN
                 <foreach item="boxNumber" collection="boxNumberList" index="index" open="(" separator="," close=")">
                     #{boxNumber}
                 </foreach>
             </if>
             <if test="reelNumberList != null and reelNumberList.size() > 0">
-                AND reel_number IN
+                OR reel_number IN
                 <foreach item="reelNumber" collection="reelNumberList" index="index" open="(" separator="," close=")">
                     #{reelNumber}
                 </foreach>
@@ -497,13 +497,13 @@
         </set>
         <where>
             <if test="boxNumberList != null and boxNumberList.size() > 0">
-                AND middle_box_number IN
+                    middle_box_number IN
                 <foreach item="boxNumber" collection="boxNumberList" index="index" open="(" separator="," close=")">
                     #{boxNumber}
                 </foreach>
             </if>
             <if test="reelNumberList != null and reelNumberList.size() > 0">
-                AND reel_number IN
+                OR reel_number IN
                 <foreach item="reelNumber" collection="reelNumberList" index="index" open="(" separator="," close=")">
                     #{reelNumber}
                 </foreach>
