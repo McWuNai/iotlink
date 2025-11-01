@@ -199,11 +199,11 @@ public class CardFlow {
                                 yzCardMapper.updRealNameStatus(info);
 
                                 //超量停机处理
-                                if (Double.parseDouble(RMap.get("remaining").toString()) <= 0.00) {
+                                if (Double.parseDouble(RMap.get("remaining").toString()) < 0.00) {
                                     if (status_ShowId != 5) {
                                         Map<String, Object> map1 = new HashMap<>();
-                                        map1.put("iccid", Parammap.get("iccid").toString());
-                                        map1.put("status_ShowId", "0");
+                                        map1.put("iccid", info.get("iccid").toString());
+                                        map1.put("status_ShowId", "2");
                                         singleState(map1, map);
                                     }
                                 }
@@ -321,12 +321,13 @@ public class CardFlow {
         String message = "单卡灵活变更状态 操作失败";
         if (Route != null) {
             String cd_status = Route.get("cd_status").toString();
-            String iccid = Route.get("iccid").toString();
+            String iccid = map.get("iccid").toString();
             Map<String, Object> Obj = new HashMap<>();
             Object ShowId = map.get("status_ShowId");
-            Obj.put("operType", ShowId);// API 状态
+            Obj.put("operType", Integer.parseInt(ShowId.toString()) == 2 ? 0 : 1);// API 状态
             Obj.put("iccid", iccid);
             if (cd_status != null && cd_status != "" && cd_status.equals("1")) {
+
                 Map<String, Object> CsFble = internalApiRequest.changeCardStatusFlexible(Obj, Route);
                 String code = CsFble.get("code") != null ? CsFble.get("code").toString() : "500";
                 if (code.equals("200")) {

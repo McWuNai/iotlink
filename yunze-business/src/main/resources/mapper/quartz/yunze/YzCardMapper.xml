@@ -21,7 +21,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			remaining,
 			package_id,
 			activate_date,
-			imei
+			imei,
+			real_name_status
 		FROM
 			yz_card_info
 		<where>
