@@ -44,6 +44,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			AND a.packet_id = b.packet_id
 			AND a.ord_no = c.ord_no
             <if test="NotExpired == 1">
+				AND a.error_flow > use_so_flow
 				AND  a.end_time > now()
             </if>
         </where>
@@ -257,24 +258,44 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <where>
 			iccid =#{iccid}
 			and status in ("1","2")
-			AND (#{nowMonthSta}             <![CDATA[ <= ]]>end_time and end_time             <![CDATA[ <= ]]>#{nowMonthEnd} or #{nowMonthSta}              <![CDATA[ <= ]]>start_time
-			AND start_time              <![CDATA[ <= ]]> #{nowMonthEnd} or start_time             <![CDATA[ <= ]]>#{nowMonthSta} and #{nowMonthEnd}              <![CDATA[ <= ]]> end_time)
-			and start_time              <![CDATA[ <= ]]> now()
+			AND (#{nowMonthSta}                         <![CDATA[ <= ]]>end_time and end_time                         <![CDATA[ <= ]]>#{nowMonthEnd} or #{nowMonthSta}                          <![CDATA[ <= ]]>start_time
+			AND start_time                          <![CDATA[ <= ]]> #{nowMonthEnd} or start_time                         <![CDATA[ <= ]]>#{nowMonthSta} and #{nowMonthEnd}                          <![CDATA[ <= ]]> end_time)
+			and start_time                          <![CDATA[ <= ]]> now()
         </where>
     </select>
 
     <!--查询 已失效 资费计划 真实用量-->
+    <!--修改：1.排除开始时间非本月的失效包（status=0）2.对于开始时间不在当月但结束时间在本月的包，如果已用完则排除（当作上月废包处理）3.包含已用完但未到期的跨月资费包-->
     <select id="findInvalidationSumErrorFlow" parameterType="java.util.HashMap" resultType="java.lang.String">
 		select
-			SUM(use_so_flow)
+		SUM(use_so_flow)
 		from
-			yz_card_flow
+		yz_card_flow
         <where>
 			iccid =#{iccid}
-			and status in ("0")
-			AND (#{nowMonthSta}             <![CDATA[ <= ]]>end_time and end_time             <![CDATA[ <= ]]>#{nowMonthEnd} or #{nowMonthSta}              <![CDATA[ <= ]]>start_time
-			AND start_time              <![CDATA[ <= ]]> #{nowMonthEnd} or start_time             <![CDATA[ <= ]]>#{nowMonthSta} and #{nowMonthEnd}              <![CDATA[ <= ]]> end_time)
-			and start_time              <![CDATA[ <= ]]> now()
+			and (
+			-- 已失效的资费包（status=0）
+			(status in ("0")
+			AND (
+			-- 开始时间在本月范围内的失效包：统计
+			(start_time                                                                         <![CDATA[ >= ]]> #{nowMonthSta} AND start_time                                                                         <![CDATA[ <= ]]> #{nowMonthEnd})
+			OR
+			-- 开始时间不在本月但结束时间在本月的失效包：如果未用完则统计，如果已用完则排除（当作上月废包处理）
+			(start_time                                                                         <![CDATA[ < ]]> #{nowMonthSta}
+			AND #{nowMonthSta}                                                                         <![CDATA[ <= ]]> end_time AND end_time                                                                         <![CDATA[ <= ]]> #{nowMonthEnd}
+			AND NOT (use_true_flow                                                                         <![CDATA[ >= ]]> error_flow AND error_flow > 0))
+			))
+			OR
+			-- 已用完但未到期的跨月资费包（status=1或2，use_true_flow>=error_flow），与本月时间范围有交集
+			-- 这些资费包的开始时间可能在上月或更早，需要统计以避免跨月时额度被刷新
+			(status in ("1","2")
+			AND use_true_flow                                                                         <![CDATA[ >= ]]> error_flow
+			AND error_flow > 0
+			AND (#{nowMonthSta}                                                                         <![CDATA[ <= ]]>end_time and end_time                                                                         <![CDATA[ <= ]]>#{nowMonthEnd}
+			OR #{nowMonthSta}                                                                         <![CDATA[ <= ]]>start_time AND start_time                                                                         <![CDATA[ <= ]]> #{nowMonthEnd}
+			OR start_time                                                                         <![CDATA[ <= ]]>#{nowMonthSta} and #{nowMonthEnd}                                                                         <![CDATA[ <= ]]> end_time))
+			)
+			AND start_time                                                                         <![CDATA[ <= ]]> now()
         </where>
     </select>
 
@@ -286,7 +307,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         </set>
         <where>
 			iccid =#{iccid}
-			and end_time              <![CDATA[ <= ]]> now()
+			and end_time                          <![CDATA[ <= ]]> now()
         </where>
     </update>
 
@@ -503,9 +524,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			yz_card_flow
         <where>
 			iccid = #{iccid}
-			and start_time             <![CDATA[ < ]]> #{Time}
-			and end_time             <![CDATA[ > ]]> #{Time}
+			and start_time                         <![CDATA[ < ]]> #{Time}
+			and end_time                         <![CDATA[ > ]]> #{Time}
 			and packet_type = 0
+			and packet_id = #{packet_id}
         </where>
     </select>
 
@@ -564,14 +586,15 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			and a.status in ("0")
 			and a.ord_type = '2'
 			and b.is_month = '0'
-			and start_time             <![CDATA[ <= ]]> now()
-			and end_time             <![CDATA[ >= ]]> now()
+			and start_time                         <![CDATA[ <= ]]> now()
+			and end_time                         <![CDATA[ >= ]]> now()
 			and b.packet_valid_name = '年'
         </where>
     </select>
 
 
     <!--查询 已失效 资费计划 总用量和总已用 -->
+    <!--修改：对于开始时间不在当月但结束时间在本月的包，如果已用完则排除（当作上月废包处理）-->
     <select id="findInvalidationSum" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		select
 		SUM(a.true_flow) as 'sumTrue_flow',
@@ -581,8 +604,17 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <where>
 			iccid = #{iccid}
 			and a.status in ("0")
-			and start_time             <![CDATA[ <= ]]> now()
-			and end_time             <![CDATA[ >= ]]> now()
+			and start_time                                     <![CDATA[ <= ]]> now()
+			and end_time                                     <![CDATA[ >= ]]> now()
+			and (
+			-- 开始时间在本月范围内的失效包：统计
+			(start_time                                     <![CDATA[ >= ]]> #{nowMonthSta} AND start_time                                     <![CDATA[ <= ]]> #{nowMonthEnd})
+			OR
+			-- 开始时间不在本月但结束时间在本月的失效包：如果未用完则统计，如果已用完则排除（当作上月废包处理）
+			(start_time                                     <![CDATA[ < ]]> #{nowMonthSta}
+			AND #{nowMonthSta}                                     <![CDATA[ <= ]]> end_time AND end_time                                     <![CDATA[ <= ]]> #{nowMonthEnd}
+			AND NOT (use_true_flow                                     <![CDATA[ >= ]]> error_flow AND error_flow > 0))
+			)
         </where>
     </select>
 

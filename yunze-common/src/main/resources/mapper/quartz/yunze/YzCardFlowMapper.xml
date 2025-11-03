@@ -6,8 +6,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 
 
 
-	<!--查询套餐信息    a.error_flow,a.error_time,   -->
-	<select id="queryflow" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--查询套餐信息    a.error_flow,a.error_time,   -->
+    <select id="queryflow" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			a.id,
 			a.package_id,
@@ -40,23 +40,24 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			yz_card_flow a,
 			yz_card_packet b,
 			yz_order c
-		<where>
+        <where>
 			a.iccid = #{iccid}
 			AND a.packet_id = b.packet_id
 			AND a.ord_no = c.ord_no
-			<if test="NotExpired == 1">
+            <if test="NotExpired == 1">
+				AND a.error_flow > use_so_flow
 				AND a.end_time > now()
-			</if>
-		</where>
+            </if>
+        </where>
 		ORDER BY start_time
-	</select>
+    </select>
 
 
 
 
 
-	<!--查询现有套餐信息   a.error_flow,a.error_time,   -->
-	<select id="queryflow_agent" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--查询现有套餐信息   a.error_flow,a.error_time,   -->
+    <select id="queryflow_agent" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			a.id,
 			a.package_id,
@@ -89,23 +90,23 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			yz_card_flow a,
 			yz_agent_packet b,
 			yz_order c
-		<where>
+        <where>
 			a.iccid = #{iccid}
 			AND a.packet_id = b.packet_id
 			AND a.ord_no = c.ord_no
 			AND b.package_id = #{package_id}
 			AND b.dept_id = #{agent_id}
-			<if test="NotExpired == 1">
+            <if test="NotExpired == 1">
 				AND  a.end_time > now()
-			</if>
-		</where>
+            </if>
+        </where>
 		ORDER BY start_time
-	</select>
+    </select>
 
 
 
-	<!--查询当前套餐简要信息-->
-	<select id="queryflow_simple" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--查询当前套餐简要信息-->
+    <select id="queryflow_simple" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			b.packet_wx_name,
 			b.packet_valid_time,
@@ -115,20 +116,20 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 		FROM
 			yz_card_flow a,
 			yz_card_packet b
-		<where>
+        <where>
 			a.iccid = #{iccid}
 			and	a.packet_id = b.packet_id
-		</where>
+        </where>
 			ORDER BY
 			start_time DESC
 			LIMIT 1
-	</select>
+    </select>
 
 
 
 
-	<!--查询当前套餐简要信息 代理 -->
-	<select id="queryflowAgent_simple" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--查询当前套餐简要信息 代理 -->
+    <select id="queryflowAgent_simple" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			b.packet_wx_name,
 			b.packet_valid_time,
@@ -138,42 +139,42 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 		FROM
 		yz_card_flow a,
 		yz_agent_packet b
-		<where>
+        <where>
 			a.iccid = #{iccid}
 			and	a.packet_id = b.packet_id
-		</where>
+        </where>
 		ORDER BY
 		start_time DESC
 		LIMIT 1
-	</select>
+    </select>
 
 
 
-	<!--获取资费组简要信息-->
-	<select id="queryPackage_simple" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--获取资费组简要信息-->
+    <select id="queryPackage_simple" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			package_id,
 			package_agentname
 		FROM
 			yz_card_package
-	</select>
+    </select>
 
-	<!--获取 代理 资费组简要信息-->
-	<select id="queryAgentPackage_simple" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--获取 代理 资费组简要信息-->
+    <select id="queryAgentPackage_simple" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			package_id,
 			package_agentname
 		FROM
 			yz_agent_package
-		<where>
+        <where>
 			dept_id  = #{agent_id}
-		</where>
-	</select>
+        </where>
+    </select>
 
 
 
-	<!--获取资费计划简要信息-->
-	<select id="queryPacket_simple" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--获取资费计划简要信息-->
+    <select id="queryPacket_simple" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			packet_id as dictValue,
 			packet_wx_name as dictLabel,
@@ -190,10 +191,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             is_month
 		FROM
 			yz_card_packet
-	</select>
+    </select>
 
-	<!--获取 代理 资费计划简要信息-->
-	<select id="queryAgentPacket_simple" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--获取 代理 资费计划简要信息-->
+    <select id="queryAgentPacket_simple" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			packet_id as dictValue,
 			packet_wx_name as dictLabel,
@@ -210,21 +211,21 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			is_month
 		FROM
 			yz_agent_packet
-		<where>
+        <where>
 			dept_id in
-			<foreach item="agent_id" collection="agent_id" index="agent_id" open="(" separator="," close=")">
+            <foreach item="agent_id" collection="agent_id" index="agent_id" open="(" separator="," close=")">
 				#{agent_id}
-			</foreach>
-		</where>
-	</select>
+            </foreach>
+        </where>
+    </select>
 
 
 
 
 
 
-	<!--卡板信息导出需要用到的套餐数据-->
-	<select id="outCardFlow" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--卡板信息导出需要用到的套餐数据-->
+    <select id="outCardFlow" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			iccid,
 			true_flow,
@@ -236,10 +237,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			b.packet_valid_name
 		FROM
 			( SELECT * FROM yz_card_flow WHERE iccid IN
-			<foreach item="iccid_arrs" collection="iccid_arrs" index="index"  separator="," open="(" close=")" >
+        <foreach item="iccid_arrs" collection="iccid_arrs" index="index" separator="," open="(" close=")">
 					#{iccid_arrs}
-			</foreach>
-		<![CDATA[	ORDER BY start_time DESC  LIMIT 99999999 ) a ,
+        </foreach>
+        <![CDATA[	ORDER BY start_time DESC  LIMIT 99999999 ) a ,
 			yz_card_packet b
 		WHERE
 			a.packet_id = b.packet_id
@@ -247,25 +248,25 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 		GROUP BY
 		a.iccid
 		]]>
-	</select>
+    </select>
 
-	<!-- 修改 资费计划用量-->
-	<update id="updFlow" parameterType="java.util.HashMap" >
+    <!-- 修改 资费计划用量-->
+    <update id="updFlow" parameterType="java.util.HashMap">
 		update yz_card_flow
-		<set>
+        <set>
 			use_true_flow = #{use_true_flow},
 			use_so_flow = #{use_so_flow},
-			<if test="status!=null">
+            <if test="status!=null">
 				status = #{status}
-			</if>
-		</set>
-		<where>
+            </if>
+        </set>
+        <where>
 			id =#{id}
-		</where>
-	</update>
+        </where>
+    </update>
 
-	<!--查询 生效中 未生效 资费计划  -->
-	<select id="findInEffect" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--查询 生效中 未生效 资费计划  -->
+    <select id="findInEffect" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		select
 			id,
 			true_flow,
@@ -275,79 +276,99 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			use_true_flow
 		from
 			yz_card_flow
-		<where>
+        <where>
 			iccid =#{iccid}
 			and status in ("1","2")
-			AND (#{nowMonthSta} <![CDATA[ <= ]]>end_time and end_time <![CDATA[ <= ]]>#{nowMonthEnd} or #{nowMonthSta}  <![CDATA[ <= ]]>start_time
-			AND start_time  <![CDATA[ <= ]]> #{nowMonthEnd} or start_time <![CDATA[ <= ]]>#{nowMonthSta} and #{nowMonthEnd}  <![CDATA[ <= ]]> end_time)
-			and start_time  <![CDATA[ <= ]]> now()
-		</where>
-	</select>
+			AND (#{nowMonthSta}                                                 <![CDATA[ <= ]]>end_time and end_time                                                 <![CDATA[ <= ]]>#{nowMonthEnd} or #{nowMonthSta}                                                  <![CDATA[ <= ]]>start_time
+			AND start_time                                                  <![CDATA[ <= ]]> #{nowMonthEnd} or start_time                                                 <![CDATA[ <= ]]>#{nowMonthSta} and #{nowMonthEnd}                                                  <![CDATA[ <= ]]> end_time)
+			and start_time                                                  <![CDATA[ <= ]]> now()
+        </where>
+    </select>
 
-	<!--查询 已失效 资费计划 真实用量-->
-	<select id="findInvalidationSumErrorFlow" parameterType="java.util.HashMap" resultType="java.lang.String">
+    <!--查询 已失效 资费计划 真实用量-->
+    <!--修改：1.排除开始时间非本月的失效包（status=0）2.对于开始时间不在当月但结束时间在本月的包，如果已用完则排除（当作上月废包处理）3.包含已用完但未到期的跨月资费包-->
+    <select id="findInvalidationSumErrorFlow" parameterType="java.util.HashMap" resultType="java.lang.String">
 		select
 			SUM(use_so_flow)
 		from
 			yz_card_flow
-		<where>
+        <where>
 			iccid =#{iccid}
-			and status in ("0")
-			AND (#{nowMonthSta} <![CDATA[ <= ]]>end_time and end_time <![CDATA[ <= ]]>#{nowMonthEnd} or #{nowMonthSta}  <![CDATA[ <= ]]>start_time
-			AND start_time  <![CDATA[ <= ]]> #{nowMonthEnd} or start_time <![CDATA[ <= ]]>#{nowMonthSta} and #{nowMonthEnd}  <![CDATA[ <= ]]> end_time)
-			and start_time  <![CDATA[ <= ]]> now()
-		</where>
-	</select>
+			and (
+				-- 已失效的资费包（status=0）
+				(status in ("0") 
+				 AND (
+					-- 开始时间在本月范围内的失效包：统计
+					(start_time                                                             <![CDATA[ >= ]]> #{nowMonthSta} AND start_time                                                             <![CDATA[ <= ]]> #{nowMonthEnd})
+					OR 
+					-- 开始时间不在本月但结束时间在本月的失效包：如果未用完则统计，如果已用完则排除（当作上月废包处理）
+					(start_time                                                             <![CDATA[ < ]]> #{nowMonthSta} 
+					 AND #{nowMonthSta}                                                             <![CDATA[ <= ]]> end_time AND end_time                                                             <![CDATA[ <= ]]> #{nowMonthEnd}
+					 AND NOT (use_true_flow                                                             <![CDATA[ >= ]]> error_flow AND error_flow > 0))
+				))
+				OR 
+				-- 已用完但未到期的跨月资费包（status=1或2，use_true_flow>=error_flow），与本月时间范围有交集
+				-- 这些资费包的开始时间可能在上月或更早，需要统计以避免跨月时额度被刷新
+				(status in ("1","2") 
+				 AND use_true_flow                                                             <![CDATA[ >= ]]> error_flow 
+				 AND error_flow > 0
+				 AND (#{nowMonthSta}                                                             <![CDATA[ <= ]]>end_time and end_time                                                             <![CDATA[ <= ]]>#{nowMonthEnd} 
+				      OR #{nowMonthSta}                                                             <![CDATA[ <= ]]>start_time AND start_time                                                             <![CDATA[ <= ]]> #{nowMonthEnd} 
+				      OR start_time                                                             <![CDATA[ <= ]]>#{nowMonthSta} and #{nowMonthEnd}                                                             <![CDATA[ <= ]]> end_time))
+			)
+			AND start_time                                                             <![CDATA[ <= ]]> now()
+        </where>
+    </select>
 
-	<!--修改 时间到期资费计划-->
-	<update id="updStatus" parameterType="java.util.HashMap" >
+    <!--修改 时间到期资费计划-->
+    <update id="updStatus" parameterType="java.util.HashMap">
 		update yz_card_flow
-		<set>
+        <set>
 			status = 0
-		</set>
-		<where>
+        </set>
+        <where>
 			iccid =#{iccid}
-			and end_time  <![CDATA[ <= ]]> now()
-		</where>
-	</update>
+			and end_time                                                  <![CDATA[ <= ]]> now()
+        </where>
+    </update>
 
 
-	<!--查询卡号对应订单号是否已经存在-->
-	<select id="findExistence" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+    <!--查询卡号对应订单号是否已经存在-->
+    <select id="findExistence" parameterType="java.util.HashMap" resultType="java.lang.Integer">
 		select
 			COUNT(iccid)
 		from
 			yz_card_flow
-		<where>
+        <where>
 			iccid =#{iccid}
 			and ord_no =#{ord_no}
 
-		</where>
-	</select>
+        </where>
+    </select>
 
 
-	<!--  获取当前充值 包 的最后 一个 到期 时间-->
-	<select id="findEndTime" parameterType="java.util.HashMap" resultType="java.lang.String">
+    <!--  获取当前充值 包 的最后 一个 到期 时间-->
+    <select id="findEndTime" parameterType="java.util.HashMap" resultType="java.lang.String">
 		SELECT
 			DATE_FORMAT( A.end_time, "%Y-%m-%d %H:%i:%S"  ) AS ymd
 		FROM
 			yz_card_flow A,
 			yz_card_packet B
-		<where>
+        <where>
 			A.iccid = #{iccid}
 			AND A.package_id = B.package_id
 			AND A.packet_id = B.packet_id
 			AND B.packet_type = 0
 			AND A.STATUS = 1
-		</where>
+        </where>
 		ORDER BY
 			A.end_time DESC
 			LIMIT 1;
-	</select>
+    </select>
 
 
-	<!--插入flow-->
-	<insert id="saveFlow" parameterType="java.util.HashMap" >
+    <!--插入flow-->
+    <insert id="saveFlow" parameterType="java.util.HashMap">
 		insert  into
 			yz_card_flow
 		(
@@ -367,7 +388,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			error_time,
 			validate_type
 		)value
-		<foreach item="flow_arrs" collection="flow_arrs" index="index"  separator="," >
+        <foreach item="flow_arrs" collection="flow_arrs" index="index" separator=",">
 			(#{flow_arrs.package_id},
 			#{flow_arrs.packet_id},
 			#{flow_arrs.ord_no},
@@ -383,10 +404,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			#{flow_arrs.iccid},
 			#{flow_arrs.error_time},
 			#{flow_arrs.validate_type})
-		</foreach>
+        </foreach>
 
-	</insert>
-	<insert id="insertFlow">
+    </insert>
+    <insert id="insertFlow">
 		insert  into
 			yz_card_flow
 		(
@@ -422,11 +443,11 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			#{error_time},
 			#{validate_type}
 		)
-	</insert>
+    </insert>
 
 
-	<!--获取 资费计划 信息-->
-	<select id="FindPacket" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--获取 资费计划 信息-->
+    <select id="FindPacket" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			packet_id,
 			package_id,
@@ -448,15 +469,15 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			packet_valid_type as wxValidType
 		FROM
 			yz_card_packet
-		<where>
+        <where>
 			package_id = #{package_id}
 			and packet_id = #{packet_id}
-		</where>
+        </where>
 
-	</select>
+    </select>
 
-	<!--获取 代理 资费计划 信息-->
-	<select id="FindPacketAgent" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--获取 代理 资费计划 信息-->
+    <select id="FindPacketAgent" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			packet_id,
 			package_id,
@@ -478,17 +499,17 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			packet_valid_type as wxValidType
 		FROM
 			yz_agent_packet
-		<where>
+        <where>
 			package_id = #{package_id}
 			and packet_id = #{packet_id}
 			and dept_id  = #{agent_id}
-		</where>
-	</select>
+        </where>
+    </select>
 
 
 
-	<!--获取 资费计划 简要 信息-->
-	<select id="FindPacket_concise" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--获取 资费计划 简要 信息-->
+    <select id="FindPacket_concise" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			packet_flow,
 			packet_valid_time,
@@ -496,15 +517,15 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			is_month
 		FROM
 		yz_card_packet
-		<where>
+        <where>
 			package_id = #{package_id}
 			and packet_id = #{packet_id}
-		</where>
+        </where>
 
-	</select>
+    </select>
 
-	<!--获取 代理 资费计划 简要 信息-->
-	<select id="FindPacketAgent_concise" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--获取 代理 资费计划 简要 信息-->
+    <select id="FindPacketAgent_concise" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			packet_flow,
 			packet_valid_time,
@@ -512,62 +533,62 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			is_month
 		FROM
 			yz_agent_packet
-		<where>
+        <where>
 			package_id = #{package_id}
 			and packet_id = #{packet_id}
 			and dept_id  = #{agent_id}
-		</where>
-	</select>
+        </where>
+    </select>
 
 
-	<!--订购资费筛选条件-->
-	<sql id="selwhere">
-		<where>
-			<if test="type==0 and value!=null and value!=''">
+    <!--订购资费筛选条件-->
+    <sql id="selwhere">
+        <where>
+            <if test="type==0 and value!=null and value!=''">
 				AND ord_no LIKE CONCAT(#{value},'%')
-			</if>
-			<if test="type==1 and value!=null and value!=''">
+            </if>
+            <if test="type==1 and value!=null and value!=''">
 				AND iccid LIKE CONCAT(#{value},'%')
-			</if>
-			<if test="status != null and status != '' ">
+            </if>
+            <if test="status != null and status != '' ">
 				AND status = #{status}
-			</if>
-			<if test="iccid != null and iccid != '' ">
+            </if>
+            <if test="iccid != null and iccid != '' ">
 				AND iccid = #{iccid}
-			</if>
-			<if test="packet !=null and packet != '' ">
+            </if>
+            <if test="packet !=null and packet != '' ">
 				AND packet_type =#{packet}
-			</if>
-			<if test="effect !=null and effect != '' ">
+            </if>
+            <if test="effect !=null and effect != '' ">
 				AND validate_type =#{effect}
-			</if>
-			<if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
+            </if>
+            <if test="timetype != null  and timetype != '' and staTime!=null and endTime!=null">
 				AND
-				<if test="timetype == 0">
+                <if test="timetype == 0">
 					 create_time )
-				</if>
-				<if test="timetype == 1">
+                </if>
+                <if test="timetype == 1">
 					 start_time
-				</if>
-				<if test="timetype == 2">
+                </if>
+                <if test="timetype == 2">
 					end_time
-				</if>
-				<if test="timetype == 3">
+                </if>
+                <if test="timetype == 3">
 					 validate_time
-				</if>
+                </if>
 				BETWEEN #{staTime} AND #{endTime}
-			</if>
-			<if test="IccidArr != null  and IccidArr != '' and IccidArr.size>0">
+            </if>
+            <if test="IccidArr != null  and IccidArr != '' and IccidArr.size>0">
 				and  iccid in
-				<foreach item="IccidArr" collection="IccidArr" index="IccidArr" open="(" separator="," close=")">
+                <foreach item="IccidArr" collection="IccidArr" index="IccidArr" open="(" separator="," close=")">
 					#{IccidArr}
-				</foreach>
-			</if>
-		</where>
-	</sql>
+                </foreach>
+            </if>
+        </where>
+    </sql>
 
-	<!--订购资费查询-->
-	<select id="getList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--订购资费查询-->
+    <select id="getList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 			SELECT id,package_id,packet_id,ord_no,true_flow,
 				DATE_FORMAT(start_time,'%Y-%m-%d') as start_time,
 				DATE_FORMAT(end_time,'%Y-%m-%d') as end_time,
@@ -578,63 +599,63 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 				use_so_flow
 			FROM
 				yz_card_flow
-			<include refid="selwhere"/>
+        <include refid="selwhere"/>
 			ORDER BY
-			<if test="ORDER_BY_type==0">
+        <if test="ORDER_BY_type==0">
 				start_time
-			</if>
-			<if test="ORDER_BY_type==1">
+        </if>
+        <if test="ORDER_BY_type==1">
 				create_time
-			</if>
-			<if test="ORDER_BY_type==2">
+        </if>
+        <if test="ORDER_BY_type==2">
 				end_time
-			</if>
-			<if test="ORDER_BY_type==3">
+        </if>
+        <if test="ORDER_BY_type==3">
 				iccid
-			</if>
-			<if test="ORDER_BY_rule==1">
+        </if>
+        <if test="ORDER_BY_rule==1">
 				DESC
-			</if>
-			<if test="ORDER_BY_rule==0" >
+        </if>
+        <if test="ORDER_BY_rule==0">
 				ASC
-			</if>
+        </if>
 		   LIMIT #{StarRow},#{PageSize}
-	</select>
-<!--订购资费查询 分页-->
-	<select id="MapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+    </select>
+    <!--订购资费查询 分页-->
+    <select id="MapCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
 		select
 			count(1)
 		FROM
 			yz_card_flow
-		<include refid="selwhere"/>
-	</select>
+        <include refid="selwhere"/>
+    </select>
 
 
 
-	<select id="findPacketType" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <select id="findPacketType" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		select
 			packet_type
 		FROM
 			yz_card_packet
-		<where>
+        <where>
 			package_id =#{package_id}
 			and packet_id =#{packet_id}
-		</where>
+        </where>
 			LIMIT 1
-	</select>
+    </select>
 
-	<!--查询到期日期-->
-	<select id="sletume" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--查询到期日期-->
+    <select id="sletume" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			*
 		FROM
 			( SELECT iccid, end_time FROM yz_card_flow WHERE end_time > now() ORDER BY end_time DESC LIMIT 99999999999 ) a
 		GROUP BY
 			a.iccid;
-	</select>
+    </select>
 
-	<!--资费订购导出-->
-	<select id="exportArr" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--资费订购导出-->
+    <select id="exportArr" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			id,
 			package_id,
@@ -653,11 +674,11 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 			use_so_flow
 		FROM
 			yz_card_flow
-		<include refid="selwhere"/>
-	</select>
+        <include refid="selwhere"/>
+    </select>
 
-	<!--查询yz_card_packet-->
-	<select id="exportflow" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--查询yz_card_packet-->
+    <select id="exportflow" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 		b.packet_id,
 		a.packet_wx_name,
@@ -667,63 +688,73 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 		FROM
 		yz_card_packet a LEFT JOIN
 		yz_card_flow b on a.packet_id = b.packet_id
-		<include refid="selwhere"/>
+        <include refid="selwhere"/>
 		GROUP BY b.packet_id
-	</select>
+    </select>
 
-	<!--查询失效的防超套系数-->
-	<select id="FindError_time" parameterType="java.util.HashMap" resultType="java.lang.String">
+    <!--查询失效的防超套系数-->
+    <select id="FindError_time" parameterType="java.util.HashMap" resultType="java.lang.String">
 		SELECT
 		error_time
 		FROM
 		yz_card_flow
-		<where>
+        <where>
 			iccid = #{iccid}
 			and status in ("0")
-		</where>
+        </where>
 		ORDER BY end_time DESC
 		LIMIT 1
-	</select>
+    </select>
 
 
 
-	<!--查询 已失效 资费计划 真实用量 年包 -->
-	<select id="findInvalidationSumErrorFlow_Year" parameterType="java.util.HashMap" resultType="java.lang.String">
+    <!--查询 已失效 资费计划 真实用量 年包 -->
+    <select id="findInvalidationSumErrorFlow_Year" parameterType="java.util.HashMap" resultType="java.lang.String">
 		select
 		SUM(a.error_flow)
 		from
 		yz_card_flow a,
 		yz_card_packet b
-		<where>
+        <where>
 			a.packet_id = b.packet_id
 			and iccid = #{iccid}
 			and a.status in ("0")
 			and a.ord_type = '2'
 			and b.is_month = '0'
-			and start_time <![CDATA[ <= ]]> now()
-			and end_time <![CDATA[ >= ]]> now()
+			and start_time                                                 <![CDATA[ <= ]]> now()
+			and end_time                                                 <![CDATA[ >= ]]> now()
 			and b.packet_valid_name = '年'
-		</where>
-	</select>
+        </where>
+    </select>
 
 
-	<!--查询 已失效 资费计划 总用量和总已用 -->
-	<select id="findInvalidationSum" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--查询 已失效 资费计划 总用量和总已用 -->
+    <!--修改：对于开始时间不在当月但结束时间在本月的包，如果已用完则排除（当作上月废包处理）-->
+    <select id="findInvalidationSum" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		select
 		SUM(a.true_flow) as 'sumTrue_flow',
 		SUM(a.use_so_flow) as 'sumUse_so_flow'
 		from
 		yz_card_flow a
-		<where>
+        <where>
 			iccid = #{iccid}
 			and a.status in ("0")
-			and start_time <![CDATA[ <= ]]> now()
-			and end_time <![CDATA[ >= ]]> now()
-		</where>
-	</select>
+			and start_time                         <![CDATA[ <= ]]> now()
+			and end_time                         <![CDATA[ >= ]]> now()
+			and (
+				-- 开始时间在本月范围内的失效包：统计
+				(start_time                         <![CDATA[ >= ]]> #{nowMonthSta} AND start_time                         <![CDATA[ <= ]]> #{nowMonthEnd})
+				OR 
+				-- 开始时间不在本月但结束时间在本月的失效包：如果未用完则统计，如果已用完则排除（当作上月废包处理）
+				(start_time                         <![CDATA[ < ]]> #{nowMonthSta} 
+				 AND #{nowMonthSta}                         <![CDATA[ <= ]]> end_time AND end_time                         <![CDATA[ <= ]]> #{nowMonthEnd}
+				 AND NOT (use_true_flow                         <![CDATA[ >= ]]> error_flow AND error_flow > 0))
+			)
+        </where>
+    </select>
 
-	<!--备份 yz_card_flow 表-->
-	<select id="backupsFl" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--备份 yz_card_flow 表-->
+    <select id="backupsFl" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			id,
 			package_id,
@@ -746,27 +777,27 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             use_so_flow
 		FROM
 			yz_card_flow
-		<where>
+        <where>
 			ord_no IN
-			<foreach item="ordNoID" collection="ordNoID" index="ordNoID" open="(" separator="," close=")">
+            <foreach item="ordNoID" collection="ordNoID" index="ordNoID" open="(" separator="," close=")">
 				#{ordNoID}
-			</foreach>
-		</where>
-	</select>
+            </foreach>
+        </where>
+    </select>
 
-	<!--批量删除对应order 表的 订单号-->
-	<delete id="delOrdArr" parameterType="java.util.HashMap">
+    <!--批量删除对应order 表的 订单号-->
+    <delete id="delOrdArr" parameterType="java.util.HashMap">
 		DELETE  from yz_card_flow
-		<where>
+        <where>
 			ord_no IN
-			<foreach item="delOrd" collection="delOrd" index="delOrd" open="(" separator="," close=")">
+            <foreach item="delOrd" collection="delOrd" index="delOrd" open="(" separator="," close=")">
 				#{delOrd}
-			</foreach>
-		</where>
-	</delete>
+            </foreach>
+        </where>
+    </delete>
 
-	<!--查询 用量总和已用流量 -->
-	<select id="consumption" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+    <!--查询 用量总和已用流量 -->
+    <select id="consumption" parameterType="java.util.HashMap" resultType="java.util.HashMap">
 		SELECT
 			packet_id,
 			dept_id,
@@ -784,22 +815,22 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 		GROUP BY
 			a.packet_id,
 			b.dept_id
-	</select>
+    </select>
 
-	<!--查询  资费计划 真实用量 当月可用-->
-	<select id="findSumErrorFlow" parameterType="java.util.HashMap" resultType="java.lang.String">
+    <!--查询  资费计划 真实用量 当月可用-->
+    <select id="findSumErrorFlow" parameterType="java.util.HashMap" resultType="java.lang.String">
 		select
 		SUM(error_flow)
 		from
 		yz_card_flow
-		<where>
+        <where>
 			iccid =#{iccid}
-			AND (#{nowMonthSta} <![CDATA[ <= ]]>end_time and end_time <![CDATA[ <= ]]>#{nowMonthEnd} or #{nowMonthSta}  <![CDATA[ <= ]]>start_time
-			AND start_time  <![CDATA[ <= ]]> #{nowMonthEnd} or start_time <![CDATA[ <= ]]>#{nowMonthSta} and #{nowMonthEnd}  <![CDATA[ <= ]]> end_time)
-			and start_time  <![CDATA[ <= ]]> now()
-		</where>
-	</select>
-	<select id="selCardFlow" resultType="java.lang.Integer">
+			AND (#{nowMonthSta}                                                 <![CDATA[ <= ]]>end_time and end_time                                                 <![CDATA[ <= ]]>#{nowMonthEnd} or #{nowMonthSta}                                                  <![CDATA[ <= ]]>start_time
+			AND start_time                                                  <![CDATA[ <= ]]> #{nowMonthEnd} or start_time                                                 <![CDATA[ <= ]]>#{nowMonthSta} and #{nowMonthEnd}                                                  <![CDATA[ <= ]]> end_time)
+			and start_time                                                  <![CDATA[ <= ]]> now()
+        </where>
+    </select>
+    <select id="selCardFlow" resultType="java.lang.Integer">
 		SELECT
 			count(0) AS total
 		FROM
@@ -807,8 +838,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 		WHERE
 			iccid = #{iccid}
 		  AND validate_type = "0"
-	</select>
-	<select id="selOneCardFlow" resultType="java.lang.Integer">
+    </select>
+    <select id="selOneCardFlow" resultType="java.lang.Integer">
 		SELECT
 			count(0) AS total
 		FROM
@@ -816,8 +847,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 		WHERE
 			iccid = #{iccid}
 		  AND validate_type = "0"
-	</select>
-	<select id="outCardFlowByList" parameterType="java.util.Map" resultType="com.yunze.common.core.domain.entity.YzCard">
+    </select>
+    <select id="outCardFlowByList" parameterType="java.util.Map" resultType="com.yunze.common.core.domain.entity.YzCard">
 		SELECT
 		t1.msisdn,
 		t1.iccid,
@@ -850,98 +881,98 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 		(IF(use_so_flow>0,use_so_flow,0)+IF(use_flow>0,use_flow,0)) AS use_so_flow_sum
 		FROM
 		( SELECT * FROM yz_card_flow WHERE iccid IN
-		<foreach item="card" collection="cardList" index="index" separator="," open="(" close=")">
+        <foreach item="card" collection="cardList" index="index" separator="," open="(" close=")">
 			#{card.iccid}
-		</foreach>
-		<![CDATA[	ORDER BY create_time DESC) a left join
+        </foreach>
+        <![CDATA[	ORDER BY create_time DESC) a left join
 			yz_card_packet b
 		ON
 			a.packet_id = b.packet_id
 		GROUP BY
 		a.iccid
 		]]>) AS t5 ON t1.iccid = t5.iccid
-		<where>
+        <where>
 			t2.`status` = 0
-			<if test="value != null and value != ''">
+            <if test="value != null and value != ''">
 				AND t1.iccid = #{value}
 				OR t1.imsi = #{value}
 				OR t1.msisdn = #{value}
-			</if>
-			<if test="UpType != null   and UpType != ''   ">
+            </if>
+            <if test="UpType != null   and UpType != ''   ">
 				and
-				<if test="UpType == 0">
+                <if test="UpType == 0">
 					t1.vid
-				</if>
-				<if test="UpType == 1">
+                </if>
+                <if test="UpType == 1">
 					t1.msisdn
-				</if>
-				<if test="UpType == 2">
+                </if>
+                <if test="UpType == 2">
 					t1.iccid
-				</if>
-				<if test="UpType == 3">
+                </if>
+                <if test="UpType == 3">
 					t1.imsi
-				</if>
+                </if>
 				IN
-				<if test="UpArr != null and UpArr != '' and UpArr.size>0">
-					<foreach item="UpArr" collection="UpArr" index="UpArr" open="(" separator="," close=")">
+                <if test="UpArr != null and UpArr != '' and UpArr.size>0">
+                    <foreach item="UpArr" collection="UpArr" index="UpArr" open="(" separator="," close=")">
 						#{UpArr.cardNumber}
-					</foreach>
-				</if>
-			</if>
-			<if test="batch_query_arr!=null and batch_query_arr!=''">
-				<if test="batch_query_type==1 ">
+                    </foreach>
+                </if>
+            </if>
+            <if test="batch_query_arr!=null and batch_query_arr!=''">
+                <if test="batch_query_type==1 ">
 					and t1.vid
 					in
-					<foreach item="batch_query_arr" collection="batch_query_arr" open="(" separator="," close=")">
+                    <foreach item="batch_query_arr" collection="batch_query_arr" open="(" separator="," close=")">
 						#{batch_query_arr}
-					</foreach>
-				</if>
-				<if test="batch_query_type==3 ">
+                    </foreach>
+                </if>
+                <if test="batch_query_type==3 ">
 					and t1.msisdn in
-					<foreach item="batch_query_arr" collection="batch_query_arr" open="(" separator="," close=")">
+                    <foreach item="batch_query_arr" collection="batch_query_arr" open="(" separator="," close=")">
 						#{batch_query_arr}
-					</foreach>
-				</if>
-				<if test="batch_query_type==0 ">
+                    </foreach>
+                </if>
+                <if test="batch_query_type==0 ">
 					and t1.iccid in
-					<foreach item="batch_query_arr" collection="batch_query_arr" open="(" separator="," close=")">
+                    <foreach item="batch_query_arr" collection="batch_query_arr" open="(" separator="," close=")">
 						#{batch_query_arr}
-					</foreach>
-				</if>
-				<if test="batch_query_type==4 ">
+                    </foreach>
+                </if>
+                <if test="batch_query_type==4 ">
 					and t1.imsi in
-					<foreach item="batch_query_arr" collection="batch_query_arr" open="(" separator="," close=")">
+                    <foreach item="batch_query_arr" collection="batch_query_arr" open="(" separator="," close=")">
 						#{batch_query_arr}
-					</foreach>
-				</if>
-				<if test="batch_query_type==5 ">
+                    </foreach>
+                </if>
+                <if test="batch_query_type==5 ">
 					and t1.imei in
-					<foreach item="batch_query_arr" collection="batch_query_arr" open="(" separator="," close=")">
+                    <foreach item="batch_query_arr" collection="batch_query_arr" open="(" separator="," close=")">
 						#{batch_query_arr}
-					</foreach>
-				</if>
-			</if>
-			<if test="StartAndEndtype != null  and StartAndEndtype != '' and StartValue!=null and EndValue!=null">
+                    </foreach>
+                </if>
+            </if>
+            <if test="StartAndEndtype != null  and StartAndEndtype != '' and StartValue!=null and EndValue!=null">
 				and
-				<if test="StartAndEndtype == 1">
+                <if test="StartAndEndtype == 1">
 					t1.vid
-				</if>
-				<if test="StartAndEndtype == 2">
+                </if>
+                <if test="StartAndEndtype == 2">
 					t1.msisdn
-				</if>
-				<if test="StartAndEndtype == 3">
+                </if>
+                <if test="StartAndEndtype == 3">
 					t1.iccid
-				</if>
-				<if test="StartAndEndtype == 4">
+                </if>
+                <if test="StartAndEndtype == 4">
 					t1.imsi
-				</if>
-				<if test="StartAndEndtype == 5">
+                </if>
+                <if test="StartAndEndtype == 5">
 					t1.imei
-				</if>
+                </if>
 				BETWEEN #{StartValue} AND #{EndValue}
-			</if>
-		</where>
+            </if>
+        </where>
 		GROUP BY
 		t1.iccid
-	</select>
+    </select>
 </mapper>
