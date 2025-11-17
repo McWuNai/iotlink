@@ -457,11 +457,11 @@ public class SysUserServiceImpl implements ISysUserService {
         payParams.put("app_token", params.get("appToken"));
         payParams.put("mch_id", params.get("mchId"));
         payParams.put("paterner_key", params.get("paternerKey"));
-        payParams.put("index_url", "https://swww.iotesim.cn/wechat?appId=" + params.get("appId"));
-        payParams.put("back_url", "http://sgtw.iotesim.cn/web/weixin/pay/weixinPayNotify/" + params.get("appId"));
+        payParams.put("index_url", "https://www.iotesim.cn/wechat?appId=" + params.get("appId"));
+        payParams.put("back_url", "http://gtw.iotesim.cn/web/weixin/pay/weixinPayNotify/" + params.get("appId"));
         payParams.put("status", params.get("status"));
         payParams.put("create_user", loginUser.getUser().getUserId());
-        payParams.put("native_url", "http://sgtw.iotesim.cn/yunze/MySysDept/weChatNotify/" + params.get("appId"));
+        payParams.put("native_url", "http://gtw.iotesim.cn/yunze/MySysDept/weChatNotify/" + params.get("appId"));
         payParams.put("auth_txt", params.get("authTxt"));
 
         return yzWxConfigMapper.paySetting(payParams);

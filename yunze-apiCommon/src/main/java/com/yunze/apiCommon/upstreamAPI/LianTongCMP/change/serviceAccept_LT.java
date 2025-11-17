@@ -34,7 +34,7 @@ public class serviceAccept_LT extends LT_CMP_Api {
         try{
             CommonJsonRequest request = new CommonJsonRequest();
             //完整的url：https://gwapi.10646.cn/api/addRatePlan/V1/1Main/vV1.1
-            request.setApiName("addRatePlan/V1/1Main/vV1.1");
+            request.setApiName("addRatePlan/V1/1Main");
             request.setApiVer("V1.1");
 
             Map<String, Object> params = new HashMap<String, Object>();
