@@ -119,7 +119,7 @@ public class YzCardServiceImpl implements IYzCardService {
     /**
      * 获取业务统计数据
      */
-    public Map<String, Object> getBusinessStatistics(String filePath) {
+    public Map<String, Object> getBusinessStatistics(String filePath, String identifier) {
         // 从文件名中解析日期（格式：YYYY-mm-DD）
         String fileName = new File(filePath).getName();
         String dateStr = fileName.replace(".xlsx", "");
@@ -129,9 +129,14 @@ public class YzCardServiceImpl implements IYzCardService {
                 Integer.parseInt(dateParts[1]), // 月
                 Integer.parseInt(dateParts[2])); // 日（修正：使用完整的日期）
 
-        // 构建新的缓存key格式：yunze:card:getBusinessStatistics:mm:YYYY:DD
-        String cacheKey = String.format("%s%s:%s:%s",
+        if (StringUtils.isEmpty(identifier)) {
+            throw new IllegalArgumentException("identifier参数不能为空");
+        }
+
+        // 构建新的缓存key格式：yunze:card:getBusinessStatistics:identifier:mm:YYYY:DD
+        String cacheKey = String.format("%s%s:%s:%s:%s",
                 BUSINESS_STATS_PREFIX,
+                identifier,
                 dateParts[1], // mm
                 dateParts[0], // YYYY
                 dateParts[2]); // DD
@@ -149,7 +154,7 @@ public class YzCardServiceImpl implements IYzCardService {
             ExcelStreamingReader reader = new ExcelStreamingReader();
             // 构建完整的文件路径
             String canonicalPath = new File("").getCanonicalPath();
-            String baseDir = "/mnt/file/flowCount/";
+            String baseDir = "/mnt/file/flowCount/" + identifier + "/";
             String monthDir = dateParts[1] + "/"; // 月份目录
             String yearDir = dateParts[0] + "/"; // 年份目录
             String fullPath = Paths.get(canonicalPath, baseDir, monthDir, yearDir, fileName).toString();
@@ -291,7 +296,7 @@ public class YzCardServiceImpl implements IYzCardService {
             currentDay = Math.max(0, currentDay);
 
             // 计算计费统计信息
-            BillingStatistics billingStats = calculateBillingStatistics(allData, headerRow, fileDate);
+            BillingStatistics billingStats = calculateBillingStatistics(allData, headerRow, fileDate, identifier);
 
             // 封装返回数据
             statistics.put("simCardCount", simCardCount);
@@ -358,17 +363,21 @@ public class YzCardServiceImpl implements IYzCardService {
     /**
      * Excel处理相关方法
      */
-    public PageResult getPagedContentFromExcel(String filePath, int pageNumber, int pageSize) {
+    public PageResult getPagedContentFromExcel(String filePath, String identifier, int pageNumber, int pageSize) {
         // 从文件名中解析日期（格式：YYYY-mm-DD）
         String fileName = new File(filePath).getName();
         String dateStr = fileName.replace(".xlsx", "");
         String[] dateParts = dateStr.split("-");
 
+        if (StringUtils.isEmpty(identifier)) {
+            throw new IllegalArgumentException("identifier参数不能为空");
+        }
+
         try {
             ExcelStreamingReader reader = new ExcelStreamingReader();
             // 构建完整的文件路径
             String canonicalPath = new File("").getCanonicalPath();
-            String baseDir = "/mnt/file/flowCount/";
+            String baseDir = "/mnt/file/flowCount/" + identifier + "/";
             String monthDir = dateParts[1] + "/"; // 月份目录
             String yearDir = dateParts[0] + "/"; // 年份目录
             String fullPath = canonicalPath + baseDir + monthDir + yearDir + fileName;
@@ -2159,7 +2168,7 @@ public class YzCardServiceImpl implements IYzCardService {
     }
 
     public AjaxResult uploadChunk(MultipartFile chunk, String user, int chunkIndex, int totalChunks,
-            String fileName, String optionalParam) {
+            String fileName, String optionalParam, String identifier) {
         String baseDir;
         String fullPath;
         String tempDir;
@@ -2171,7 +2180,10 @@ public class YzCardServiceImpl implements IYzCardService {
                 String[] dateParts = optionalParam.split("-");
                 String year = dateParts[0];
                 String month = dateParts[1];
-                baseDir = "/mnt/file/flowCount/" + month + "/" + year + "/";
+                if (StringUtils.isEmpty(identifier)) {
+                    return AjaxResult.error("identifier参数不能为空");
+                }
+                baseDir = "/mnt/file/flowCount/" + identifier + "/" + month + "/" + year + "/";
                 finalFileName = optionalParam + ".xlsx"; // 使用日期作为文件名
             } else {
                 baseDir = "/mnt/file/export/" + user + '/';
@@ -2241,7 +2253,7 @@ public class YzCardServiceImpl implements IYzCardService {
                 // 如果是带日期的上传，处理业务统计
                 if (StringUtils.isNotEmpty(optionalParam)) {
                     try {
-                        getBusinessStatistics(finalFileName); // 使用最终文件名
+                        getBusinessStatistics(finalFileName, identifier); // 使用最终文件名
                     } catch (Exception e) {
                         log.error("业务统计处理失败", e);
                         return AjaxResult.error("业务统计处理失败: " + e.getMessage());
@@ -2585,7 +2597,7 @@ public class YzCardServiceImpl implements IYzCardService {
      * }
      */
 
-    public Map<String, Object> calculateList(String deptName, String flowCount) {
+    public Map<String, Object> calculateList(String deptName, String flowCount, String identifier) {
         Map<String, Object> rmap = new HashMap<>();
         List<String> xlsxFiles = new ArrayList<>();
         // 基础路径配置
@@ -2593,7 +2605,7 @@ public class YzCardServiceImpl implements IYzCardService {
         String pathName;
 
         if (StringUtils.isNotEmpty(flowCount)) {
-            pathName = Paths.get(BASE_PATH, "mnt", "file", "flowCount").toString();
+            pathName = Paths.get(BASE_PATH, "mnt", "file", flowCount, identifier).toString();
         } else {
             pathName = Paths.get(BASE_PATH, "mnt", "file", "export", deptName).toString();
         }
@@ -3011,7 +3023,7 @@ public class YzCardServiceImpl implements IYzCardService {
         }
     }
 
-    public AjaxResult getBusinessVolume(String date) {
+    public AjaxResult getBusinessVolume(String date, String identifier) {
         try {
             // 解析年月
             String[] dateParts = date.split("-");
@@ -3029,8 +3041,9 @@ public class YzCardServiceImpl implements IYzCardService {
             // 遍历该月每一天
             for (int day = 1; day <= daysInMonth; day++) {
                 // 构建Redis键名，格式：yunze:card:getBusinessStatistics:mm:YYYY:DD
-                String cacheKey = String.format("%s%02d:%d:%02d",
+                String cacheKey = String.format("%s%s:%02d:%d:%02d",
                         BUSINESS_STATS_PREFIX,
+                        identifier,
                         month,
                         year,
                         day);
@@ -3083,12 +3096,14 @@ public class YzCardServiceImpl implements IYzCardService {
         private List<CompanyConfig> companyConfigs;
         private String createTime;
         private String createBy;
+        private String billingType; // 计费类型：4G 或 5G
 
         public static class CompanyConfig {
             private String companyName;
             private String keyword;
             private double price; // 价格参数
             private double minimumPrice; // 低消价格参数
+            private double minimumUsage; // 低消用量 GB
 
             // getters and setters
             public String getCompanyName() {
@@ -3122,6 +3137,14 @@ public class YzCardServiceImpl implements IYzCardService {
             public void setMinimumPrice(double minimumPrice) {
                 this.minimumPrice = minimumPrice;
             }
+
+            public double getMinimumUsage() {
+                return minimumUsage;
+            }
+
+            public void setMinimumUsage(double minimumUsage) {
+                this.minimumUsage = minimumUsage;
+            }
         }
 
         // getters and setters
@@ -3148,6 +3171,14 @@ public class YzCardServiceImpl implements IYzCardService {
         public void setCreateBy(String createBy) {
             this.createBy = createBy;
         }
+
+        public String getBillingType() {
+            return billingType;
+        }
+
+        public void setBillingType(String billingType) {
+            this.billingType = billingType;
+        }
     }
 
     /**
@@ -3160,6 +3191,8 @@ public class YzCardServiceImpl implements IYzCardService {
         private String status; // 卡状态
         private boolean isExistingUser; // 是否存量用户
         private double billingAmount; // 计费金额
+        private String networkType; // 网络类型：1=NB, 2=4G SIM, 3=5G SIM
+        private boolean isRealName; // 是否已实名
 
         // constructors
         public CardBillingInfo() {
@@ -3219,6 +3252,22 @@ public class YzCardServiceImpl implements IYzCardService {
 
         public void setBillingAmount(double billingAmount) {
             this.billingAmount = billingAmount;
+        }
+
+        public String getNetworkType() {
+            return networkType;
+        }
+
+        public void setNetworkType(String networkType) {
+            this.networkType = networkType;
+        }
+
+        public boolean isRealName() {
+            return isRealName;
+        }
+
+        public void setRealName(boolean realName) {
+            isRealName = realName;
         }
     }
 
@@ -3370,10 +3419,10 @@ public class YzCardServiceImpl implements IYzCardService {
     /**
      * 从Redis获取计费配置
      */
-    private BillingConfig getBillingConfig() {
+    private BillingConfig getBillingConfig(String identifier) {
         try {
-            String configKey = "yunze:calculate:company:config";
-            String configJson = redisCache.getCacheObject(configKey);
+            String configKey = "yunze:calculate:company:config:";
+            String configJson = redisCache.getCacheObject(configKey + identifier);
 
             if (StringUtils.isNotEmpty(configJson)) {
                 BillingConfig config = JSON.parseObject(configJson, BillingConfig.class);
@@ -3424,7 +3473,13 @@ public class YzCardServiceImpl implements IYzCardService {
      * 计算单卡计费金额
      */
     private double calculateCardBilling(CardBillingInfo cardInfo, double avgFlowGB,
-            BillingConfig.CompanyConfig config, boolean isExistingUser) {
+            BillingConfig.CompanyConfig config, boolean isExistingUser, boolean is5GBilling) {
+        // 如果是5G计费，使用5G计费规则
+        if (is5GBilling) {
+            return calculate5GBilling(cardInfo, avgFlowGB, config, isExistingUser);
+        }
+
+        // 4G计费规则（原有逻辑）
         // 卡状态为已停用且当月无用量不进行价格计算与收费
         if ("停机".equals(cardInfo.getStatus()) && cardInfo.getFlowGB() == 0) {
             return 0.0;
@@ -3454,14 +3509,50 @@ public class YzCardServiceImpl implements IYzCardService {
     }
 
     /**
+     * 5G计费规则
+     * 1、当月自然激活按流量计费，结算按照 流量用量(GB)*流量价格(也就是用多少算多少)
+     * 2、非当月自然月激活的用户
+     * 若总平均使用量>低消用量GB，结算按照单卡 流量用量GB* 流量 价格
+     * 若总平均使用量<=低消用量GB，结算按照单卡 低消用量GB* 低消 价格
+     */
+    private double calculate5GBilling(CardBillingInfo cardInfo, double avgFlowGB,
+            BillingConfig.CompanyConfig config, boolean isExistingUser) {
+        // 卡状态为已停用且当月无用量不进行价格计算与收费
+        if ("停机".equals(cardInfo.getStatus()) && cardInfo.getFlowGB() == 0) {
+            return 0.0;
+        }
+
+        // 1、当月自然激活按流量计费，结算按照 流量用量(GB)*流量价格
+        if (!isExistingUser) {
+            // 新增用户（当月自然激活）：流量用量(GB) * 流量价格
+            return cardInfo.getFlowGB() * config.getPrice();
+        }
+
+        // 2、非当月自然月激活的用户
+        // 获取低消用量（GB），如果未配置则默认为20GB
+        double minimumUsage = config.getMinimumUsage() > 0 ? config.getMinimumUsage() : 20.0;
+
+        if (avgFlowGB > minimumUsage) {
+            // 若总平均使用量>低消用量GB，结算按照单卡 流量用量GB* 流量 价格
+            return cardInfo.getFlowGB() * config.getPrice();
+        } else {
+            // 若总平均使用量<=低消用量GB，结算按照单卡 低消用量GB* 低消 价格
+            return minimumUsage * config.getMinimumPrice();
+        }
+    }
+
+    /**
      * 通用计算方式
      */
     private double calculateCommonBilling(double cardFlowGB, double avgFlowGB, BillingConfig.CompanyConfig config) {
-        if (avgFlowGB <= 20) {
-            // 总平均流量GB小于等于20GB则单卡计费为低消价格参数
+        // 获取低消用量（GB），如果未配置则默认为20GB
+        double minimumUsage = config.getMinimumUsage() > 0 ? config.getMinimumUsage() : 20.0;
+
+        if (avgFlowGB <= minimumUsage) {
+            // 总平均流量GB小于等于低消用量GB则单卡计费为低消价格参数
             return config.getMinimumPrice();
         } else {
-            // 总平均流量GB大于20GB则单卡计费为卡实际流量(GB) * 价格参数
+            // 总平均流量GB大于低消用量GB则单卡计费为卡实际流量(GB) * 价格参数
             return cardFlowGB * config.getPrice();
         }
     }
@@ -3471,7 +3562,8 @@ public class YzCardServiceImpl implements IYzCardService {
      */
     private BillingStatistics calculateBillingStatistics(List<List<String>> allData,
             List<String> headerRow,
-            LocalDate fileDate) {
+            LocalDate fileDate,
+            String identifier) {
         // 不再使用独立的计费缓存键，直接返回计算结果
         // 计费统计将合并到业务统计缓存中
 
@@ -3480,7 +3572,7 @@ public class YzCardServiceImpl implements IYzCardService {
         billingStats.setCalculateTime(LocalDateTime.now().toString());
 
         // 获取计费配置
-        BillingConfig billingConfig = getBillingConfig();
+        BillingConfig billingConfig = getBillingConfig(identifier);
         if (billingConfig == null) {
             // 配置无效时返回空的计费统计，不进行计费计算
             log.debug("计费配置无效，返回空的计费统计");
@@ -3542,10 +3634,12 @@ public class YzCardServiceImpl implements IYzCardService {
                 totalCards++;
 
                 // 检查实名状态
+                boolean isRealName = false;
                 if (realNameIndex != -1 && row.size() > realNameIndex) {
                     String realNameStatus = row.get(realNameIndex);
                     if (realNameStatus != null && realNameStatus.contains("已实名")) {
                         realNameCards++;
+                        isRealName = true;
                     }
                 }
 
@@ -3579,6 +3673,7 @@ public class YzCardServiceImpl implements IYzCardService {
 
                 // 创建卡计费信息
                 CardBillingInfo cardInfo = new CardBillingInfo("", flowGB, activateTime, status);
+                cardInfo.setRealName(isRealName);
 
                 // 判断是否为新增用户
                 boolean isNewUser = isNewUserInNaturalMonth(activateDate, fileDate);
@@ -3591,29 +3686,82 @@ public class YzCardServiceImpl implements IYzCardService {
                 }
             }
 
-            // 计算平均流量
-            double existingUserAvgFlow = existingUsers.stream()
-                    .filter(card -> card.getFlowGB() > 0)
-                    .mapToDouble(CardBillingInfo::getFlowGB)
-                    .average().orElse(0.0);
+            // 判断是否为5G计费
+            boolean is5GBilling = "5G".equals(billingConfig.getBillingType());
 
-            double newUserAvgFlow = newUsers.stream()
-                    .filter(card -> card.getFlowGB() > 0)
-                    .mapToDouble(CardBillingInfo::getFlowGB)
-                    .average().orElse(0.0);
+            // 计算平均流量
+            // 5G计费：总平均使用量包括已激活、已实名但无用量、已停机且有实名或有用量的卡
+            // 4G计费：只计算有流量的卡
+            double existingUserAvgFlow;
+            double newUserAvgFlow;
+
+            if (is5GBilling) {
+                // 5G计费：总平均使用量包括已激活、已实名但无用量、已停机且有实名或有用量的卡
+                // 筛选出满足以下条件之一的卡：
+                // 1. 已激活
+                // 2. 已实名
+                // 3. 已停机 且 （已实名 或 有用量）
+                List<CardBillingInfo> existing5GCards = existingUsers.stream()
+                        .filter(card -> "已激活".equals(card.getStatus()) ||
+                                card.isRealName() ||
+                                ("停机".equals(card.getStatus()) && (card.isRealName() || card.getFlowGB() > 0)))
+                        .collect(java.util.stream.Collectors.toList());
+
+                List<CardBillingInfo> new5GCards = newUsers.stream()
+                        .filter(card -> "已激活".equals(card.getStatus()) ||
+                                card.isRealName() ||
+                                ("停机".equals(card.getStatus()) && (card.isRealName() || card.getFlowGB() > 0)))
+                        .collect(java.util.stream.Collectors.toList());
+
+                // 计算5G卡的平均流量（包括0流量的卡）
+                if (!existing5GCards.isEmpty()) {
+                    existingUserAvgFlow = existing5GCards.stream()
+                            .mapToDouble(CardBillingInfo::getFlowGB)
+                            .sum() / existing5GCards.size();
+                } else {
+                    // 如果没有5G卡，使用所有存量用户的平均流量（只计算有流量的）
+                    existingUserAvgFlow = existingUsers.stream()
+                            .filter(card -> card.getFlowGB() > 0)
+                            .mapToDouble(CardBillingInfo::getFlowGB)
+                            .average().orElse(0.0);
+                }
+
+                if (!new5GCards.isEmpty()) {
+                    newUserAvgFlow = new5GCards.stream()
+                            .mapToDouble(CardBillingInfo::getFlowGB)
+                            .sum() / new5GCards.size();
+                } else {
+                    // 如果没有5G卡，使用所有新增用户的平均流量（只计算有流量的）
+                    newUserAvgFlow = newUsers.stream()
+                            .filter(card -> card.getFlowGB() > 0)
+                            .mapToDouble(CardBillingInfo::getFlowGB)
+                            .average().orElse(0.0);
+                }
+            } else {
+                // 4G计费：只计算有流量的卡
+                existingUserAvgFlow = existingUsers.stream()
+                        .filter(card -> card.getFlowGB() > 0)
+                        .mapToDouble(CardBillingInfo::getFlowGB)
+                        .average().orElse(0.0);
+
+                newUserAvgFlow = newUsers.stream()
+                        .filter(card -> card.getFlowGB() > 0)
+                        .mapToDouble(CardBillingInfo::getFlowGB)
+                        .average().orElse(0.0);
+            }
 
             // 计算总计费金额（包括0.06的部分）
             double totalBillAmount = 0.0;
 
             // 计算存量用户计费
             for (CardBillingInfo card : existingUsers) {
-                double billing = calculateCardBilling(card, existingUserAvgFlow, config, true);
+                double billing = calculateCardBilling(card, existingUserAvgFlow, config, true, is5GBilling);
                 totalBillAmount += billing;
             }
 
             // 计算新增用户计费
             for (CardBillingInfo card : newUsers) {
-                double billing = calculateCardBilling(card, newUserAvgFlow, config, false);
+                double billing = calculateCardBilling(card, newUserAvgFlow, config, false, is5GBilling);
                 totalBillAmount += billing;
             }
 
@@ -3639,7 +3787,7 @@ public class YzCardServiceImpl implements IYzCardService {
      * @param testDate 测试日期，格式：yyyy-MM-dd
      * @return 计费测试结果
      */
-    public Map<String, Object> testBillingLogic(String testDate) {
+    public Map<String, Object> testBillingLogic(String testDate, String identifier) {
         Map<String, Object> result = new HashMap<>();
 
         try {
@@ -3647,7 +3795,7 @@ public class YzCardServiceImpl implements IYzCardService {
             LocalDate fileDate = LocalDate.parse(testDate);
 
             // 获取计费配置
-            BillingConfig billingConfig = getBillingConfig();
+            BillingConfig billingConfig = getBillingConfig(identifier);
 
             result.put("success", true);
             result.put("billingConfig", billingConfig);
