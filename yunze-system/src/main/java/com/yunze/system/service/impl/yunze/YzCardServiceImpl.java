@@ -272,8 +272,9 @@ public class YzCardServiceImpl implements IYzCardService {
                         Integer.parseInt(dateParts[2])).minusDays(1);
 
                 // 构建前一天的缓存key
-                String previousCacheKey = String.format("%s%02d:%d:%02d",
+                String previousCacheKey = String.format("%s%s:%02d:%d:%02d",
                         BUSINESS_STATS_PREFIX,
+                        identifier,
                         previousDay.getMonthValue(),
                         previousDay.getYear(),
                         previousDay.getDayOfMonth());
