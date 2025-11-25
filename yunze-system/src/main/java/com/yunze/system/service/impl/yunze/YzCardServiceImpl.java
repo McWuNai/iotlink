@@ -3538,7 +3538,7 @@ public class YzCardServiceImpl implements IYzCardService {
             return cardInfo.getFlowGB() * config.getPrice();
         } else {
             // 若总平均使用量<=低消用量GB，结算按照单卡 低消用量GB* 低消 价格
-            return minimumUsage * config.getMinimumPrice();
+            return config.getMinimumPrice();
         }
     }
 
